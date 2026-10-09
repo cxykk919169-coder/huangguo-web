@@ -1,0 +1,40 @@
+# 短剧站候选清单
+# 一行一个域名, # 开头是注释
+# 用法: python hg_probe_site.py --file candidates.txt --out probe-result.json
+#
+# 分类说明:
+#   [已知] 实测过的站
+#   [新]   老板/外部提供的新地址
+#   [同类] 生态里同类型的站 (待验证)
+
+# ---- 已知 ----
+huangguo9.com          # 黄果地址发布页 (不是剧站)
+mgmg10.com             # 芒果短剧 (有付费墙, 已接入仅免费集)
+
+# ---- 新 (老板提供) ----
+relang02.cc            # 热浪短剧
+yeguodj.com            # 野果短剧
+
+# ---- 同类 (待验证) ----
+relang01.cc
+relang03.cc
+relang.cc
+yeguo01.com
+yeguodj.cc
+huangguo10.com
+huangguo8.com
+hgai1.com
+huangguoai.com
+huangguoai.ai
+hgduanju.com
+duanju.com
+redianju.com
+kuaikanju.com
+juqingju.com
+haokanju.com
+mianfeiju.com
+djvip.cc
+djapp.cc
+djfree.cc
+resouju.com
+remenju.com

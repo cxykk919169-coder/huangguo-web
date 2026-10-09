@@ -1,0 +1,5 @@
+{
+  "_note": "分片反代地址。填成你的 VPS https 域名后, 前端所有 r2.dev 分片都会经它转发 (它补 CORS 头)。留空 = 直连 (仅能过 CORS 的环境可用)。",
+  "_example": "https://seg.example.com",
+  "seg": ""
+}

@@ -1,0 +1,86 @@
+# ERO 静态播放快照 (国内直连可用的关键)
+# =====================================================
+#   *.workers.dev 在国内被 DNS 污染 + SNI 封禁 → 浏览器够不到 Worker;
+#   而 ERO 播放必须经 Worker 才能 POST /playback/resolve。
+#
+#   破解点 (实测):
+#     - 分片所在的 R2 公共桶不校验 grant, 去掉 ?grant= 也能 200, 且 r2.dev 国内可达
+#     - license 里的内容密钥按 key_id 静态, 客户端本地就能解出来
+#   于是把 manifest + license 在 CI 侧 (runner 能到 Worker) 抓下来落盘,
+#   浏览器读同源静态文件 + 直连 r2.dev → 0 次实时上游请求。
+#
+# 产出: data/es-play/<dramaId>.json
+
+name: SnapshotEsPlay
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "只做前 N 部 (0=全部)"
+        default: "0"
+      only:
+        description: "drama id 前缀过滤 (留空=全部)"
+        default: ""
+      skip_done:
+        description: "已有快照的剧跳过"
+        type: boolean
+        default: false
+  schedule:
+    # 上游若重新转码, 分片哈希会变 → 每 6 小时刷一次
+    - cron: "23 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "es-play-snapshot"
+  cancel-in-progress: false
+
+jobs:
+  snap:
+    name: 生成 ERO 播放快照
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 抓取
+        env:
+          ES_WORKER: ${{ vars.ES_WORKER || 'https://huangguo-web.cxykk919169.workers.dev' }}
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+          ES_EMAIL: ${{ secrets.ES_EMAIL }}
+          ES_PASSWORD: ${{ secrets.ES_PASSWORD }}
+        run: |
+          set +e
+          # 带账号登录的版本: 免费集本来就拿得到, 登录后还能覆盖已用钻石解锁的集。
+          # 匿名版 fetch_es_play_static.py 只作为兜底 (无 secrets 时)。
+          if [ -n "$ES_PASSWORD" ]; then
+            python fetch_es_play_auth.py \
+              --limit "${{ github.event.inputs.limit || '0' }}" \
+              --only  "${{ github.event.inputs.only || '' }}"
+          else
+            python fetch_es_play_static.py \
+              --limit "${{ github.event.inputs.limit || '0' }}" \
+              --only  "${{ github.event.inputs.only || '' }}" \
+              --workers 8
+          fi
+          echo "--- 产物 ---"
+          ls -l data/es-play/ 2>/dev/null | head -25
+          du -sh data/es-play 2>/dev/null
+          exit 0
+
+      - name: 提交
+        run: |
+          set +e
+          git config user.name  "es-bot"
+          git config user.email "es-bot@users.noreply.github.com"
+          [ -d data/es-play ] && git add -f data/es-play
+          [ -f data/es-play-index.json ] && git add -f data/es-play-index.json
+          if git diff --cached --quiet; then echo "无变化"; exit 0; fi
+          git commit -m "chore(es): 刷新 ERO 播放快照 $(date -u '+%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git push && break
+            git pull --rebase=merges origin main || git rebase --abort
+            sleep 3
+          done
+          exit 0

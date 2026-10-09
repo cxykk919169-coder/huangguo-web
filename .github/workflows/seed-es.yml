@@ -1,0 +1,61 @@
+# EROSHORT 快照补抓 (手动触发)
+# 常规同步由 sync.yml 定时跑; 这个用于限流期想立刻补一份时手动点。
+# 上游总量很小 (total=18), page_size 默认 20 → 1 页即可装完。
+name: SeedES
+
+on:
+  workflow_dispatch:
+    inputs:
+      pages:
+        description: "最多翻几页 (page_size=20, 上游 total≈18, 1 页够)"
+        required: false
+        default: "2"
+
+permissions:
+  contents: write
+
+jobs:
+  seed:
+    name: 生成快照
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 抓取
+        run: |
+          set +e
+          PAGES="${{ github.event.inputs.pages }}"
+          # 不做阻断式探针: 直连出口必被 CF 拦, 探针失败不代表中转抓不到。
+          # 探针只作为信息打印, 抓取照跑。 --probe 太慢 (每通道串行重试), 这里跳过。
+          python3 sync_es.py --pages "$PAGES" 2>&1 | tee /tmp/sync.log
+          echo "rc=$?"
+          python3 build_es_snapshot.py 2>&1 | tail -30 || true
+          ls -la data/es-*.json 2>/dev/null || echo "(无产物)"
+
+      - name: 提交
+        run: |
+          set -e
+          git config user.name  "huangguo-sync[bot]"
+          git config user.email "huangguo-sync@users.noreply.github.com"
+          git add data/es-*.json
+          if git diff --cached --quiet; then
+            echo "无变化, 跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(es): EROSHORT 种子快照 $(date -u '+%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git push && break || (git pull --rebase=merges origin main || git rebase --abort; sleep 3)
+          done
+
+      - name: 汇总
+        run: |
+          {
+            echo "## EROSHORT 快照补抓"
+            echo '```'
+            cat /tmp/sync.log 2>/dev/null | tail -50
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

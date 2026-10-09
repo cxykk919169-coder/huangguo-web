@@ -1,0 +1,3728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0e0e10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="湟果视频">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>湟果视频</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{background:#0e0e10;color:#eee;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:40px;min-height:100vh}
+header{position:sticky;top:0;z-index:50;background:rgba(14,14,16,.96);backdrop-filter:blur(12px);border-bottom:1px solid #1d1d22;padding:11px 12px 9px}
+.bar{display:flex;align-items:center;gap:9px;max-width:1180px;margin:0 auto}
+.logo{font-size:17px;font-weight:800;white-space:nowrap;flex:0 0 auto}
+.logo span{color:#ff7a18}
+.search{flex:1;display:flex;gap:7px;min-width:0}
+input{flex:1;min-width:60px;font-size:16px;padding:10px 13px;border-radius:10px;border:1px solid #2b2b32;background:#17171c;color:#eee;outline:none;font-family:inherit}
+input:focus{border-color:#ff7a18;background:#1b1b21}
+button{font-size:15px;padding:10px 15px;border-radius:10px;border:0;background:#ff7a18;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+button:active{transform:scale(.96)}
+button.gh{background:#212127;color:#bbb}
+button.gh:active{background:#2b2b33}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:9px 0 1px;max-width:1180px;margin:0 auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:7px 14px;border-radius:20px;background:#191920;color:#8d8d97;font-size:14px;border:1px solid #26262e;cursor:pointer;white-space:nowrap;transition:.15s}
+.tab.on{background:#ff7a18;color:#fff;border-color:#ff7a18;font-weight:600}
+main{max-width:1180px;margin:0 auto;padding:14px 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:11px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}}
+.item{background:#17171c;border:1px solid #22222a;border-radius:12px;overflow:hidden;cursor:pointer;transition:.15s;display:flex;flex-direction:column}
+.item:active{transform:scale(.97);border-color:#ff7a18}
+.thumb{position:relative;width:100%;aspect-ratio:3/4;background:#22222a;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#4a4a55;font-size:26px}
+.badge{position:absolute;top:6px;left:6px;background:rgba(255,122,24,.92);color:#fff;font-size:10.5px;padding:2px 6px;border-radius:5px;font-weight:600}
+.badge.src{background:rgba(10,10,14,.72);color:#cfcfda;font-weight:500}
+.item .t{font-size:12.5px;padding:8px 8px 3px;line-height:1.4;max-height:52px;overflow:hidden;color:#dcdce2;font-weight:500}
+.item .e{font-size:11px;color:#6e6e7a;padding:0 8px 8px;margin-top:auto}
+.load{text-align:center;color:#5a5a66;padding:44px 20px;font-size:14px}
+.spin{display:inline-block;width:17px;height:17px;border:2px solid #2b2b33;border-top-color:#ff7a18;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.card{background:#16161b;border:1px solid #26262e;border-radius:14px;padding:15px;margin-top:14px}
+.dhead{display:flex;gap:14px;flex-wrap:wrap}
+.dcover{width:118px;aspect-ratio:3/4;border-radius:10px;object-fit:cover;background:#22222a;flex:0 0 auto}
+.dinfo{flex:1;min-width:190px}
+.dtitle{font-size:20px;font-weight:700;margin-bottom:7px;line-height:1.3}
+.dmeta{color:#8b8b97;font-size:13px;line-height:1.9}
+.dmeta em{color:#ff7a18;font-style:normal;font-weight:600}
+.tag{display:inline-block;background:#212128;color:#9a9aa6;font-size:11.5px;padding:3px 9px;border-radius:6px;margin:3px 5px 0 0}
+.tag.c{background:#2a1a10;color:#ff9a4d}
+.ddesc{color:#8f8f9b;font-size:13.5px;line-height:1.75;margin-top:11px;white-space:pre-wrap}
+.vwrap{margin-top:14px;background:#000;border-radius:12px;overflow:hidden;position:relative}
+video{width:100%;display:block;background:#000;max-height:74vh}
+.playbar{display:flex;align-items:center;gap:9px;padding:10px 12px;background:#131318;border-top:1px solid #22222a;flex-wrap:wrap}
+.playbar .curep{color:#ff7a18;font-weight:600;font-size:14px}
+.eps{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.ep{padding:9px 14px;border-radius:9px;background:#1e1e25;color:#8fb4ff;font-size:14px;border:1px solid #2a2a33;cursor:pointer;transition:.12s;text-decoration:none;display:inline-block;font-family:inherit}
+.ep:active,.ep.on{background:#ff7a18;color:#fff;border-color:#ff7a18}
+.ep.on{font-weight:700}
+/* EROSHORT: 付费集样式 */
+.ep.locked{background:#221a12;color:#a07a3a;border-color:#3a2c18;position:relative}
+.ep.locked .lockb{display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;background:#ffb02e;color:#231a08;font-size:10px;font-style:normal;font-weight:700;vertical-align:1px}
+.back{display:inline-flex;align-items:center;gap:5px;color:#ff7a18;font-size:14.5px;margin-bottom:11px;cursor:pointer;background:none;border:0;padding:0;font-family:inherit}
+.pager{display:flex;gap:9px;justify-content:center;margin-top:22px}
+.sec{font-size:15px;font-weight:700;margin:22px 0 11px;padding-left:10px;border-left:3px solid #ff7a18;color:#e8e8ee}
+.err{background:#2a1416;border:1px solid #4a1f24;color:#ff8b8b;padding:14px;border-radius:11px;font-size:13.5px;line-height:1.7}
+.hint{background:#1a1e2a;border:1px solid #26314a;color:#8fb0e0;padding:12px 14px;border-radius:11px;font-size:13px;line-height:1.7;margin-top:14px}
+footer{text-align:center;color:#494951;font-size:11.5px;padding:28px 16px 12px;line-height:2}
+.cfg{background:#16161b;border:1px solid #2a2a33;border-radius:12px;padding:14px;margin-top:14px;font-size:13.5px}
+.cfg label{display:block;color:#8b8b97;margin-bottom:6px;font-size:13px}
+.cfg .row{display:flex;gap:8px;margin-bottom:11px}
+.cfg input{font-size:13px;padding:9px 11px}
+
+/* ===== 收藏按钮 ===== */
+.favbtn{background:none;border:1px solid #3a3a46;color:#9a9aa6;font-size:12.5px;padding:5px 11px;border-radius:8px;cursor:pointer;margin-left:10px;font-family:inherit;vertical-align:middle;transition:.15s}
+.favbtn:hover{border-color:#ff7a18;color:#ff7a18}
+.favbtn.on{background:#3a1a12;border-color:#ff7a18;color:#ff7a18;font-weight:600}
+
+/* ===== 倍速栏 ===== */
+.spdwrap{display:inline-flex;gap:4px;margin-left:auto;flex-wrap:wrap;align-items:center;font-size:11.5px;color:#6e6e7a}
+.spd{background:#1e1e25;border:1px solid #2a2a33;color:#9a9aa6;font-size:11.5px;padding:4px 8px;border-radius:6px;cursor:pointer;font-family:inherit;transition:.12s}
+.spd:hover{color:#ff7a18;border-color:#ff7a18}
+.spd.on{background:#ff7a18;color:#fff;border-color:#ff7a18;font-weight:700}
+
+/* ===== 继续播放提示 ===== */
+.resume{margin-top:9px;background:#1a2a1e;border:1px solid #2a4a32;color:#8fe0a8;font-size:12.5px;padding:8px 12px;border-radius:9px}
+
+/* ===== 无限滚动哨兵 ===== */
+.sentinel{display:flex;align-items:center;justify-content:center;gap:9px;padding:26px 0 34px;color:#6e6e7a;font-size:13px}
+.sentinel .spin{width:15px;height:15px;border-width:2px}
+
+/* ===== 回到顶部 ===== */
+#totop{position:fixed;right:16px;bottom:78px;z-index:60;width:42px;height:42px;border-radius:50%;background:#1e1e25;border:1px solid #3a3a46;color:#ff7a18;font-size:19px;font-weight:700;cursor:pointer;display:none;box-shadow:0 6px 20px rgba(0,0,0,.5);font-family:inherit}
+#totop:hover{border-color:#ff7a18;background:#2a1a10}
+
+/* ===== 我的页面 ===== */
+.minehead{display:flex;align-items:center;justify-content:space-between;font-size:19px;font-weight:700;margin:4px 0 6px;color:#e8e8ee}
+.mineacts{display:flex;gap:7px}
+.mineacts .gh{font-size:12px;padding:5px 11px}
+.minebtn{color:#ff7a18 !important}
+
+/* ===== 双站切换 ===== */
+.sitebar{display:flex;gap:6px;align-items:center;margin-left:4px}
+.sitebtn{padding:8px 15px;border-radius:10px;background:#1b1b21;border:1px solid #2c2c36;color:#9a9aa6;font-size:14px;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap;line-height:1.2}
+.sitebtn:hover{border-color:#4a4a58;color:#d0d0da}
+.sitebtn.on{background:#2a1a10;border-color:#ff7a18;color:#ff7a18;font-weight:700}
+.sitebtn[data-k="hd"].on{background:#0f2a20;border-color:#5ad1a0;color:#5ad1a0}
+.sitebtn .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle;background:#55555f}
+.sitebtn.on .dot{background:currentColor}
+.sitedesc{font-size:11.5px;color:#6e6e7a;margin:6px 0 0;padding:0 2px}
+
+/* ===== 黄豆短剧 详情页 ===== */
+.hdplay{margin-top:16px;padding:16px;border-radius:12px;background:#101a16;border:1px solid #1e3a2c}
+.hdplaytip{font-size:13px;line-height:1.85;color:#8fb8a4}
+.hdplaytip b{color:#5ad1a0;font-size:14px}
+.hdplaybtn{display:inline-block;margin-top:12px;padding:12px 26px;border-radius:10px;background:#5ad1a0;color:#06210f;font-weight:700;font-size:15px;text-decoration:none;transition:.15s}
+.hdplaybtn:hover{background:#73e0b2;transform:translateY(-1px)}
+.hdlines{margin-top:14px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.hdlinetip{font-size:12px;color:#6e7e76}
+.hdline{padding:6px 13px;border-radius:8px;background:#18251f;border:1px solid #2a4436;color:#8fb8a4;font-size:12.5px;text-decoration:none;transition:.15s;cursor:pointer}
+.hdline:hover{border-color:#5ad1a0;color:#5ad1a0}
+.hdline.on{background:#5ad1a0;border-color:#5ad1a0;color:#06210f;font-weight:700}
+.hdlock{margin:8px 0;padding:14px;border-radius:10px;background:#1a1510;border:1px solid #4a3a1a;color:#ffcf5c;font-size:13.5px;line-height:1.8;text-align:center}
+.tag.c{background:#123024;color:#5ad1a0}
+.tabsup{display:inline-block;margin-left:4px;padding:0 5px;border-radius:6px;background:#2c2c36;color:#8d8d97;font-size:10.5px;font-style:normal;vertical-align:middle}
+.tab.on .tabsup{background:#5ad1a0;color:#06210f}
+
+/* ===== 轻提示 ===== */
+.hgtoast{position:fixed;left:50%;bottom:66px;transform:translateX(-50%) translateY(14px);z-index:9999;
+  padding:10px 20px;border-radius:22px;background:rgba(24,24,30,.95);border:1px solid #3a3a46;color:#e8e8ee;
+  font-size:13.5px;opacity:0;transition:.22s;pointer-events:none;white-space:nowrap;max-width:88vw;overflow:hidden;text-overflow:ellipsis}
+.hgtoast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ============================================================
+   海角网 (hjw) —— 站点观感复刻
+   源站主色 #e35d8a (玫红), 卡片圆角 + 阴影, 图文帖是纵向阅读流。
+   这里只做视觉还原, 数据与交互仍走本项目的统一层。
+   ============================================================ */
+
+/* 板块主色 (切到海角时整站色调跟着走) */
+html[data-site="hjw"] .logo span{color:#e35d8a}
+html[data-site="hjw"] input:focus{border-color:#e35d8a;background:#1e1a1e}
+html[data-site="hjw"] button{background:#e35d8a}
+html[data-site="hjw"] .tab.on{background:#e35d8a;border-color:#e35d8a}
+html[data-site="hjw"] .item:active{border-color:#e35d8a}
+html[data-site="hjw"] .sec{border-left-color:#e35d8a}
+html[data-site="hjw"] .back{color:#e35d8a}
+html[data-site="hjw"] .dmeta em{color:#e35d8a}
+html[data-site="hjw"] .sitebtn.on{background:#2a1220;border-color:#e35d8a;color:#e35d8a}
+html[data-site="hjw"] .ep:active,html[data-site="hjw"] .ep.on{background:#e35d8a;border-color:#e35d8a}
+html[data-site="hjw"] .spd.on{background:#e35d8a;border-color:#e35d8a}
+html[data-site="hjw"] .spd:hover{color:#e35d8a;border-color:#e35d8a}
+html[data-site="hjw"] .favbtn.on{background:#3a1226;border-color:#e35d8a;color:#e35d8a}
+html[data-site="hjw"] .favbtn:hover{border-color:#e35d8a;color:#e35d8a}
+html[data-site="hjw"] .tag{background:#241a20;color:#c090a4}
+html[data-site="hjw"] .hgtoast{border-color:#5a2a3e}
+
+/* --- 首页分区楼层 (源站首页按分类平铺) --- */
+.hjwsect{margin:0 0 24px}
+.hjwsect-h{display:flex;align-items:center;gap:9px;margin:0 0 11px;padding-bottom:9px;border-bottom:1px solid #26262e}
+.hjwsect-h b{font-size:16.5px;font-weight:800;color:#eee;letter-spacing:.3px}
+.hjwsect-h b::before{content:'';display:inline-block;width:3px;height:15px;background:#e35d8a;border-radius:2px;margin-right:8px;vertical-align:-2px}
+.hjwsect-h .more{margin-left:auto;font-size:12.5px;color:#8d8d97;cursor:pointer;padding:4px 10px;border-radius:7px;border:1px solid #2b2b32;background:#17171c;transition:.15s}
+.hjwsect-h .more:hover{color:#e35d8a;border-color:#e35d8a}
+
+/* --- 海角卡片: 源站是竖版封面 + 两行标题 --- */
+.grid.hjwgrid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+@media(min-width:700px){.grid.hjwgrid{grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:13px}}
+.item.hjw{border-radius:10px;background:#17171c;border:1px solid #26262e;overflow:hidden}
+.item.hjw .thumb{aspect-ratio:3/4;background:#1d1d24}
+.item.hjw .thumb img{transition:transform .3s}
+.item.hjw:active .thumb img{transform:scale(1.05)}
+.item.hjw .t{font-size:12.5px;line-height:1.42;max-height:54px;padding:8px 8px 2px;color:#dedee4;font-weight:500}
+.item.hjw .e{font-size:10.5px;color:#6e6e7a;padding:3px 8px 8px;display:flex;gap:8px;align-items:center;margin-top:auto}
+.item.hjw .e .vp{color:#e35d8a}
+.item.hjw .badge{background:rgba(227,93,138,.94)}
+/* 图文帖角标 */
+.item.hjw .badge.art{background:rgba(90,110,209,.92)}
+/* 图片张数角标 */
+.itag{position:absolute;left:6px;bottom:6px;background:rgba(10,10,14,.76);color:#dcdce4;font-size:10px;padding:2px 6px;border-radius:5px;backdrop-filter:blur(3px)}
+
+/* --- 详情页 --- */
+.hjwhead{margin-bottom:4px}
+.hjwtitle{font-size:19px;font-weight:800;line-height:1.42;color:#f0f0f5;margin:0 0 9px}
+@media(min-width:700px){.hjwtitle{font-size:23px}}
+.hjwmeta{display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;color:#8b8b97;font-size:12.5px;margin-bottom:10px}
+.hjwmeta .cat{color:#e35d8a;font-weight:600;cursor:pointer;text-decoration:none}
+.hjwmeta .cat:hover{text-decoration:underline}
+.hjwauthor{display:flex;align-items:center;gap:9px;padding:11px 0;border-top:1px solid #22222a;border-bottom:1px solid #22222a;margin-bottom:14px}
+.hjwauthor img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#22222a;flex:0 0 auto}
+.hjwauthor .nm{font-size:13.5px;font-weight:600;color:#dcdce2}
+.hjwauthor .tm{font-size:11.5px;color:#6e6e7a}
+
+/* --- 图文帖阅读流 --- */
+.hjwart{font-size:15.5px;line-height:1.95;color:#d8d8e0;word-break:break-word}
+.hjwart p{margin:0 0 14px}
+.hjwart img{width:100%;height:auto;display:block;border-radius:9px;margin:14px 0;background:#1d1d24}
+.hjwart br{content:'';display:block;height:6px}
+.hjwart .defaultimg{margin:14px 0}
+.hjwart .defaultimg img{margin:0}
+.hjwart a{color:#e35d8a;word-break:break-all}
+.hjwart blockquote{border-left:3px solid #3a3a46;padding-left:12px;color:#9a9aa6;margin:12px 0}
+.hjwart video{max-height:none}
+.hjwart h1,.hjwart h2,.hjwart h3{font-size:17px;font-weight:700;margin:20px 0 10px;color:#eee}
+/* 图片点击放大 */
+.hjwart img{cursor:zoom-in}
+.hjwlb{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.94);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.hjwlb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.hjwlb .n{position:absolute;top:18px;left:50%;transform:translateX(-50%);color:#9a9aa6;font-size:13px;background:rgba(20,20,26,.9);padding:5px 14px;border-radius:14px}
+.hjwlb .x{position:absolute;top:14px;right:16px;font-size:26px;color:#8d8d97;line-height:1;cursor:pointer}
+.hjwlb .pv,.hjwlb .nx{position:absolute;top:50%;transform:translateY(-50%);font-size:30px;color:#c8c8d2;background:rgba(24,24,30,.8);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none}
+.hjwlb .pv{left:14px}
+.hjwlb .nx{right:14px}
+
+/* --- 相关推荐 --- */
+.hjwrel{margin-top:26px}
+.hjwrel-h{font-size:15px;font-weight:700;color:#e8e8ee;padding-left:10px;border-left:3px solid #e35d8a;margin-bottom:12px}
+
+/* --- 顶部信息条 (仿源站) --- */
+.hjwbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 16px;padding:10px 13px;background:#17171c;border:1px solid #26262e;border-radius:11px;font-size:12.5px;color:#8b8b97}
+.hjwbar .k{color:#6e6e7a}
+.hjwbar .v{color:#dedee4;font-weight:600}
+.hjwbar .free{margin-left:auto;color:#6ad89a;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo" onclick="goHome()" style="cursor:pointer">湟果<span>视频</span></div>
+    <div class="sitebar" id="sitebar"></div>
+    <div class="search">
+      <input id="q" placeholder="搜索片名（两个板块一起搜）/ 输入ID" autocomplete="off">
+      <button onclick="doSearch()">搜索</button>
+      <button class="gh" onclick="goHome()">首页</button>
+      <button class="gh minebtn" onclick="goMine()" id="minebtn" title="我的收藏与历史">我的</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+<main id="app"><div class="load"><span class="spin"></span>加载中…</div></main>
+<footer style="font-size:12px;line-height:1.8;color:#6e6e7a;padding:16px 12px;max-width:1180px;margin:0 auto">
+  <div style="border-top:1px solid #22222a;padding-top:12px">
+    <b style="color:#8d8d97">免责声明</b><br>
+    本站为个人学习与技术研究的<b>非商业性</b>项目，不提供任何视听内容的上传、存储与转码服务。<br>
+    页面展示的标题、封面、播放地址等数据均来自第三方公开网页，本站仅做<b>索引与跳转</b>，不拥有其版权。<br>
+    所有内容版权归原作者及权利方所有。若权利人认为本站索引侵犯其权益，请通过仓库 Issue 联系，我们将<b>及时删除</b>相关链接。<br>
+    本站不保证内容的准确性、合法性或可用性，使用者应自行判断并承担相应风险。<br>
+    <span style="color:#5a5a66">本项目采用 MIT 许可，仅限学习交流，禁止任何商业用途。</span>
+  </div>
+</footer>
+
+  <script src="hls.min.js"></script>
+  <script src="hg-direct.js"></script>
+  <script src="crypto-js.min.js"></script>
+  <script src="hg-hd.js"></script>
+  <script src="hg-es.js"></script>
+  <script src="hg-stego.js"></script>
+  <script src="hg-hjw.js"></script>
+<script>
+/* ===================== 配置 ===================== */
+// 后端地址：部署 Cloudflare Worker 后把它填在这里
+const DEFAULT_API = 'https://huangguo-web.cxykk919169.workers.dev';
+let API = localStorage.getItem('hg_api') || DEFAULT_API;
+
+// 记录 Worker 是否可用 (第一次失败后就不再重试, 直接用直连模式)
+let WORKER_OK = null;      // null=未知, true=可用, false=不可用
+let MODE_TOLD = false;     // 是否已经提示过用户
+
+/* ===================== 双站配置 ===================== */
+// 两个数据源:
+//   hg (黄果短剧) —— GitHub Pages 前端 + 直连上游网页解析
+//   hd (黄豆短剧) —— 官方公开 JSON API, 数据规整, 带分类/排行/搜索
+const SITES = {
+  hg: {
+    key: 'hg',
+    name: '黄果短剧',
+    short: '黄果',
+    color: '#ff7a18',
+    desc: '主源 · 全站免费直取, 无付费墙',
+    hasEps: true,
+  },
+  hd: {
+    key: 'hd',
+    name: '黄豆短剧',
+    short: '黄豆',
+    color: '#5ad1a0',
+    desc: '官方接口 · 分类/排行/求剧榜齐全',
+    hasEps: false,   // 播放源需登录, 详情页提供 H5 跳转
+  },
+  es: {
+    key: 'es',
+    name: 'EROSHORT',
+    short: 'ERO',
+    color: '#8b5cf6',
+    desc: 'AI 漫改短剧 · 免费集可直接播放',
+    hasEps: true,
+  },
+  hjw: {
+    key: 'hjw',
+    name: '海角网',
+    short: '海角',
+    color: '#e35d8a',
+    desc: 'UGC 社区 · 视频帖正文与播放源全明文, 免登录免金币',
+    hasEps: false,   // 单帖单视频, 不做选集
+  },
+};
+let SITE = localStorage.getItem('hg_site') || 'hg';
+if (!SITES[SITE]) SITE = 'hg';
+
+function setSite(k) {
+  if (!SITES[k]) return;
+  SITE = k;
+  localStorage.setItem('hg_site', k);
+  curCat = ''; curPage = 1;
+  curVid = null;
+  curSrc = k;            // 详情页来源跟着板块走
+  HD_CUR = null; HD_LINES = []; HD_LINE_I = 0;
+  HJW_CATS_LOADED = false;   // 海角分类按板块重载
+  document.documentElement.setAttribute('data-site', k);
+  renderSiteBar();       // ← 之前漏了这句: 按钮高亮不刷新
+  renderTabs();
+  goHome();
+}
+
+/* ===================== 统一取数层 ===================== */
+/**
+ * 三级降级取数据:
+ *   1. Worker API      (数据最全, 但 workers.dev 在国内被墙)
+ *   2. 前端直连上游     (hg-direct.js, 浏览器本地解析, 国内可用)
+ *   3. 抛错
+ *
+ * 黄豆短剧 (hd) 走它自己的 API + /api/hd 代理, 不参与上面的降级。
+ */
+function api(path, params) {
+  // ---- 黄豆短剧分支 ----
+  if (SITE === 'hd') return hdApi(path, params);
+
+  // ---- 海角网分支 ----
+  // 实测 (2026-10 runner): www.hjw01.com / hjw01.com **不发** Access-Control-Allow-Origin,
+  // 只有 CDN 边缘 hjw1.com 带 * —— 而那台是 8KB 空壳。
+  // 所以浏览器直连详情页会被 CORS 拦死, 必须走 Worker 的 /api/hjw/* 出网抓。
+  // 前端本地的 HJWW 模块只在 Worker 不可达时兜底 (那时多半也直连不通, 但值得一试)。
+  if (SITE === 'hjw') {
+    const p = params || {};
+    if (path === '/api/list') return hjwList(p);
+    if (path === '/api/search') return hjwSearch(p.q);
+    return hjwApi(path, p);
+  }
+
+  // ---- EROSHORT 分支 (上游挂 Cloudflare 校验, 取数统一走 Worker /api/es/*) ----
+  if (SITE === 'es') {
+    const p = params || {};
+    if (path === '/api/list') return esList(p);
+    if (path === '/api/search') return esSearch(p.q);
+    return esApi(path, p);
+  }
+
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+
+  // ---- 已经确定 Worker 不可用 → 直接走直连 ----
+  if (WORKER_OK === false) return directApi(path, params);
+
+  if (!API) {
+    WORKER_OK = false;
+    return directApi(path, params);
+  }
+
+  // 超时从 8s 降到 2.5s: workers.dev 被墙时是直接挂起, 等 8 秒用户以为卡死了
+  const TIMEOUT = (WORKER_OK === null) ? 2500 : 5000;
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctl) ctl.abort(); }, TIMEOUT);
+  const opts = { method: 'GET' };
+  if (ctl) opts.signal = ctl.signal;
+
+  return fetch(API + path + qs, opts).then(r => {
+    clearTimeout(timer);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    WORKER_OK = true;
+    return r.json();
+  }).catch(err => {
+    clearTimeout(timer);
+    // Worker 挂了 → 降级到直连
+    if (WORKER_OK !== true) {
+      WORKER_OK = false;
+      if (!MODE_TOLD) {
+        MODE_TOLD = true;
+        console.info('[湟果] Worker 不可达, 已切换到直连模式 (前端本地解析)');
+      }
+    }
+    // 二级: 前端直连上游
+    return directApi(path, params).catch(e2 => {
+      // 三级: 静态快照 (Actions 每 30 分钟抓好的 data/hg-list.json)
+      if (path === '/api/list') return hgListFallback(params, err || e2);
+      if (path === '/api/search') return hgSearchFallback((params && params.q) || '', err || e2);
+      throw (err || e2);
+    });
+  });
+}
+
+/* ===================== 海角网取数 ===================== */
+/**
+ * 海角网 (hjw01.com) —— UGC 社区, 帖子分「视频帖」和「图文帖」两种。
+ *
+ * 【为什么优先走 Worker】
+ *   实测: www.hjw01.com / hjw01.com 都不发 Access-Control-Allow-Origin,
+ *   浏览器 fetch 详情页会被 CORS 直接拦死。
+ *   所以取数走 Worker 的 /api/hjw/* (服务端出网, 不受 CORS 约束)。
+ *
+ * 【三级降级】
+ *   1. Worker /api/hjw/*  —— 正常路径
+ *   2. 前端直连 HJWW       —— 极少数边缘环境 (CDN 节点带 ACAO 时) 能成
+ *   3. 静态快照 data/hjw-list.json —— 上游整个挂了也不白屏 (只有索引, 无正文)
+ *
+ * 【关于「金币解锁」】
+ *   站点 GOLD_PAYMENT_ENABLED 恒为 true, 但那只是充值入口的开关。
+ *   实测 14 篇帖子的正文里 **不存在** 解锁/付费可见/购买后可见任何容器,
+ *   图片和 m3u8 全部明文返回。站点 schema.org 自己也写着
+ *   "isAccessibleForFree": true。→ 全部内容免费直取, 不做任何门槛。
+ *
+ * 【时效性】
+ *   m3u8 带 auth_key=<到期时间戳>-..., 每次访问详情页重新签发,
+ *   所以不能缓存死链 —— 每次播放都重新取一次详情。
+ */
+let HJW_CATS_LOADED = false;
+const CATS_HJW = [{ id: '', name: '首页' }];
+
+/* ===================== 海角图片解密 =====================
+ * 图床字节流是 AES-128-CBC 密文 (key/iv 来自站方 js_app.config.js 的 crypto.media_*),
+ * 原站由 z-image-loader 组件 fetch→解密→渲染; 直接 <img src> 拿到的是密文,
+ * 浏览器解析失败 → 显示 alt (标题文字) —— 老板看到的「图片内容是标题」就是这个。
+ * 图床发 ACAO:* , 浏览器可直接 fetch 密文自解; 明文图(万一站方改明文)直接用不折腾。 */
+const HJW_MEDIA_KEY = 'f5d965df75336270';
+const HJW_MEDIA_IV  = '97b60394abc2fbe1';
+const HJW_DEC = {};          // url -> dataURL (内存缓存)
+const HJW_BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+function u8ToWordArray(u8) {
+  const w = [];
+  for (let i = 0; i < u8.length; i++) {
+    w[i >>> 2] = (w[i >>> 2] || 0) | (u8[i] << (24 - (i % 4) * 8));
+  }
+  return CryptoJS.lib.WordArray.create(w, u8.length);
+}
+
+async function hjwDecryptImage(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return url;
+  if (HJW_DEC[url]) return HJW_DEC[url];
+  const r = await fetch(url, { mode: 'cors' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const b = new Uint8Array(await r.arrayBuffer());
+  // 明文图 (JPEG/PNG 头) 直接用
+  if ((b[0] === 0xff && b[1] === 0xd8) || (b[0] === 0x89 && b[1] === 0x50)) {
+    const blob = new Blob([b], { type: b[0] === 0x89 ? 'image/png' : 'image/jpeg' });
+    const u = URL.createObjectURL(blob);
+    HJW_DEC[url] = u;
+    return u;
+  }
+  const dec = CryptoJS.AES.decrypt(
+    { ciphertext: u8ToWordArray(b) },
+    CryptoJS.enc.Utf8.parse(HJW_MEDIA_KEY),
+    { iv: CryptoJS.enc.Utf8.parse(HJW_MEDIA_IV),
+      mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.NoPadding });
+  const out = 'data:image/jpeg;base64,' + dec.toString(CryptoJS.enc.Base64);
+  HJW_DEC[url] = out;
+  return out;
+}
+
+/** 单图绑定: 占位 → 解密 → 上图; 失败半透明占位 (alt 已空, 不出标题文字) */
+function hjwDecryptBind(im, url) {
+  im.setAttribute('data-dec', url);
+  im.src = HJW_BLANK;
+  im.onerror = function () { this.style.opacity = '0.35'; };
+  hjwDecryptImage(url).then(u => { im.src = u; im.style.opacity = ''; })
+    .catch(() => { im.style.opacity = '0.35'; });
+}
+
+/** 扫描页面上待解密图 (列表封面用 IntersectionObserver 懒解, 进视口才拉密文) */
+let HJW_ENC_IO = null;
+function hjwDecryptScan(root) {
+  const imgs = (root || document).querySelectorAll('img[data-hjwenc]:not([data-done])');
+  if (!imgs.length) return;
+  if (!('IntersectionObserver' in window)) {
+    imgs.forEach(im => { im.setAttribute('data-done', '1'); hjwDecryptBind(im, im.getAttribute('data-hjwenc')); });
+    return;
+  }
+  if (!HJW_ENC_IO) {
+    HJW_ENC_IO = new IntersectionObserver(es => {
+      es.forEach(e => {
+        if (!e.isIntersecting) return;
+        const im = e.target;
+        HJW_ENC_IO.unobserve(im);
+        hjwDecryptBind(im, im.getAttribute('data-hjwenc'));
+      });
+    }, { rootMargin: '300px' });
+  }
+  imgs.forEach(im => { im.setAttribute('data-done', '1'); HJW_ENC_IO.observe(im); });
+}
+
+/** 保证 hg-hjw.js 已加载 + 注入 Worker 代理地址 (降级路径用) */
+function hjwEnsure() {
+  if (typeof HJWW === 'undefined') {
+    return Promise.reject(new Error('海角模块未加载'));
+  }
+  if (API) HJWW.setProxy(API);
+  return (WORKER_OK === false)
+    ? HJWW.pickHost().then(() => HJWW)
+    : Promise.resolve(HJWW);
+}
+
+/** 海角启动探测: 3s 定型 Worker 可用性。
+ *  国内 workers.dev 被墙时不再让 hjwW 每层干等 20s 超时 ——
+ *  探完 WORKER_OK=false, 后续 hjwW 直接 0ms 走快照。 */
+let HJW_PROBE = null;
+function hjwProbe() {
+  if (HJW_PROBE) return HJW_PROBE;
+  HJW_PROBE = new Promise(resolve => {
+    if (!API || typeof fetch === 'undefined') { WORKER_OK = false; return resolve(false); }
+    const ctl = ('AbortController' in window) ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 3000);
+    const opts = { method: 'GET' };
+    if (ctl) opts.signal = ctl.signal;
+    fetch(API + '/api/version', opts).then(r => {
+      clearTimeout(timer);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(j => {
+      WORKER_OK = !!(j && j.build);
+      console.info('[湟果] 海角: Worker ' + (WORKER_OK ? '可达' : '异常, 走快照'));
+      resolve(WORKER_OK);
+    }).catch(() => {
+      clearTimeout(timer);
+      WORKER_OK = false;
+      console.info('[湟果] 海角: Worker 不可达, 走静态快照');
+      resolve(false);
+    });
+  });
+  return HJW_PROBE;
+}
+
+/** 调 Worker 的 /api/hjw/* */
+function hjwW(path, params) {
+  // 已探明 Worker 不可达 → 0ms 失败, 让降级链直接走快照, 不撞墙
+  if (WORKER_OK === false) return Promise.reject(new Error('Worker 不可达'));
+  const p = params || {};
+  const o = {};
+  Object.keys(p).forEach(k => { if (p[k] !== undefined && p[k] !== '') o[k] = p[k]; });
+  const qs = new URLSearchParams(o).toString();
+  const url = API + '/api/hjw' + path + (qs ? '?' + qs : '');
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  // 未探明时短超时 (3.5s, 配合 hjwProbe); 已探明可达才给长超时 (20s)
+  const TIMEOUT = (WORKER_OK === null) ? 3500 : 20000;
+  const timer = setTimeout(() => { if (ctl) ctl.abort(); }, TIMEOUT);
+  const opts = { method: 'GET' };
+  if (ctl) opts.signal = ctl.signal;
+  return fetch(url, opts).then(r => {
+    clearTimeout(timer);
+    if (!r.ok && r.status !== 502) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(j => {
+    clearTimeout(timer);
+    if (!j || j.ok === false) throw new Error((j && j.error) || '海角接口失败');
+    return j;
+  }).catch(e => {
+    clearTimeout(timer);
+    // 超时/网络层失败 → 记住不可达, 后续请求不再撞墙 (HTTP 4xx/5xx 不算, Worker 活着)
+    if (e && (e.name === 'AbortError' || e.name === 'TypeError')) WORKER_OK = false;
+    throw e;
+  });
+}
+
+/** 归一化单条 (列表/搜索共用) */
+function hjwNorm(x) {
+  return {
+    id: String(x.id),
+    title: x.title || '',
+    cover: x.cover || '',
+    date: x.date || '',
+    reply: x.reply || '',
+    views: x.views || '',
+    author: x.author || '',
+    isVideo: !!x.isVideo,
+    isArticle: x.isArticle === true,
+    imageCount: x.imageCount || 0,
+    chars: x.chars || 0,
+    epCount: 0,
+    _src: 'hjw'
+  };
+}
+
+function hjwList(params) {
+  const p = params || {};
+  const page = parseInt(p.page || '1', 10) || 1;
+
+  // 首次进海角: 先把兜底分类摆上 (tab 立刻可见)
+  if (!HJW_CATS_LOADED && !CATS_HJW.length) {
+    CATS_HJW.push({ id: '', name: '首页' });
+  }
+
+  const viaWorker = () => hjwW('/list', { cat: p.cat, page: page }).then(j => {
+    if (!HJW_CATS_LOADED && j.categories && j.categories.length) {
+      CATS_HJW.length = 0;
+      CATS_HJW.push({ id: '', name: '首页' });
+      j.categories.forEach(c => CATS_HJW.push({ id: c.slug, name: c.name }));
+      HJW_CATS_LOADED = true;
+      renderTabs();
+    }
+    const items = (j.items || []).map(hjwNorm);
+    // 首页/首屏空列表视为失败 —— 继续降级, 别拿空数据「假成功」糊住用户
+    if (!items.length && page === 1) throw new Error('worker 列表为空');
+    return { ok: true, source: 'hjw', page: page, items: items,
+             total: items.length, hasMore: items.length > 0 };
+  });
+
+  // 首页首屏: 走一次 /sections 拿楼层 (全 11 板块 + 推荐, 服务端分 3 批并发)
+  const viaSections = () => hjwW('/sections', { limit: 14 }).then(j => {
+    const secs = (j.sections || []).map(s => ({
+      slug: s.slug, name: s.name,
+      items: (s.items || []).map(hjwNorm)
+    }));
+    const items = [], seen = new Set();
+    secs.forEach(s => s.items.forEach(x => {
+      if (seen.has(x.id)) return;
+      seen.add(x.id); items.push(x);
+    }));
+    if (!items.length) throw new Error('sections 为空');
+    return { ok: true, source: 'hjw', page: 1, items: items,
+             sections: secs, total: items.length, hasMore: false };
+  });
+
+  // 降级 2: 静态快照 —— 实测 www/hjw01.com 不发 CORS 头, 浏览器直连必败,
+  // 所以列表链不再放「前端直连」层白等 pickHost; 快照 189 条随时有货。
+  const viaSnap = () => loadSnap('hjw-list').then(snap => {
+    if (!snap) return { ok: false, error: '海角暂不可达', items: [] };
+    if (p.cat) {
+      // 快照条目带 catId (slug, 逗号分隔多值), 按板块过滤; 没匹配上就回全量
+      const f = (snap.items || []).filter(x =>
+        String(x.catId || '').split(',').indexOf(p.cat) >= 0);
+      const its = (f.length ? f : snap.items).map(hjwNorm);
+      return { ok: true, source: 'hjw', page: 1, snapshot: true,
+               items: its, total: its.length, hasMore: false };
+    }
+    const its = (snap.items || []).map(hjwNorm).slice(0, 120);
+    return { ok: true, source: 'hjw', page: 1, snapshot: true,
+             items: its, total: its.length, hasMore: false };
+  });
+
+  // 首页首屏优先 sections; 其它情况先走 /list
+  const primary = (!p.cat && page === 1) ? viaSections() : viaWorker();
+
+  return primary
+    .catch(() => viaWorker().catch(viaSnap))
+    .catch(e => ({ ok: false, error: String((e && e.message) || e), items: [] }));
+}
+
+function hjwSearch(kw) {
+  kw = String(kw || '').trim();
+  if (!kw) return Promise.resolve({ ok: true, items: [] });
+  return hjwW('/search', { q: kw })
+    .then(j => ({ ok: true, source: 'hjw', keyword: kw,
+                  items: (j.items || []).map(hjwNorm) }))
+    .catch(() => loadSnap('hjw-list').then(snap => {
+      // 直连搜索同样被 CORS 拦死, 直接快照本地过滤
+      if (!snap) return { ok: false, error: '搜索不可用', items: [] };
+      const low = kw.toLowerCase();
+      const items = (snap.items || [])
+        .filter(x => (x.title || '').toLowerCase().indexOf(low) >= 0)
+        .map(hjwNorm);
+      return { ok: true, source: 'hjw', keyword: kw, snapshot: true, items };
+    }));
+}
+
+/** 海角详情: Worker 优先 → 前端直连 → 静态快照 (离线兜底) */
+async function hjwDetail(id) {
+  // 1) Worker (国内 workers.dev 常被墙, hjwW 已做探活定型)
+  try {
+    return await hjwW('/video', { id: id });
+  } catch (e1) {
+    // 2) 静态快照 —— 图文帖正文/图片都在快照里, 离线也能看完整内容。
+    //    放在直连前面: 直连被 CORS 拦死还会卡 pickHost, 不能耽误快照。
+    try {
+      const snap = await hjwSnapDetail(id);
+      if (snap) return snap;
+    } catch (e2) { /* 往下走 */ }
+    // 3) 浏览器直连 (竞速 3s: pickHost 逐个探镜像可能很慢, 不能等它)
+    try {
+      const d = await Promise.race([
+        hjwEnsure().then(() => HJWW.detail({ id: id })),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('直连超时')), 3000))
+      ]);
+      if (d && d.ok) return d;
+    } catch (e3) { /* 全失败 */ }
+    throw e1;
+  }
+}
+
+let _hjwSnapList = null;
+async function hjwSnapDetail(id) {
+  try {
+    if (!_hjwSnapList) {
+      const r = await fetch('data/hjw-list.json', { cache: 'force-cache' });
+      if (!r.ok) return null;
+      _hjwSnapList = await r.json();
+    }
+    const it = (_hjwSnapList.items || []).find(x => String(x.id) === String(id));
+    if (!it) return null;
+    // 相关推荐: 快照里挑同板块的其它帖
+    const rel = (_hjwSnapList.items || [])
+      .filter(x => String(x.id) !== String(id)
+                   && it.catName && x.catName === it.catName)
+      .slice(0, 6)
+      .map(x => ({ id: x.id, title: x.title, cover: x.cover }));
+    return {
+      ok: true, source: 'hjw-snap', offline: true,
+      id: String(it.id), title: it.title || '', cover: it.cover || '',
+      author: it.author || '', avatar: '', date: it.date || '',
+      views: it.views || '', tags: it.tags || [],
+      catName: it.catName || '', catId: it.catId || '',
+      artHtml: it.artHtml || '', artText: it.artText || '',
+      images: it.images || [], imageCount: it.imageCount || 0,
+      isVideo: !!it.isVideo, isArticle: !it.isVideo && (it.imageCount > 0 || !!it.artHtml),
+      m3u8: '', m3u8_h265: '',       // 时效签名, 快照里不放
+      payGated: false, related: rel,
+      pageUrl: 'https://www.hjw01.com/archives/' + it.id + '/'
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 通用取数: 目前只用到详情 */
+function hjwApi(path, params) {
+  const p = params || {};
+  if (path === '/api/video' || path === '/api/detail') {
+    return hjwDetail(p.id || p.vid);
+  }
+  if (path === '/api/ep') {
+    return hjwDetail(p.id || p.vid).then(d => ({
+      ok: !!d.m3u8, id: d.id, ep: String(p.ep || '1'), source: 'hjw',
+      raw: d.m3u8, url: hjwProxied(d.m3u8),
+      error: d.m3u8 ? '' : (d.isArticle ? '该帖为图文内容, 无视频' : '该帖不含视频')
+    }));
+  }
+  return Promise.reject(new Error('海角未实现的接口: ' + path));
+}
+
+/* ===================== EROSHORT 取数 ===================== */
+/**
+ * EROSHORT (eroshort.net) 取数层。
+ *
+ * 为什么不能直连:
+ *   站点挂 Cloudflare 人机校验 —— 裸 fetch /api/* 会被 403 拦 (返回挑战页)。
+ *   实测 Worker 出口在 CF 白名单内, 能正常拿到 JSON。
+ *   所以取数统一走 Worker 的 /api/es/* 转发 (见 worker.js 的 ES_API_BASE)。
+ *
+ * 上游接口 (REST, base = https://eroshort.net/api/v1):
+ *   GET  /browse/layouts/short            首页轮播 + 推荐
+ *   GET  /tags?schema=short_video...      分类标签
+ *   GET  /shorts?page=&page_size=&q=&tag= 列表 / 搜索
+ *   GET  /shorts/{id}                     详情
+ *   GET  /hierarchy/short_video/{id}/children   集数列表
+ *   GET  /playlines/episode/{epId}        播放线路
+ *   GET  /wallet/entitlement/{epId}       权限 (FREE_CONTENT 可直接播)
+ *   POST /playback/resolve                解析真实流地址
+ *
+ * 本地前端脚本 hg-es.js 已把上述契约封装好 (window.HGEs),
+ * 这里只负责: 走 Worker 前缀 + 快照兜底。
+ */
+let ES_CATS_LOADED = false;
+const CATS_MG = ES_CATS();            // 复用旧变量名, 减少改动面
+
+/** 默认分类表 (来自上游 /tags, 加"全部") */
+function ES_CATS() {
+  const base = [{ id: '', name: '全部' }];
+  const tags = (window.HGEs && window.HGEs.CATS) || [];
+  tags.forEach(t => base.push({ id: t.code, name: t.name }));
+  return base;
+}
+
+/** 动态刷新分类: 上游 /tags → 快照 data/es-cats.json → 内置兜底 */
+async function ES_CATS_REFRESH() {
+  if (window.HGEs && window.HGEs.refreshCats) {
+    try {
+      const r = await window.HGEs.refreshCats();
+      if (r && r.items && r.items.length) return r;
+    } catch (e) { /* 落到快照 */ }
+  }
+  try {
+    const res = await fetch('data/es-cats.json', { cache: 'no-cache' });
+    if (res.ok) {
+      const j = await res.json();
+      const rows = (j && j.categories) || [];
+      if (rows.length) {
+        return { ok: true, items: [{ id: '', name: '全部' }].concat(
+          rows.map(c => ({ id: c.code || c.slug || c.name, name: c.name }))) };
+      }
+    }
+  } catch (e) { /* 落到内置 */ }
+  return { ok: true, items: ES_CATS(), source: 'builtin' };
+}
+
+/**
+ * 走 Worker 取 JSON。
+ * Worker 把 CF 挑战页统一转成 {ok:false,error:"CF_CHALLENGE"}(502),
+ * 这里直接抛错, 由上层回退快照。
+ */
+function esApi(path, params) {
+  const p = params || {};
+  // path 形如 '/api/list' → 去掉前缀, 映射到上游子路径
+  let sub = path.replace(/^\/api\/?/, '');
+  const map = {
+    'list': '/shorts',
+    'video': '/shorts/' + encodeURIComponent(p.id || ''),
+    'ep': '/playlines/episode/' + encodeURIComponent(p.epId || p.id || ''),
+    'ent': '/wallet/entitlement/' + encodeURIComponent(p.id || ''),
+    'home': '/browse/layouts/short',
+    'tags': '/tags?schema=short_video&only_with_content=true',
+    'search': '/shorts',
+    'resolve': '/playback/resolve',
+  };
+  const target = map[sub] || ('/' + sub);
+
+  const q = {};
+  if (sub === 'list' || sub === 'search') {
+    if (p.page) q.page = p.page;
+    if (p.pageSize) q.page_size = p.pageSize;
+    if (p.cat) q.tag = p.cat;
+    if (p.q) q.q = p.q;
+    if (p.sort) q.sort = p.sort;
+  }
+  const qsStr = new URLSearchParams(q).toString();
+
+  const url = API + '/api/es' + target + (qsStr ? (target.indexOf('?') >= 0 ? '&' : '?') + qsStr : '');
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 18000);
+  const opts = { method: 'GET' };
+  if (ctl) opts.signal = ctl.signal;
+
+  return fetch(url, opts).then(r => {
+    clearTimeout(timer);
+    return r.json().catch(() => ({ ok: false, error: 'HTTP ' + r.status }));
+  }).catch(e => {
+    clearTimeout(timer);
+    throw e;
+  });
+}
+
+/**
+ * 静态快照兜底。
+ * 上游挂 CF 拦截 / Worker 不可达时, 读 data/es-list.json, 站点不白屏。
+ */
+const SNAP = {};   // { 'mg-list': {...}, ... }
+
+function loadSnap(name) {
+  if (SNAP[name]) return Promise.resolve(SNAP[name]);
+  const url = 'data/' + name + '.json';
+  return fetch(url, { cache: 'no-cache' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(j => {
+      if (!j) return null;
+      // es-detail.json 用的是 details 字段 (数组), 其余快照用 items
+      const has = (j.items && j.items.length) ||
+                  (j.plays && Object.keys(j.plays).length) ||
+                  (j.details && (Array.isArray(j.details) ? j.details.length : Object.keys(j.details).length));
+      if (has) { SNAP[name] = j; return j; }
+      return null;
+    })
+    .catch(() => null);
+}
+
+/**
+ * EROSHORT 取数策略: 快照优先, 实时增强。
+ *
+ * 为什么反过来:
+ *   eroshort.net 对所有数据中心出口 (Worker 边缘 / CI / 本地) 做 CF 硬拦,
+ *   唯一可用通道是公共 CORS 中转, 而中转限流是常态 → 实时请求命中率低。
+ *   若按"实时优先、失败兜底", 用户每次都要等超时再出内容, 体验差且常白屏。
+ *   所以并发发起实时请求 + 读快照:
+ *     · 实时先回 → 用实时的 (最新集数)
+ *     · 快照先回或实时失败 → 立刻渲染快照 (data/es-*.json 由 CI 定时抓)
+ *   两条路都不空手, 用户永远能看到内容。
+ */
+
+/** 快照里的标签可能是字符串数组或 {code,name} 数组 → 统一成 code 列表 */
+function esTagCodes(x) {
+  const t = x && x.tags;
+  if (!t) return [];
+  // 上游 tags 里混有前导空格 (' 校园'), 不 trim 会永远匹配不上分类 tab
+  const clean = v => String(typeof v === 'string' ? v : (v && (v.code || v.name)) || '').trim();
+  if (Array.isArray(t)) return t.map(clean).filter(Boolean);
+  if (typeof t === 'string') return t.split(/[,，\s]+/).map(clean).filter(Boolean);
+  return [];
+}
+
+/**
+ * 状态分类 (group=display_status) 在分类表里的 code 是 ongoing / completed,
+ * 但条目的 tags 里写的是中文名 "更新中" / "已完结" —— code 与 tag 文本不一致,
+ * 直接拿 code 去匹配 tags 会永远空。这里做 code → 中文名 的归一。
+ * 返回 null 表示不是状态分类。
+ */
+function esStatusTag(cat) {
+  const c = String(cat || '').trim().toLowerCase();
+  if (c === 'ongoing' || c === '更新中') return '更新中';
+  if (c === 'completed' || c === '已完结') return '已完结';
+  return null;
+}
+
+/**
+ * 从 es-detail 快照里按 id 取一条。
+ * CI 端写出的 details 是数组 [{id, detail:{...}} | {id, eps,...}],
+ * 历史版本写过对象 {id: {...}} —— 两种都兼容, 否则详情页会空。
+ *
+ * onlyWithEps: 默认 true。快照里有两种条目 —— 带集数表的 (能直接播) 和只有
+ * meta 的。只有 meta 的拿去当"命中", 详情页会没有剧集列表, 反而不如走列表卡片
+ * 分支 (至少标题/封面/标签是全的)。
+ */
+function esFindDetail(snap, id, onlyWithEps) {
+  if (!snap || !snap.details || !id) return null;
+  const needEps = onlyWithEps !== false;
+  const D = snap.details;
+  let hit = null;
+  if (Array.isArray(D)) {
+    const h = D.filter(x => x && x.id === id)[0];
+    hit = h ? (h.detail || h) : null;
+  } else {
+    hit = D[id] || null;
+  }
+  if (!hit) return null;
+  if (needEps && !(Array.isArray(hit.eps) && hit.eps.length)) return null;
+  return hit;
+}
+
+/**
+ * 在快照里按分类过滤。
+ * 注意大小写陷阱: 分类 code 是 "绿帽ntr", 但卡片的 tags 里是显示名 "绿帽NTR"。
+ * 直接 indexOf 会全空 → 必须大小写无关比较, 并同时比 name/code。
+ */
+function esFilterSnap(items, cat) {
+  if (!cat) return items;
+  const c = String(cat).trim().toLowerCase();
+  if (!c) return items;
+  // 状态分类单独走一条路: 否则 ongoing/completed 这两个 tab 永远是空的
+  const st = esStatusTag(c);
+  if (st) {
+    return items.filter(x => {
+      const codes = esTagCodes(x).map(v => String(v).toLowerCase());
+      return codes.indexOf(st.toLowerCase()) >= 0;
+    });
+  }
+  return items.filter(x => {
+    const codes = esTagCodes(x).map(v => String(v).toLowerCase());
+    if (codes.indexOf(c) >= 0) return true;
+    if ((x.title || '').toLowerCase().indexOf(c) >= 0) return true;
+    return false;
+  });
+}
+
+/** EROSHORT 搜索: 快照立即出, 实时结果到了再替换 */
+async function esSearch(kw) {
+  kw = String(kw || '').trim();
+  if (!kw) return { ok: true, items: [] };
+  const low = kw.toLowerCase();
+  const fromSnap = async () => {
+    const snap = await loadSnap('es-list');
+    if (!snap) return null;
+    const items = snap.items.filter(x => (x.title || '').toLowerCase().indexOf(low) >= 0);
+    return { ok: true, items, snapshot: true, source: 'es' };
+  };
+  const snap = await fromSnap();
+  if (snap && snap.items.length) return snap;   // 快照命中: 不等网络
+  try {
+    const j = await esApi('/api/list', { q: kw, pageSize: 12 });
+    if (j && j.items && j.items.length) return { ok: true, items: j.items, source: 'es' };
+    throw new Error('空结果');
+  } catch (e) {
+    return snap || { ok: true, items: [], snapshot: true, source: 'es' };
+  }
+}
+
+/**
+ * EROSHORT 列表: 快照优先, 实时后台升级。
+ *
+ * 为什么不让"实时优先":
+ *   Worker 侧每个中继要等 15-20s 超时, 4 个中继串行 = 用户白等 60-80s 才看到
+ *   兜底快照。数据中心出口几乎必被 CF 拦, 实时命中率极低。
+ *   改成立刻读本地 data/es-list.json (同源静态资源, 毫秒级), 实时请求丢到
+ *   后台跑, 回来了再回调升级 UI —— 用户永远秒见内容。
+ */
+async function esList(params) {
+  const cat = (params && params.cat) || '';
+  const page = (params && params.page) || 1;
+  const pageSize = Math.max(1, Math.min(48, (params && params.pageSize) || 48));
+  const snap = await loadSnap('es-list');
+  if (snap && snap.items && snap.items.length) {
+    let items = esFilterSnap(snap.items, cat);
+    const off = (page - 1) * pageSize;
+    const slice = items.slice(off, off + pageSize);
+    // 后台升级: 实时拿到了就通知调用方 (不阻塞本次返回)
+    esListLive(cat, page, pageSize).catch(() => {});
+    return {
+      ok: true, items: slice, snapshot: true, source: 'es',
+      total: items.length, page, hasMore: off + pageSize < items.length,
+    };
+  }
+  // 没快照 (首次部署 / 快照丢失) → 只能等实时
+  try {
+    const j = await esApi('/api/list', { cat, page, pageSize });
+    if (j && j.items && j.items.length) return j;
+    throw new Error((j && j.error) || '空结果');
+  } catch (e) {
+    return { ok: true, items: [], snapshot: true, source: 'es', page, hasMore: false };
+  }
+}
+
+/** 后台实时请求: 结果只用于刷新缓存, 失败静默 */
+let _esLiveAt = 0;
+async function esListLive(cat, page, pageSize) {
+  const now = Date.now();
+  if (now - _esLiveAt < 60000) return null;   // 60s 内不重复打
+  _esLiveAt = now;
+  try {
+    const j = await esApi('/api/list', { cat, page, pageSize });
+    if (j && j.items && j.items.length) {
+      SNAP['es-list-live'] = j;
+      return j;
+    }
+  } catch (e) { /* 静默 */ }
+  return null;
+}
+
+/** 预取快照 (进 ERO 板块时调用), 让首屏不用等网络超时 */
+function esWarmSnap() {
+  loadSnap('es-list').catch(() => {});
+  loadSnap('es-detail').catch(() => {});
+}
+
+/** EROSHORT 分类懒加载: 拉一次上游 /tags (失败回退 data/es-cats.json), 再重绘 tab */
+async function loadMgCats() {
+  if (ES_CATS_LOADED || SITE !== 'es') return;
+  ES_CATS_LOADED = true;          // 先置位, 防止并发重入
+  try {
+    const r = await ES_CATS_REFRESH();
+    if (r && r.items && r.items.length) {
+      CATS_MG.length = 0;
+      CATS_MG.push(...r.items);
+    } else if (!CATS_MG.length) {
+      CATS_MG.push(...ES_CATS());
+    }
+  } catch (e) {
+    if (!CATS_MG.length) CATS_MG.push(...ES_CATS());
+  }
+  renderTabs();
+}
+
+
+/* ---------- EROSHORT: 详情 / 播放 桥接 ---------- */
+/**
+ * 详情 + 集数表。
+ * 上游需要两次请求 (详情 /shorts/{id} + 集数 /hierarchy/.../children),
+ * 这里在 Worker 侧合并成一次返回, 前端只发一跳。
+ *
+ * Worker 返回结构: { ok, meta:{id,title,cover,tags,description,...}, eps:[{id,ep,label,title,free}] }
+ */
+async function esVideo(id) {
+  // 快照优先: data/es-detail.json 是本项目自身静态资源, 毫秒级返回, 不等上游。
+  const snap = await loadSnap('es-detail');
+  const d = esFindDetail(snap, id);
+  if (d && d.eps && d.eps.length) {
+    esVideoLive(id).catch(() => {});   // 后台升级
+    return {
+      ok: true,
+      meta: {
+        id: id,
+        title: d.title || '',
+        cover: d.cover || '',
+        epTotal: d.eps.length,
+        ...(d.meta || {}),
+      },
+      eps: d.eps.map((x, i) => ({
+        id: x.id,
+        ep: x.ep || i + 1,
+        label: x.label || ('第' + (x.ep || i + 1) + '集'),
+        title: x.title || '',
+        free: null,
+      })),
+      snapshot: true,
+      source: 'es',
+    };
+  }
+  // 详情缺失或无集数 → 至少用列表快照的卡片信息, 别让页面空着
+  const lst = await loadSnap('es-list');
+  const c = lst && (lst.items || []).filter(x => x.id === id)[0];
+  // 顺便捞一下只有 meta 的详情条目 (无 eps), 标题/简介可能比列表更全
+  const dm = esFindDetail(snap, id, false);
+  if (c || dm) {
+    esVideoLive(id).catch(() => {});
+    return {
+      ok: true, snapshot: true, source: 'es', eps: [],
+      meta: {
+        id: id,
+        title: (c && c.title) || (dm && dm.title) || '',
+        cover: (c && c.cover) || (dm && dm.cover) || '',
+        tags: (c && c.tags) || [],
+        description: (dm && dm.desc) || (c && c.desc) || '',
+        epTotal: (c && c.epCount) || (dm && dm.epTotal) || 0,
+        views: (c && c.views) || (dm && dm.views) || 0,
+      },
+    };
+  }
+  // 连快照都没有 → 只能实时 (首次部署 / 快照丢失)
+  try {
+    const j = await esApi('/api/video', { id });
+    if (j && j.ok) return { ok: true, meta: j.meta || {}, eps: j.eps || [], source: 'es' };
+    throw new Error((j && j.error) || '详情失败');
+  } catch (e) {
+    if (d) return { ok: true, meta: d, eps: [], snapshot: true, source: 'es' };
+    throw e;
+  }
+}
+
+/** 后台实时详情: 结果写入 SNAP 供后续复用, 失败静默 */
+let _esVidLiveAt = {};
+async function esVideoLive(id) {
+  const now = Date.now();
+  if (_esVidLiveAt[id] && now - _esVidLiveAt[id] < 120000) return null;
+  _esVidLiveAt[id] = now;
+  try {
+    const j = await esApi('/api/video', { id });
+    if (j && j.ok && j.eps && j.eps.length) return j;
+  } catch (e) { /* 静默 */ }
+  return null;
+}
+
+/**
+ * 取某一集的可播信息。
+ * 返回 { ok, locked, url, format, free, reason }
+ *  - 免费集: resolve 后拿到真实流地址 (direct 直连 / hls 走 hls.js)
+ *  - 付费集: locked, 给原站跳转
+ */
+/**
+ * ERO 静态播放快照 (data/es-play/<剧id>.json, 同源)
+ *
+ * 为什么必须有这一路:
+ *   ERO 播放必须先 POST /api/v1/playback/resolve 拿授权, 而只有本站 Worker 的
+ *   出口能过上游的风控。问题是 *.workers.dev 在国内被 DNS 污染 + SNI 封禁 ——
+ *   浏览器根本连不上 Worker, 于是国内直连时"实时解析"必然失败,
+ *   表现就是点开任意一集都不出画面。
+ *
+ *   静态快照由 CI 侧 (runner 能到 Worker) 生成, 落在同源的 data/es-play/ 下。
+ *   它已经带好 license 与**去掉 grant 的分片地址** —— 上游 R2 公共桶不校验 grant,
+ *   而 r2.dev 国内可达, 所以分片能浏览器直连。
+ *
+ *   全程 0 次实时上游请求 → 国内直连可用, 而且比实时路径更快。
+ */
+const _ES_STATIC = {};
+
+async function esEpStatic(dramaId, epId) {
+  if (!dramaId || !epId) return null;
+  let m = _ES_STATIC[dramaId];
+  if (m === undefined) {
+    try {
+      const r = await fetch('data/es-play/' + dramaId + '.json', { cache: 'no-cache' });
+      m = r.ok ? await r.json() : null;
+    } catch (e) { m = null; }
+    _ES_STATIC[dramaId] = m;
+  }
+  const rec = m && m.eps && m.eps[epId];
+  if (!rec || !rec.license) return null;
+  return {
+    ok: true, locked: false, format: 'stego_hls',
+    m3u8: rec.m3u8 || null,
+    url: null,
+    license: rec.license,
+    mediaId: rec.mediaId || null,
+    assetVersion: rec.variantId || null,
+    free: true, snapshot: true,
+  };
+}
+
+/**
+ * ERO 单集解析: 实时 (Worker) → 静态快照 双路。
+ *
+ * 顺序说明:
+ *   Worker 可用时先用实时 (最新, 秒回); 不可用直接读静态, 不做无意义的超时等待。
+ *   实时拿到 netError 时同样落静态 —— 直连国内时这就是常态。
+ */
+async function esResolveEp(dramaId, ep, epId) {
+  if (WORKER_OK !== false) {
+    try {
+      const r = await esEp(epId);
+      if (r && r.locked) return r;
+      if (r && r.ok && (r.url || r.m3u8)) return r;
+    } catch (e) { /* 落到静态 */ }
+  }
+  const s = await esEpStatic(dramaId, epId);
+  if (s) return s;
+  try { return await esEp(epId); }
+  catch (e) { return { ok: false, locked: false, netError: true, reason: 'unreachable' }; }
+}
+
+async function esEp(epId) {
+  let j = null;
+  try {
+    j = await esApi('/api/ep', { epId });
+  } catch (e) {
+    // Worker 不可达 / 超时 —— 这是网络故障, 不是"付费锁定", 必须区分开
+    return { ok: false, locked: false, netError: true, reason: 'worker_unreachable' };
+  }
+  if (!j) return { ok: false, locked: false, netError: true, reason: 'empty_response' };
+
+  // Worker/上游判定的真·锁定 (付费、VIP、登录) 才走 locked 分支
+  if (j.ok === false && j.locked === true) {
+    return { ok: false, locked: true, reason: j.reason || 'no_source' };
+  }
+  // 502 / CF_CHALLENGE / BAD_UPSTREAM 等 —— 上游被拦或中转限流, 属网络层
+  if (j.ok === false && (j.error === 'CF_CHALLENGE' || j.error === 'BAD_UPSTREAM' || j.error)) {
+    return { ok: false, locked: false, netError: true, reason: j.error, via: j.via || '' };
+  }
+  if (!j.ok) return { ok: false, locked: false, netError: true, reason: j.reason || 'unknown' };
+
+  if (j.url) {
+    if (j.format === 'stego_hls' && j.stego && j.stego.license) {
+      return {
+        ok: true, locked: false, format: 'stego_hls', url: j.url,
+        license: j.stego.license, mediaId: j.mediaId || (j.stego && j.stego.media_id) || null,
+        assetVersion: j.assetVersion || (j.stego && j.stego.variant_id) || null,
+        expiresAt: j.expiresAt || null, free: true,
+      };
+    }
+    return { ok: true, locked: false, url: j.url, format: j.format || 'direct', free: true };
+  }
+  return { ok: true, locked: false, pending: true, playline: j.playline, free: !!j.free };
+}
+
+/* ---------- 黄果: 上游锁状态 (由 Actions 每 30 分钟探测写入) ---------- */
+// { free_ok: true, ep2_ok: true|false, ep_count: N, host: "..." }
+let HG_LOCK = null;
+let HG_LOCK_LOADED = false;
+
+async function loadHgLock() {
+  if (HG_LOCK_LOADED) return HG_LOCK;
+  HG_LOCK_LOADED = true;
+  try {
+    const r = await fetch('data/hg-lock.json', { cache: 'no-cache' });
+    if (r.ok) { const j = await r.json(); if (j && typeof j === 'object') HG_LOCK = j; }
+  } catch (e) { /* 没有就算了, 默认当免费 */ }
+  return HG_LOCK;
+}
+
+/** 黄果列表: Worker → 直连 → 静态快照 三级 */
+async function hgListFallback(params, err) {
+  const cat = (params && params.cat) || '';
+  const snap = await loadSnap('hg-list');
+  if (!snap) throw err;
+  let items = snap.items || [];
+  if (cat) {
+    const f = items.filter(x => (x.cats || []).indexOf(cat) >= 0);
+    if (f.length) items = f;
+  }
+  return { ok: true, items, snapshot: true, source: 'hg' };
+}
+
+/** 黄果搜索: 失败时用快照本地过滤 */
+async function hgSearchFallback(kw, err) {
+  const low = String(kw || '').toLowerCase();
+  const snap = await loadSnap('hg-list');
+  if (!snap) throw err;
+  const items = (snap.items || []).filter(x =>
+    (x.title || '').toLowerCase().indexOf(low) >= 0 ||
+    (Array.isArray(x.tags) ? x.tags.join(' ') : '').toLowerCase().indexOf(low) >= 0);
+  return { ok: true, items, snapshot: true, source: 'hg' };
+}
+
+/* ===================== 黄豆短剧取数 ===================== */
+/**
+ * 指定来源取数 (全站搜索用):
+ *   apiOf('hd', '/api/video', {id})  → 无论当前在哪个板块, 都走黄豆
+ *   apiOf('hg', '/api/video', {id})  → 都走黄果
+ * 和 api() 的区别只是 api() 跟随当前板块。
+ */
+function apiOf(src, path, params) {
+  if (src === 'hd') return hdApi(path, params);
+  if (src === 'es') return esApi(path, params);
+  if (SITE === 'hg') return api(path, params);
+  // 当前不在黄果板块但要取黄果的数据: 临时切一下再切回来, 避免污染全局状态
+  const keep = SITE;
+  SITE = 'hg';
+  const p = api(path, params);
+  SITE = keep;
+  return p;
+}
+
+/**
+ * 优先走 Worker 的 /api/hd/* 代理 (绕过可能的 CORS / 网络问题),
+ * Worker 不可用则直接调官方 API (它带 CORS 头)。
+ */
+function hdApi(path, params) {
+  if (typeof HDHd === 'undefined') return Promise.reject(new Error('黄豆短剧模块未加载'));
+  const p = params || {};
+
+  // Worker 代理优先 (已验证 WORKER_OK===false 时跳过)
+  if (WORKER_OK !== false && API) {
+    const map = {
+      '/api/list': '/api/hd/list',
+      '/api/search': '/api/hd/search',
+      '/api/video': '/api/hd/video',
+      '/api/categories': '/api/hd/categories',
+      '/api/rankings': '/api/hd/rankings',
+      '/api/wishes': '/api/hd/wishes',
+      '/api/health': '/api/hd/health',
+    };
+    const hp = map[path];
+    if (hp) {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+      return fetch(API + hp + qs, { method: 'GET' }).then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).catch(() => hdDirect(path, p));
+    }
+  }
+  return hdDirect(path, p);
+}
+
+function hdDirect(path, p) {
+  try {
+    if (path === '/api/list')       return HDHd.list(p);
+    if (path === '/api/search')     return HDHd.search(p.q, p.page);
+    if (path === '/api/video')      return HDHd.video(p.id);
+    if (path === '/api/categories') return HDHd.categories();
+    if (path === '/api/rankings')   return HDHd.rankings(p.page);
+    if (path === '/api/wishes')     return HDHd.wishes(p.page);
+    if (path === '/api/health')     return HDHd.probe();
+  } catch (e) {
+    return Promise.reject(e);
+  }
+  return Promise.reject(new Error('未知接口: ' + path));
+}
+
+// 轻量提示
+let TOAST_T = null;
+function toast(msg) {
+  let el = document.getElementById('hgtoast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'hgtoast';
+    el.className = 'hgtoast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(TOAST_T);
+  TOAST_T = setTimeout(() => el.classList.remove('on'), 1800);
+}
+
+/**
+ * 前端直连上游 (走 hg-direct.js)
+ * 把 /api/xxx 映射到 HGDirect 的对应方法
+ */
+function directApi(path, params) {
+  if (typeof HGDirect === 'undefined') {
+    return Promise.reject(new Error('直连模块未加载'));
+  }
+  const p = params || {};
+  try {
+    if (path === '/api/list')   return HGDirect.list(p);
+    if (path === '/api/search') return HGDirect.search(p.q);
+    if (path === '/api/video')  return HGDirect.video(p.id);
+    if (path === '/api/ep')     return HGDirect.ep(p.id, p.ep);
+    if (path === '/api/health') return HGDirect.probe();
+  } catch (e) {
+    return Promise.reject(e);
+  }
+  return Promise.reject(new Error('未知接口: ' + path));
+}
+
+/**
+ * 启动探测: 并行试 Worker 和直连, 谁先成功用谁
+ * 这样国内用户不用等 workers.dev 超时。
+ */
+let BOOT_PROBE = null;
+function bootProbe() {
+  if (BOOT_PROBE) return BOOT_PROBE;
+
+  function tryWorker() {
+    if (!API || typeof fetch === 'undefined') return Promise.reject(new Error('无 API'));
+    const ctl = ('AbortController' in window) ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 3000);
+    const opts = { method: 'GET' };
+    if (ctl) opts.signal = ctl.signal;
+    return fetch(API + '/api/health', opts).then(r => {
+      clearTimeout(timer);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(j => {
+      if (!j || j.ok !== true) throw new Error('health 异常');
+      return { mode: 'worker', ms: 0 };
+    }).catch(e => { clearTimeout(timer); throw e; });
+  }
+
+  function tryDirect() {
+    if (typeof HGDirect === 'undefined') return Promise.reject(new Error('无直连模块'));
+    const t0 = Date.now();
+    return HGDirect.probe().then(r => {
+      if (!r || !r.ok || !r.count) throw new Error(r && r.error || '直连探测失败');
+      return { mode: 'direct', ms: Date.now() - t0, count: r.count };
+    });
+  }
+
+  BOOT_PROBE = new Promise(resolve => {
+    let settled = false;
+    const done = (m) => { if (!settled) { settled = true; resolve(m); } };
+
+    tryWorker().then(m => {
+      WORKER_OK = true;
+      if (!MODE_TOLD) { MODE_TOLD = true; console.info('[湟果] 使用 Worker 模式'); }
+      done(m);
+    }).catch(() => {
+      // Worker 失败不立即降级, 等直连结果
+    });
+
+    tryDirect().then(m => {
+      if (!settled) {
+        WORKER_OK = false;
+        if (!MODE_TOLD) { MODE_TOLD = true; console.info('[湟果] 使用直连模式 (' + m.ms + 'ms, ' + m.count + ' 条)'); }
+      }
+      done(m);
+    }).catch(() => {
+      if (!settled) {
+        // 两个都失败, 标记直连并让后续请求自己报错
+        WORKER_OK = false;
+      }
+    });
+
+    // 兜底: 4 秒还没结果就别拦着了
+    setTimeout(() => done({ mode: 'timeout' }), 4000);
+  });
+
+  return BOOT_PROBE;
+}
+
+
+/* ===================== 状态 ===================== */
+// 黄果短剧的分类
+const CATS_HG = [['','推荐'],['ai-duanju','AI短剧'],['ai-manju','AI漫剧'],['ai-huanlian','AI换脸'],['ai-mogai','AI魔改'],['chigua','吃瓜'],['topics','专题']];
+// 黄豆短剧的分类 (从 API 动态拉, 这里是首屏兜底)
+const CATS_HD = [];
+let CATS = CATS_HG;
+let curCat = '', curPage = 1;
+
+const esc = s => (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app = () => document.getElementById('app');
+
+function renderTabs() {
+  const el = document.getElementById('tabs');
+  if (SITE === 'hd') {
+    el.innerHTML = CATS_HD.map(c =>
+      '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
+      esc(c.name) + (c.children && c.children.length ? '<i class="tabsup">' + c.children.length + '</i>' : '') + '</div>'
+    ).join('');
+    return;
+  }
+  if (SITE === 'es') {
+    const list = CATS_MG.length ? CATS_MG : [{ id: '', name: '全部' }];
+    el.innerHTML = list.map(c =>
+      '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
+      esc(c.name) + '</div>').join('');
+    return;
+  }
+  if (SITE === 'hjw') {
+    const list = CATS_HJW.length ? CATS_HJW : [{ id: '', name: '全部' }];
+    el.innerHTML = list.map(c =>
+      '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
+      esc(c.name) + '</div>').join('');
+    return;
+  }
+  el.innerHTML = CATS.map(([k, n]) =>
+    '<div class="tab' + (curCat === k ? ' on' : '') + '" onclick="pickCat(\'' + k + '\')">' + n + '</div>').join('');
+}
+function pickCat(k) { curCat = k; curPage = 1; renderTabs(); goHome(); }
+
+// 黄豆短剧分类懒加载 (只拉一次) —— 用 slug 做筛选键
+let HD_CATS_LOADED = false;
+async function loadHdCats() {
+  if (HD_CATS_LOADED || SITE !== 'hd') return;
+  try {
+    const cats = await api('/api/categories');
+    if (!cats || !cats.length) return;
+    CATS_HD.length = 0;
+    CATS_HD.push({ id: '', name: '全部' });
+    cats.forEach(c => {
+      CATS_HD.push({ id: c.slug, name: c.name, children: c.children || [] });
+      (c.children || []).forEach(ch => CATS_HD.push({ id: ch.slug, name: c.name + '·' + ch.name }));
+    });
+    HD_CATS_LOADED = true;
+    renderTabs();
+  } catch (e) { /* 分类拉不动不影响列表 */ }
+}
+
+/* ===================== 列表 (无限滚动) ===================== */
+let LOADING_MORE = false;
+let HAS_MORE = true;
+const MAX_PAGES = 20;              // 黄果: 上游 114 页, 但滚到 20 页够了
+
+// 黄豆短剧 985 部 / 每页 20 ≈ 50 页; 黄果保持 20 页上限
+function maxPages() { return SITE === 'hd' ? 60 : MAX_PAGES; }
+
+/**
+ * 视图令牌: 每次导航 (首页/搜索/详情/切站) 自增。
+ * 异步请求回来时如果令牌变了, 就丢弃结果 —— 防止"慢的旧请求覆盖新页面"。
+ */
+let VIEW_TOKEN = 0;
+function newView() { return ++VIEW_TOKEN; }
+function stale(t) { return t !== VIEW_TOKEN; }
+
+/* ===================== 返回键接管 =====================
+ * 进详情页 pushState 一层; 手机物理返回/手势返回触发 popstate → 回列表,
+ * 不再直接退出网站。顶部「‹ 返回列表」按钮走 goBack() 同一条路。 */
+let VIEW_DETAIL = false;
+function pushDetailState() {
+  VIEW_DETAIL = true;
+  try { history.pushState({ hg: 'detail' }, '', location.href); } catch (e) {}
+}
+function goBack() {
+  if (VIEW_DETAIL) history.back();   // popstate 统一处理
+  else goHome();
+}
+window.addEventListener('popstate', () => {
+  if (VIEW_DETAIL) {
+    VIEW_DETAIL = false;
+    goHome();
+  }
+});
+
+async function goHome() {
+  VIEW_DETAIL = false;   // 任意入口回列表都清掉详情标记, 防 popstate 循环
+  const T = newView();
+  app().innerHTML = '<div class="load"><span class="spin"></span>加载中…</div>';
+  LOADING_MORE = false;
+  HAS_MORE = true;
+  curPage = 1;
+  try {
+    // 首屏先等探测结果 (谁快用谁), 避免国内用户白等 workers.dev 超时
+    if (SITE === 'hg' && WORKER_OK === null) await bootProbe();
+    // 黄豆短剧: 先拉分类
+    if (SITE === 'hd' && !HD_CATS_LOADED) await loadHdCats();
+    // EROSHORT: 先预热快照 + 拉分类 (上游走公共中转, 命中率不稳, 快照是主源)
+    if (SITE === 'es') { esWarmSnap(); if (!ES_CATS_LOADED) await loadMgCats(); }
+    // 海角: 先 3s 探测定型 Worker 可用性 (探不到直接快照, 不干等超时)
+    if (SITE === 'hjw' && WORKER_OK === null) await hjwProbe();
+    const j = await api('/api/list', { cat: curCat, page: 1 });
+    if (stale(T)) return;                     // 期间用户已经切走/点进详情
+    if (!j.items || !j.items.length) { app().innerHTML = '<div class="err">没有内容，稍后再试</div>'; return; }
+    if (SITE === 'hg') applyCoverCache(j.items);
+    SEEN_IDS = new Set(j.items.map(x => String(x.id)));
+
+    // ---- 海角首页: 分区楼层 (复刻源站) ----
+    if (SITE === 'hjw' && j.sections && j.sections.length) {
+      const secs = j.sections.filter(s => s.items && s.items.length);
+      app().innerHTML = secs.map(s => {
+        const cards = s.items.map(x => cardHtml(Object.assign({}, x, { site: 'hjw' }))).join('');
+        return '<section class="hjwsect">' +
+          '<div class="hjwsect-h"><b>' + esc(s.name) + '</b>' +
+            '<span class="more" onclick="pickCat(\'' + esc(s.slug) + '\')">更多 ›</span>' +
+          '</div>' +
+          '<div class="grid hjwgrid">' + cards + '</div>' +
+          '</section>';
+      }).join('') +
+      '<div class="sentinel" id="sentinel"><span id="sentineltxt">共 ' + secs.length + ' 个板块</span></div>';
+      HAS_MORE = false;
+      hjwDecryptScan();
+      installScrollTop();
+      return;
+    }
+
+    const gridCls = (SITE === 'hjw') ? 'grid hjwgrid' : 'grid';
+    app().innerHTML =
+      '<div class="' + gridCls + '" id="grid">' + j.items.map(cardHtml).join('') + '</div>' +
+      '<div class="sentinel" id="sentinel"><span class="spin"></span><span id="sentineltxt">向下滚动加载更多</span></div>';
+    if (SITE === 'hg') fillMissingCovers(j.items);
+    if (SITE === 'hjw') hjwDecryptScan();
+    // EROSHORT: 单页全量返回, 无分页, 直接标记到底
+    if (SITE === 'es') {
+      HAS_MORE = false;
+      const s = document.getElementById('sentineltxt');
+      if (s) s.textContent = '共 ' + SEEN_IDS.size + ' 部（' + (curCat || '全部') + '）';
+    }
+    setupInfinite();
+    installScrollTop();
+  } catch (e) { if (!stale(T)) showErr(e); }
+}
+
+let SEEN_IDS = new Set();
+
+// 加载下一页, 追加到列表末尾
+async function loadMore() {
+  if (LOADING_MORE || !HAS_MORE) return;
+  if (curPage >= maxPages()) {
+    HAS_MORE = false;
+    const s = document.getElementById('sentineltxt');
+    if (s) s.textContent = '已经到底了（共 ' + SEEN_IDS.size + ' 部）';
+    return;
+  }
+  LOADING_MORE = true;
+  const st = document.getElementById('sentineltxt');
+  if (st) st.textContent = '正在加载…';
+  try {
+    const next = curPage + 1;
+    // 黄豆短剧用 slug 筛选; 黄果用 cat
+    const j = await api('/api/list', (SITE === 'hd' && curCat !== '')
+      ? { cat: curCat, page: next }
+      : { cat: curCat, page: next });
+    const items = (j.items || []).filter(x => x && !SEEN_IDS.has(String(x.id)));
+    if (!items.length) {
+      // 这一页全是已见过的 (上游分页有重叠), 直接跳下一页继续试
+      curPage = next;
+      if (next >= maxPages()) {
+        HAS_MORE = false;
+        if (st) st.textContent = '已经到底了（共 ' + SEEN_IDS.size + ' 部）';
+      }
+      return;
+    }
+    items.forEach(x => SEEN_IDS.add(String(x.id)));
+    applyCoverCache(items);
+    const grid = document.getElementById('grid');
+    if (grid) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = items.map(cardHtml).join('');
+      while (tmp.firstChild) grid.appendChild(tmp.firstChild);
+    }
+    fillMissingCovers(items);
+    if (SITE === 'hjw') hjwDecryptScan();
+    curPage = next;
+    if (st) st.textContent = '已加载 ' + SEEN_IDS.size + ' 部，继续下滑';
+  } catch (e) {
+    HAS_MORE = false;
+    if (st) st.textContent = '加载失败，稍后再试';
+  } finally {
+    LOADING_MORE = false;
+  }
+}
+
+// 用 IntersectionObserver 监听底部哨兵
+let OBS = null;
+function setupInfinite() {
+  if (OBS) { OBS.disconnect(); OBS = null; }
+  if (!('IntersectionObserver' in window)) {
+    // 老浏览器降级: 监听滚动
+    window.onscroll = () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 600) loadMore();
+    };
+    return;
+  }
+  window.onscroll = null;
+  const sentinel = document.getElementById('sentinel');
+  if (!sentinel) return;
+  OBS = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (en.isIntersecting) loadMore();
+    }
+  }, { rootMargin: '600px 0px' });
+  OBS.observe(sentinel);
+}
+
+// 回到顶部按钮
+function installScrollTop() {
+  let btn = document.getElementById('totop');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'totop';
+    btn.innerHTML = '↑';
+    btn.title = '回到顶部';
+    btn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.body.appendChild(btn);
+  }
+  const show = () => {
+    const b = document.getElementById('totop');
+    if (!b) return;
+    const inList = document.getElementById('grid');
+    b.style.display = (inList && window.scrollY > 600) ? 'block' : 'none';
+  };
+  window.removeEventListener('scroll', show);
+  window.addEventListener('scroll', show, { passive: true });
+  show();
+}
+
+function pg(d) { /* 已改为无限滚动, 保留兼容 */ }
+
+/**
+ * 封面 URL 包装
+ * 黄果的封面在 pic.wirqed.cn (带 auth_key), 虽然返回 ACAO:* 但有些网络环境
+ * 会被运营商拦截 / 混合内容拦。走 Worker /img 代理最稳; Worker 不可达时用原图。
+ */
+function coverUrl(u, src) {
+  if (!u) return '';
+  const s = String(u).trim();
+  if (!/^https?:\/\//i.test(s)) return s;
+  // 占位图直接透传, 没必要代理
+  if (/cover-placeholder|placeholder\.(png|webp)/i.test(s)) return s;
+
+  const cur = src || SITE;
+
+  // 黄豆的封面是 CloudFront, 直连就很好, 不折腾
+  if (cur === 'hd') return s;
+
+  // EROSHORT: 封面在 Cloudflare R2 公开桶 (pub-*.r2.dev), 无防盗链,
+  // <img> 不受 CORS 限制, 直接原图最稳 —— 走代理反而多一跳。
+  if (cur === 'es') {
+    return s;
+  }
+
+  // 海角: 图片床 pic.wlwvch.cn 无防盗链 + 国内直连通 + <img> 不受 CORS 限制,
+  // 直接原图 —— 走 /proxy/ 反而在 Worker 被墙时挂起/失败 (实测 proxy 透传有问题)
+  if (cur === 'hjw') {
+    return s;
+  }
+
+  // 黄果: 封面是 AES 加密的, 必须走 /img 解密
+  if (typeof API === 'string' && API && WORKER_OK !== false) {
+    return API + '/img?u=' + encodeURIComponent(s);
+  }
+  return s;
+}
+
+/**
+ * 卡片渲染
+ * it.site 可选: 'hg' | 'hd' — 全站搜索结果里每条自带来源, 点进去才知道该走哪个播放器。
+ * 不传就用当前板块 SITE。
+ */
+function cardHtml(it) {
+  const src = it.site || SITE;
+  const cv = coverUrl(it.cover, src);
+  // data-hg="1" 会让 onerror 直接认输 (黄果封面是 AES 加密的, 直连必失败)。
+  // ERO 封面是 R2 公链, 无防盗链, 直连通常成功; 万一失败也值得退回原图再试一次,
+  // 所以 es 不打这个标记。
+  const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es') ? '' : ' data-hg="1"';
+  const SITE_LABEL = { hd: '黄豆', es: 'ERO', hg: '黄果', hjw: '海角' };
+  const tag = it.showSite
+    ? '<div class="badge src" style="left:auto;right:6px;background:rgba(10,10,14,.72)">' +
+      (SITE_LABEL[src] || '黄果') + '</div>'
+    : '';
+
+  // ---- 海角卡片 (复刻源站观感) ----
+  if (src === 'hjw') {
+    const isArt = it.isArticle || (it.kind === 'article');
+    const kindBadge = isArt
+      ? '<div class="badge art">图文</div>'
+      : (it.isVideo ? '' : '');
+    const imgTag = it.imageCount
+      ? '<div class="itag">🖼 ' + it.imageCount + '</div>'
+      : '';
+    const sub = [
+      it.views ? '<span class="vp">' + esc(it.views) + '</span>' : '',
+      it.date ? '<span>' + esc(String(it.date).slice(5, 10)) + '</span>' : '',
+    ].filter(Boolean).join('');
+    return '<div class="item hjw" data-id="' + esc(it.id) + '" data-site="hjw"' +
+      ' onclick="openVid(\'' + esc(it.id) + '\',\'hjw\')">' +
+      '<div class="thumb">' +
+        (cv
+          ? '<img loading="lazy" alt="" data-hjwenc="' + esc(it.cover) + '">'
+          : '') +
+        '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
+        kindBadge + imgTag + tag +
+      '</div>' +
+      '<div class="t">' + esc(it.title) + '</div>' +
+      '<div class="e">' + (sub || '') + '</div>' +
+      '</div>';
+  }
+
+  return '<div class="item" data-id="' + esc(it.id) + '" data-site="' + esc(src) + '"' +
+    ' onclick="openVid(\'' + esc(it.id) + '\',\'' + esc(src) + '\')">' +
+    '<div class="thumb">' +
+      (cv
+        ? '<img loading="lazy" src="' + esc(cv) + '" data-raw="' + esc(it.cover) + '"' + hgFlag +
+          ' onerror="hgImgFallback(this)">'
+        : '') +
+      '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
+      (it.ep ? '<div class="badge">' + it.ep + '集</div>' : '') +
+      tag +
+    '</div>' +
+    '<div class="t">' + esc(it.title) + '</div>' +
+    '<div class="e">' + (it.ep ? '共 ' + it.ep + ' 集' : '') + '</div>' +
+    '</div>';
+}
+
+/**
+ * 图片加载失败的多级兜底:
+ *   黄果: 原图是 AES 加密的, 直连一定失败 → 直接认输显示占位, 别白试一次
+ *   其余: 代理失败 → 试原图直连 → 还失败才认输
+ */
+function hgImgFallback(img) {
+  const raw = img.getAttribute('data-raw') || '';
+  const step = img.getAttribute('data-fb') || '0';
+  const isHg = img.getAttribute('data-hg') === '1';
+  if (!isHg && step === '0' && raw && img.src.indexOf('data:') !== 0) {
+    // 第一步: 换成原图直连
+    img.setAttribute('data-fb', '1');
+    img.src = raw;
+    return;
+  }
+  // 第二步: 认输, 显示占位
+  img.style.display = 'none';
+  const ph = img.nextElementSibling;
+  if (ph && ph.classList.contains('ph')) ph.style.display = 'flex';
+}
+
+/**
+ * 补齐缺失封面
+ * 从列表解析出来的条目可能没有 cover (比如热搜榜来源的纯文字条目),
+ * 这些条目后台单独去详情页抓 coverSrc, 抓到后原地更新 DOM。
+ * 结果存 localStorage 永久缓存, 下次秒出。
+ */
+const COVER_CACHE_KEY = 'hg_cover_cache_v1';
+let COVER_CACHE = (() => {
+  try { return JSON.parse(localStorage.getItem(COVER_CACHE_KEY) || '{}'); }
+  catch (e) { return {}; }
+})();
+let COVER_SAVE_T = null;
+
+function saveCoverCache() {
+  clearTimeout(COVER_SAVE_T);
+  COVER_SAVE_T = setTimeout(() => {
+    try {
+      const keys = Object.keys(COVER_CACHE);
+      // 只留最近 800 条, 防止 localStorage 爆掉
+      if (keys.length > 800) {
+        const keep = {};
+        keys.slice(-800).forEach(k => { keep[k] = COVER_CACHE[k]; });
+        COVER_CACHE = keep;
+      }
+      localStorage.setItem(COVER_CACHE_KEY, JSON.stringify(COVER_CACHE));
+    } catch (e) { /* 配额满了就算了 */ }
+  }, 300);
+}
+
+// 先用缓存里已有的封面, 一步补上
+function applyCoverCache(items) {
+  let n = 0;
+  for (const it of items) {
+    if (!it.cover && COVER_CACHE[it.id]) { it.cover = COVER_CACHE[it.id]; n++; }
+  }
+  return n;
+}
+
+async function fillMissingCovers(items) {
+  const missing = items.filter(x => !x.cover && !COVER_CACHE[x.id]);
+  if (!missing.length) return;
+
+  // 限制并发 3 个, 别把上游打挂
+  const QUEUE = missing.slice();
+  let done = 0;
+
+  async function worker() {
+    while (QUEUE.length) {
+      const it = QUEUE.shift();
+      try {
+        const v = await api('/api/video', { id: it.id });
+        const cover = v && v.cover ? String(v.cover).trim() : '';
+        if (cover && cover.startsWith('http')) {
+          COVER_CACHE[it.id] = cover;
+          saveCoverCache();
+          patchCard(it.id, cover);
+        }
+      } catch (e) { /* 补不到就算了, 保持占位图 */ }
+      done++;
+    }
+  }
+  await Promise.all([worker(), worker(), worker()]);
+}
+
+// 原地把某张卡片的占位图换成真图 (不动整页, 不影响滚动位置)
+function patchCard(id, cover) {
+  const el = document.querySelector('.item[data-id="' + id + '"] .thumb');
+  if (!el) return;
+  const ph = el.querySelector('.ph');
+  let img = el.querySelector('img');
+  if (!img) {
+    img = document.createElement('img');
+    img.loading = 'lazy';
+    el.insertBefore(img, el.firstChild);
+  }
+  img.setAttribute('data-raw', cover);
+  img.setAttribute('data-fb', '0');
+  img.setAttribute('data-hg', (SITE === 'hd') ? '0' : '1');
+  img.onerror = function () { hgImgFallback(this); };
+  img.style.display = '';
+  img.src = coverUrl(cover);
+  if (ph) ph.style.display = 'none';
+}
+
+/* ===================== 全站搜索 ===================== */
+/**
+ * 一处搜两个板块:
+ *   纯数字 → 直接当 ID 打开 (当前板块优先)
+ *   其它   → 同时打黄果和黄豆的搜索接口, 合并成一份结果
+ *            每条自带 site 标记 + 角标, 点进去自动走对应的播放器
+ * 单边失败不影响另一边 (网络抖动 / 上游抽风都可能只挂一边)。
+ */
+
+// 豆腐块搜索关键字匹配: 标题优先, 其次简介/标签/年份
+// (直连上游时的兜底; Worker 在线时由 Worker 侧做全站过滤, 比这个准)
+function hitTitle(it, kw) {
+  const low = kw.toLowerCase();
+  const fields = [it.title, it.name, it.description, it.remarks, it.year];
+  if (Array.isArray(it.tags)) fields.push(it.tags.join(' '));
+  return fields.some((f) => f && String(f).toLowerCase().indexOf(low) >= 0);
+}
+
+/**
+ * 黄豆搜索。
+ * 上游 /videos?keyword= 是摆设 (传什么词都返回同一份热度榜, 实测确认),
+ * 所以有两条路:
+ *   Worker 在线 → /api/hd/search 已经在服务端拉了全站 985 条并过滤好, 直接用
+ *   直连模式   → 前端自己拉若干页再本地过滤 (拉不了全站, 覆盖有限)
+ */
+async function hdSearch(kw, pages) {
+  // 先试 Worker 侧的全站搜索 (它会把 985 条全拉下来过滤好, 最准)
+  try {
+    const j = await hdApi('/api/search', { q: kw });
+    if (j && Array.isArray(j.items) && j.items.length) return j.items;
+    if (j && j.poolSize) return [];          // Worker 搜过了, 确实没命中
+  } catch (e) { /* Worker 不通, 走下面的直连兜底 */ }
+
+  // 兜底: 前端拉多页本地过滤
+  pages = pages || 6;
+  const shots = [];
+  for (let p = 1; p <= pages; p++) shots.push(p);
+
+  const rs = await Promise.all(shots.map((p) =>
+    apiOf('hd', '/api/list', { page: p })
+      .then((j) => (j && j.items) || [])
+      .catch(() => [])
+  ));
+
+  const seen = {};
+  const out = [];
+  for (const arr of rs) {
+    for (const it of arr) {
+      if (!it || it.id == null) continue;
+      const k = String(it.id);
+      if (seen[k]) continue;
+      seen[k] = 1;
+      out.push(it);
+    }
+  }
+  return out.filter((it) => hitTitle(it, kw));
+}
+
+async function doSearch() {
+  const kw = document.getElementById('q').value.trim();
+  if (!kw) { goHome(); return; }
+  if (/^\d+$/.test(kw)) { openVid(kw, SITE); return; }
+
+  const T = newView();
+  app().innerHTML = '<div class="load"><span class="spin"></span>搜索中…</div>';
+
+  // 三边并行, 各自兜住异常
+  const grabHg = () =>
+    apiOf('hg', '/api/search', { q: kw })
+      .then((j) => ({ src: 'hg', items: (j && j.items) || [] }))
+      .catch(() => ({ src: 'hg', items: [], err: true }));
+
+  // 黄豆走本地过滤 (上游 keyword 不可靠)
+  const grabHd = () =>
+    hdSearch(kw, 6)
+      .then((items) => ({ src: 'hd', items }))
+      .catch(() => ({ src: 'hd', items: [], err: true }));
+
+  // EROSHORT 走 Worker 代理搜索
+  const grabMg = () =>
+    esApi('/api/list', { q: kw, pageSize: 12 })
+      .then((j) => ({ src: 'es', items: (j && j.items) || [] }))
+      .catch(() => ({ src: 'es', items: [], err: true }));
+
+  // 海角走浏览器直连搜索
+  const grabHjw = () =>
+    hjwSearch(kw)
+      .then((j) => ({ src: 'hjw', items: (j && j.items) || [] }))
+      .catch(() => ({ src: 'hjw', items: [], err: true }));
+
+  const [hgRes, hdRes, mgRes, hjwRes] = await Promise.all([grabHg(), grabHd(), grabMg(), grabHjw()]);
+  if (stale(T)) return;
+
+  const tag = (r) => r.items.map((x) => ({ ...x, site: r.src, showSite: true }));
+  const hgItems = tag(hgRes);
+  const hdItems = tag(hdRes);
+  const mgItems = tag(mgRes);
+  const hjwItems = tag(hjwRes);
+  const all = hgItems.concat(hdItems, mgItems, hjwItems);
+
+  if (!all.length) {
+    const noOne = hgRes.err && hdRes.err && mgRes.err && hjwRes.err;
+    app().innerHTML = '<div class="load">' +
+      (noOne ? '所有板块都没搜到结果（网络或上游异常）' : '没找到「' + esc(kw) + '」') +
+      '</div>';
+    return;
+  }
+
+  let html = '<div class="sec">搜索：' + esc(kw) +
+    '（共 ' + all.length + ' 个结果 · 海角 ' + hjwItems.length + ' / ERO ' + mgItems.length +
+    ' / 黄豆 ' + hdItems.length + ' / 黄果 ' + hgItems.length + '）</div>';
+
+  if (hjwItems.length || SITE === 'hjw') {
+    html += '<div class="sec" style="margin-top:6px">海角网（' + hjwItems.length + '）</div>';
+    html += hjwItems.length
+      ? '<div class="grid hjwgrid">' + hjwItems.map(cardHtml).join('') + '</div>'
+      : '<div class="load" style="padding:14px">' + (hjwRes.err ? '海角搜索暂时不可用' : '海角没有匹配的结果') + '</div>';
+  }
+
+  html += '<div class="sec" style="margin-top:22px">EROSHORT（' + mgItems.length + '）</div>';
+  html += mgItems.length
+    ? '<div class="grid">' + mgItems.map(cardHtml).join('') + '</div>'
+    : '<div class="load" style="padding:14px">' + (mgRes.err ? 'EROSHORT 搜索暂时不可用' : 'EROSHORT 没有匹配的结果') + '</div>';
+
+  html += '<div class="sec" style="margin-top:22px">黄豆短剧（' + hdItems.length + '）</div>';
+  html += hdItems.length
+    ? '<div class="grid">' + hdItems.map(cardHtml).join('') + '</div>'
+    : '<div class="load" style="padding:14px">' + (hdRes.err ? '黄豆搜索暂时不可用' : '黄豆没有匹配的结果') + '</div>';
+
+  html += '<div class="sec" style="margin-top:22px">黄果短剧（' + hgItems.length + '）</div>';
+  html += hgItems.length
+    ? '<div class="grid">' + hgItems.map(cardHtml).join('') + '</div>'
+    : '<div class="load" style="padding:14px">' + (hgRes.err ? '黄果搜索暂时不可用（该站国内已不可达）' : '黄果没有匹配的结果') + '</div>';
+
+  app().innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+/* ===================== 收藏 + 观看历史 (本地存储) ===================== */
+const FAV_KEY = 'hg_favs_v1';
+const HIS_KEY = 'hg_history_v1';
+
+function loadJSON(k, dflt) {
+  try { return JSON.parse(localStorage.getItem(k) || 'null') ?? dflt; }
+  catch (e) { return dflt; }
+}
+function saveJSON(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+}
+
+// —— 收藏 ——
+let FAVS = loadJSON(FAV_KEY, {});        // { id: {id,title,cover,ep,site,ts} }
+function isFav(id) { return !!FAVS[String(id)]; }
+function toggleFav(item) {
+  const id = String(item.id);
+  if (FAVS[id]) { delete FAVS[id]; }
+  else {
+    FAVS[id] = {
+      id,
+      title: item.title || ('剧集 ' + id),
+      cover: item.cover || '',
+      ep: item.ep || '',
+      site: item.site || SITE,
+      ts: Date.now(),
+    };
+  }
+  saveJSON(FAV_KEY, FAVS);
+  return isFav(id);
+}
+function favList() {
+  return Object.values(FAVS).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+}
+
+// —— 观看历史 ——
+let HIS = loadJSON(HIS_KEY, {});         // { id: {id,title,cover,ep,epTotal,pos,dur,site,ts} }
+function hisPut(item) {
+  const id = String(item.id);
+  const old = HIS[id] || {};
+  HIS[id] = {
+    id,
+    title: item.title || old.title || ('剧集 ' + id),
+    cover: item.cover || old.cover || '',
+    ep: item.ep || old.ep || '1',
+    epTotal: item.epTotal || old.epTotal || '',
+    pos: (item.pos != null ? item.pos : old.pos) || 0,
+    dur: (item.dur != null ? item.dur : old.dur) || 0,
+    site: item.site || old.site || curSrc || SITE,
+    ts: Date.now(),
+  };
+  saveJSON(HIS_KEY, HIS);
+}
+function hisList() {
+  return Object.values(HIS).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+}
+function hisClear() {
+  if (!confirm('清空全部观看记录？')) return;
+  HIS = {}; saveJSON(HIS_KEY, HIS);
+  goHome();
+}
+function favClear() {
+  if (!confirm('清空全部收藏？')) return;
+  FAVS = {}; saveJSON(FAV_KEY, FAVS);
+  goHome();
+}
+
+/* ===================== 详情 ===================== */
+let curVid = null;
+let curEp = '1';
+// 当前详情页的来源 (全站搜索点进来的条目可能不属于当前板块)
+let curSrc = SITE;
+
+// 记录进度用
+let HIS_TIMER = null;
+
+async function openVid(id, from) {
+  const T = newView();
+  const src = from || SITE;
+  app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
+  try {
+    let v;
+    if (src === 'es') {
+      // EROSHORT: Worker 拉详情 + 集数, 失败则用快照兜住 (只有基本信息, 无集数)
+      try {
+        v = await esVideo(id);
+        if (!v || !v.ok) throw new Error((v && v.error) || '详情失败');
+      } catch (e) {
+        const snap = await loadSnap('es-list');
+        const hit = snap && snap.items.find(x => String(x.id) === String(id));
+        if (!hit) throw e;
+        v = { ok: true, meta: { id: hit.id, title: hit.title, cover: hit.cover, tags: hit.tags || [], description: hit.desc || '' },
+              eps: [], snapshot: true };
+      }
+    } else if (src === 'hjw') {
+      // 海角: Worker 端出网抓详情 (站点不发 ACAO, 浏览器直连会被 CORS 拦)
+      // 详情页 data-config 里明文写着 m3u8; 正文与图片也全量带回来
+      v = await hjwDetail(id);
+      if (!v || v.ok === false) throw new Error((v && v.error) || '详情失败');
+      // 归一成前端通用字段
+      v = {
+        id: v.id,
+        title: v.title,
+        cover: v.cover,
+        author: v.author || '',
+        avatar: v.avatar || '',
+        views: v.views || '',
+        date: v.date || '',
+        epTotal: v.isVideo ? 1 : 0,
+        tags: v.tags || [],
+        catName: v.catName || '',
+        catId: v.catId || '',
+        desc: v.artText || '',
+        // 正文与图片 (图文帖就是靠这两个字段渲染)
+        artHtml: v.artHtml || '',
+        artText: v.artText || '',
+        images: v.images || [],
+        imageCount: v.imageCount || (v.images || []).length,
+        m3u8: v.m3u8,
+        m3u8_h265: v.m3u8_h265,
+        isVideo: !!v.isVideo,
+        isArticle: v.isArticle === true,
+        payGated: false,
+        pageUrl: v.pageUrl || '',
+        related: v.related || [],
+        eps: v.m3u8 ? { '1': v.m3u8 } : {}
+      };
+    } else {
+      v = src === SITE ? await api('/api/video', { id }) : await apiOf(src, '/api/video', { id });
+    }
+    if (stale(T)) return;
+    if (v.error) { app().innerHTML = '<div class="err">' + esc(v.error) + '</div>'; return; }
+    curVid = v;
+    curSrc = src;
+
+    // 黄豆短剧: 走自己的播放器
+    if (src === 'hd') { pushDetailState(); return renderHdVid(v); }
+    // EROSHORT: 走自己的播放器 (集数是数组, 带免费/付费标记)
+    if (src === 'es') { pushDetailState(); return renderMgVid(v); }
+    // 海角网: 单帖单视频, 无选集
+    if (src === 'hjw') { pushDetailState(); return renderHjwVid(v); }
+
+    const eps = Object.entries(v.eps || {});
+    const epsKeys = Object.keys(v.eps || {}).sort((a, b) => +a - +b);
+
+    // 从历史里恢复上次看到第几集
+    const old = HIS[String(v.id)];
+    let startEp = epsKeys.length ? epsKeys[0] : '1';
+    let startPos = 0;
+    if (old && old.ep && v.eps && v.eps[old.ep]) {
+      startEp = String(old.ep);
+      startPos = old.pos || 0;
+    }
+    curEp = startEp;
+    const first = (v.eps || {})[startEp] || '';
+
+    // 记历史 (进详情页就算看过)
+    hisPut({ id: v.id, title: v.title, cover: v.cover, ep: startEp, epTotal: v.epTotal });
+
+    const faved = isFav(v.id);
+    app().innerHTML =
+      '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
+      '<div class="card">' +
+        '<div class="dhead">' +
+          (v.cover ? '<img class="dcover" src="' + esc(coverUrl(v.cover, curSrc)) + '" data-raw="' + esc(v.cover) + '" data-fb="0" data-hg="' + (curSrc === 'hd' ? '0' : '1') + '" onerror="hgImgFallback(this)">' : '') +
+          '<div class="dinfo">' +
+            '<div class="dtitle">' + esc(v.title) +
+              '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()">' +
+              (faved ? '♥ 已收藏' : '♡ 收藏') + '</button>' +
+            '</div>' +
+            '<div class="dmeta">' +
+              (v.epTotal ? '共 <em>' + v.epTotal + '</em> 集' : '') +
+              (v.author ? ' · ' + esc(v.author) : '') +
+              (v.views ? ' · 👁 ' + esc(v.views) : '') +
+              (eps.length ? ' · 已解析 <em>' + eps.length + '</em> 个播放源' : '') +
+            '</div>' +
+            '<div>' + (v.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</div>' +
+          '</div>' +
+        '</div>' +
+        (v.description ? '<div class="ddesc">' + esc(v.description).slice(0,300) + (v.description.length > 300 ? '…' : '') + '</div>' : '') +
+        (first ?
+          '<div class="vwrap"><video id="pl" controls playsinline preload="metadata" poster="' + esc(coverUrl(v.cover, curSrc)) + '"></video>' +
+          '<div class="playbar">' +
+            '<span class="curep" id="curep">第 ' + startEp + ' 集</span>' +
+            '<button class="gh" onclick="step(-1)">上一集</button>' +
+            '<button class="gh" onclick="step(1)">下一集</button>' +
+            '<span class="spdwrap" id="spdwrap"></span>' +
+          '</div>' +
+          '<div class="resume" id="resume" style="display:none"></div>' +
+          '</div>' : '') +
+        (v.epTotal ? '<div class="sec">剧集列表（共 ' + v.epTotal + ' 集）' +
+          (eps.length < v.epTotal ? '<button class="gh" id="fillbtn" style="font-size:12px;padding:5px 11px;margin-left:8px" onclick="fetchAllEps()">补齐全部播放源</button>' : '') +
+          '</div><div class="eps">' +
+          Array.from({ length: v.epTotal }, (_, i) => String(i + 1)).map(e =>
+            '<a class="ep' + (e === startEp ? ' on' : '') + '" data-ep="' + e + '" href="javascript:playEp(\'' + e + '\')">第' + e + '集</a>').join('') +
+          '</div>' : '<div class="err">未解析到剧集信息</div>') +
+      '</div>';
+    window.scrollTo(0,0);
+    pushDetailState();
+
+    // 首播: 走统一入口 (m3u8 → hls.js), 再挂播放器增强
+    if (first) {
+      setVideoSrc(document.getElementById('pl'), first, {
+        onFatal: () => {
+          const ce = document.getElementById('curep');
+          if (ce) ce.textContent = '第 ' + startEp + ' 集（源加载失败，换集或稍后重试）';
+        }
+      }).then(() => initPlayer(startPos)).catch(() => initPlayer(startPos));
+    } else {
+      initPlayer(startPos);
+    }
+  } catch (e) { showErr(e); }
+}
+
+// 收藏按钮
+function onFav() {
+  if (!curVid) return;
+  const on = toggleFav({ id: curVid.id, title: curVid.title, cover: curVid.cover, ep: curEp });
+  const b = document.getElementById('favbtn');
+  if (b) {
+    b.className = 'favbtn' + (on ? ' on' : '');
+    b.textContent = on ? '♥ 已收藏' : '♡ 收藏';
+  }
+}
+
+/* ===================== 芒果短剧 · 详情页 ===================== */
+/**
+ * 芒果短剧详情页。
+ * 与黄果/黄豆的关键差别:
+ *   - v.eps 是数组 [{ep, free, locked, payMethod, payPrice}], 不是 {ep: url} 字典
+ *   - 只有 free=true 的集能直接播; 其余返回 402, 点了解析一定失败
+ *     所以付费集直接标注"金币", 点击时弹提示并给原站跳转, 不做无用的网络请求
+ *   - 播放地址要实时向后端要 (链接带时效 token), 不预取
+ */
+/* ===================== 海角网详情渲染 ===================== */
+/**
+ * 海角是 UGC 社区 —— 一个帖子有两种形态:
+ *   A) 视频帖: 正文 + 明文 m3u8 播放源
+ *   B) 图文帖: 正文 + 若干张明文图片 (没有视频)
+ *
+ * 两种都完整渲染, 不做任何门槛:
+ *   - 正文全量展示 (parseArticle 已剥掉站方地址卡)
+ *   - 图片全量展示, 点击可放大 + 左右翻页
+ *   - 视频帖底部挂播放器
+ *
+ * 源站 UI 复刻要点:
+ *   - 标题 → 元信息行 (分类/浏览/日期) → 作者行 → 内容流
+ *   - 内容流用自己的排版, 图片通栏圆角
+ *   - 底部相关推荐网格
+ */
+function renderHjwVid(v) {
+  const id = String(v.id || '');
+  const faved = isFav(id);
+  const isVideo = !!v.isVideo;
+  const imgs = v.images || [];
+
+  curVid = {
+    id: id,
+    title: v.title || '',
+    cover: v.cover || '',
+    epTotal: isVideo ? 1 : 0,
+    tags: v.tags || [],
+    description: v.artText || '',
+    eps: v.eps || {},
+    _hjw: true,
+  };
+  curSrc = 'hjw';
+  curEp = '1';
+  if (isVideo) hisPut({ id: id, title: curVid.title, cover: curVid.cover, ep: '1', epTotal: 1 });
+
+  // ---- 头部 (标题 + 元信息 + 作者) ----
+  const head =
+    '<div class="hjwhead">' +
+      '<h1 class="hjwtitle">' + esc(curVid.title) + '</h1>' +
+      '<div class="hjwmeta">' +
+        (v.catName ? '<span class="cat" onclick="hjwJumpCat(\'' + esc(v.catId || '') + '\')">' + esc(v.catName) + '</span>' : '') +
+        '<span>' + esc(v.date || '') + '</span>' +
+        (v.views ? '<span>👁 ' + esc(v.views) + ' 浏览</span>' : '') +
+        '<span>' + (isVideo ? '🎬 视频' : '🖼 图文 · ' + imgs.length + ' 图') + '</span>' +
+      '</div>' +
+      '<div class="hjwauthor">' +
+        (v.avatar ? '<img alt="" id="hjwav">' : '') +
+        '<div>' +
+          '<div class="nm">' + esc(v.author || '匿名海友') + '</div>' +
+          '<div class="tm">' + (v.date ? esc(String(v.date).slice(0, 16)) : '') + '</div>' +
+        '</div>' +
+        '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()" style="margin-left:auto">' +
+          (faved ? '♥ 已收藏' : '♡ 收藏') + '</button>' +
+      '</div>' +
+    '</div>';
+
+  // ---- 内容流 ----
+  let body = '';
+
+  // 视频帖: 播放器放最前
+  if (isVideo && v.m3u8) {
+    // 源是 m3u8 → 不在这里塞 src, 渲染后用 setVideoSrc 交给 hls.js (Chrome 原生播不了 m3u8)
+    body +=
+      '<div class="vwrap"><video id="pl" controls playsinline preload="metadata" poster="' +
+        esc(hjwImg(v.cover)) + '"></video></div>' +
+      '<div id="resume" class="resume" style="display:none"></div>' +
+      '<div id="spd" class="spd"></div>' +
+      '<div class="rows" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="sitebtn" onclick="hjwRefresh()">↻ 重新取源</button>' +
+        (v.m3u8_h265 ? '<button class="sitebtn" onclick="hjwTryH265()">切 H.265 源</button>' : '') +
+      '</div>';
+  }
+
+  // 视频帖离线快照: 无时效内 m3u8, 说明一下而不是静默没有播放器
+  if (isVideo && !v.m3u8) {
+    body += '<div style="padding:12px 14px;background:#f6f1e8;border:1px solid #e5d9c3;border-radius:8px;color:#7a653d;font-size:13px">' +
+      '🎬 该帖为视频帖, 视频源带时效签名 —— 离线模式暂不能播放, 联网后重新打开即恢复; 下方图文部分可正常浏览。</div>';
+  }
+
+  // 正文
+  if (v.artHtml) {
+    body += '<div class="hjwart" id="hjwart">' + hjwSanitizeArt(v.artHtml) + '</div>';
+  } else if (v.artText) {
+    body += '<div class="hjwart">' + esc(v.artText).replace(/\n/g, '<br>') + '</div>';
+  }
+
+  // 标签
+  if (curVid.tags.length) {
+    body += '<div style="margin-top:18px">' +
+      curVid.tags.map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</div>';
+  }
+
+  // 相关推荐
+  const rel = v.related || [];
+
+  app().innerHTML =
+    '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
+    head +
+    '<div class="card" style="padding:16px 15px">' + body + '</div>' +
+    (rel.length
+      ? '<section class="hjwrel"><div class="hjwrel-h">相关推荐</div>' +
+        '<div class="grid hjwgrid">' +
+        rel.map(x => cardHtml(Object.assign({}, x, { site: 'hjw' }))).join('') +
+        '</div></section>'
+      : '') +
+    '<div class="rows" style="margin-top:18px">' +
+      (v.pageUrl ? '<a class="sitebtn" href="' + esc(v.pageUrl) + '" target="_blank" rel="noopener">源站原文 ↗</a>' : '') +
+    '</div>';
+
+  if (isVideo) {
+    hjwBindError();
+    if (v.m3u8) {
+      // 统一入口: 海角 m3u8 → hls.js
+      setVideoSrc(document.getElementById('pl'), hjwProxied(v.m3u8), {
+        onFatal: () => toast('视频源加载失败，可点「重新取源」'),
+      }).then(() => initPlayer(0));
+    } else {
+      initPlayer(0);
+    }
+    if (v.cover) hjwDecryptImage(v.cover).then(u => { const el = document.getElementById('pl'); if (el) el.poster = u; }).catch(() => {});
+  }
+  hjwBindArt();
+  if (v.avatar) { const av = document.getElementById('hjwav'); if (av) hjwDecryptBind(av, v.avatar); }
+  hjwDecryptScan();
+  window.scrollTo(0, 0);
+}
+
+/**
+ * 图文帖图片交互: 点击放大 + 左右翻页 + 键盘。
+ * 图片 src 统一换成代理地址 (CDN 不保证发 CORS)。
+ */
+function hjwBindArt() {
+  const box = document.getElementById('hjwart');
+  if (!box) return;
+  const imgs = Array.prototype.slice.call(box.querySelectorAll('img'));
+  if (!imgs.length) return;
+  imgs.forEach((im, i) => {
+    const raw = im.getAttribute('data-raw') || im.getAttribute('src') || '';
+    im.setAttribute('data-raw', raw);
+    // 图床字节流是密文, 不能直接 <img src> —— 占位 + 解密上图
+    hjwDecryptBind(im, raw);
+    im.onclick = function (e) { e.preventDefault(); hjwLightbox(imgs, i); };
+  });
+}
+
+/** 图片预览层 */
+let HJW_LB = null;
+function hjwLightbox(imgs, i) {
+  const list = imgs.map(x => x.getAttribute('data-raw') || x.getAttribute('src') || '');
+  function paint() {
+    if (!HJW_LB) return;
+    const im = HJW_LB.querySelector('img');
+    const u = list[i];
+    im.src = HJW_BLANK;
+    hjwDecryptImage(u).then(du => { im.src = du; })
+      .catch(() => { im.style.opacity = '0.35'; });
+    HJW_LB.querySelector('.n').textContent = (i + 1) + ' / ' + list.length;
+  }
+  if (HJW_LB) HJW_LB.remove();
+  HJW_LB = document.createElement('div');
+  HJW_LB.className = 'hjwlb';
+  HJW_LB.innerHTML =
+    '<div class="x">✕</div><div class="n"></div>' +
+    (list.length > 1 ? '<div class="pv">‹</div><div class="nx">›</div>' : '') +
+    '<img alt="">';
+  HJW_LB.onclick = function (e) {
+    if (e.target === HJW_LB || e.target.className === 'x') { HJW_LB.remove(); HJW_LB = null; }
+  };
+  const pv = HJW_LB.querySelector('.pv');
+  const nx = HJW_LB.querySelector('.nx');
+  if (pv) pv.onclick = function (e) { e.stopPropagation(); i = (i - 1 + list.length) % list.length; paint(); };
+  if (nx) nx.onclick = function (e) { e.stopPropagation(); i = (i + 1) % list.length; paint(); };
+  document.body.appendChild(HJW_LB);
+  paint();
+
+  const key = function (e) {
+    if (!HJW_LB) { document.removeEventListener('keydown', key); return; }
+    if (e.key === 'Escape') { HJW_LB.remove(); HJW_LB = null; document.removeEventListener('keydown', key); }
+    if (e.key === 'ArrowLeft' && list.length > 1) { i = (i - 1 + list.length) % list.length; paint(); }
+    if (e.key === 'ArrowRight' && list.length > 1) { i = (i + 1) % list.length; paint(); }
+  };
+  document.addEventListener('keydown', key);
+}
+
+/**
+ * 正文 HTML 清洗
+ * 保留 p / br / img / a / b / i / strong / em / span / blockquote / h1-h4
+ * 其余标签一律剥掉。事件属性全清。
+ * 图片统一转成 data-raw, 由 hjwBindArt 换成代理地址。
+ */
+function hjwSanitizeArt(html) {
+  // 先清 script / style / iframe 整块
+  let s = String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+
+  const ALLOW = /^(p|br|img|a|b|i|u|strong|em|span|blockquote|h1|h2|h3|h4|ul|ol|li|div|hr|video|source)$/i;
+
+  s = s.replace(/<\/?([a-zA-Z0-9]+)([^>]*)>/g, function (m, tag, attrs) {
+    if (!ALLOW.test(tag)) return '';
+    const closing = m.charAt(1) === '/';
+    const t = tag.toLowerCase();
+    if (closing) return '</' + t + '>';
+
+    if (t === 'br' || t === 'hr') return '<' + t + '>';
+
+    if (t === 'img') {
+      const src = (attrs.match(/z-image-loader-url="([^"]*)"/i) ||
+                   attrs.match(/data-src="([^"]*)"/i) ||
+                   attrs.match(/\ssrc="([^"]*)"/i) || [])[1] || '';
+      const u = cleanArtUrl(src);
+      // alt 一律置空: 海角帖的 img alt 是帖子标题, 图挂了会显示标题文字冒充图片内容
+      if (!u) return '';
+      return '<img data-raw="' + esc(u) + '" alt="" loading="lazy">';
+    }
+
+    if (t === 'a') {
+      const href = (attrs.match(/href="([^"]*)"/i) || [])[1] || '';
+      const ok = /^https?:\/\//i.test(href);
+      return '<a' + (ok ? ' href="' + esc(href) + '" target="_blank" rel="noopener nofollow"' : '') + '>';
+    }
+
+    return '<' + t + '>';
+  });
+
+  // 正文里可能有的裸 URL 图片 (有些帖直接贴 z-image-loader-url 在文字里) —— 不管
+  return s;
+}
+
+function cleanArtUrl(u) {
+  u = String(u || '').trim();
+  u = u.replace(/^[`'"\s]+/, '').replace(/[`'"\s]+$/, '');
+  u = u.replace(/\\u002F/g, '/').replace(/\\\//g, '/');
+  return u;
+}
+
+/** 分类跳转 (详情页里点分类名) */
+function hjwJumpCat(slug) {
+  if (!slug) return;
+  // 分类 slug 在首页 tab 里是按名字来的, 这里按 id 找不到就回首页
+  const hit = CATS_HJW.find(c => c.id === slug);
+  if (hit) pickCat(slug);
+  else goHome();
+}
+
+/** 视频帖: 切 H.265 源 */
+function hjwTryH265() {
+  if (!curVid || !curVid._hjw) return;
+  hjwEnsure().then(() => HJWW.detail({ id: curVid.id })).then(d => {
+    const v = document.getElementById('pl');
+    if (!v || !d.m3u8_h265) { toast('没有 H.265 源'); return; }
+    // 海角源也是 m3u8 → 必须走 hls.js (Chrome 原生播不了 m3u8)
+    setVideoSrc(v, hjwProxied(d.m3u8_h265), {
+      onFatal: () => toast('H.265 源加载失败, 可切回 H.264'),
+    }).then(() => v.play().catch(() => {}));
+    toast('已切到 H.265');
+  }).catch(e => toast('切换失败: ' + ((e && e.message) || e)));
+}
+
+/** 海角图片走代理 (CDN 不保证发 CORS) */
+function hjwImg(u) {
+  if (!u) return '';
+  return hjwProxied(u);
+}
+
+/** 海角 m3u8 / 图片 → Worker 代理地址 */
+function hjwProxied(raw) {
+  if (!raw) return '';
+  if (typeof HJWW !== 'undefined') {
+    if (API) HJWW.setProxy(API);
+    return HJWW.proxied(raw);
+  }
+  return raw;
+}
+
+/** 播放失败提示 + 一键重取 */
+function hjwBindError() {
+  const v = document.getElementById('pl');
+  if (!v) return;
+  v.addEventListener('error', function () {
+    const box = document.getElementById('resume');
+    if (!box) return;
+    box.style.display = '';
+    box.innerHTML = '播放源取不到了（auth_key 可能已过期）。点上面「↻ 重新取源」刷新，或直连试试。';
+  });
+}
+
+/** 重新拉详情页换新 m3u8 (auth_key 有时效) */
+async function hjwRefresh() {
+  if (!curVid || !curVid._hjw) return;
+  const v = document.getElementById('pl');
+  try {
+    toast('正在重新取源…');
+    const d = await hjwDetail(curVid.id);
+    if (!d || !d.isVideo || !d.m3u8) { toast('该帖没有可用视频源'); return; }
+    curVid.eps = { '1': d.m3u8 };
+    if (v) {
+      // m3u8 → hls.js 统一入口
+      await setVideoSrc(v, hjwProxied(d.m3u8), {
+        onFatal: () => toast('新源加载失败'),
+      });
+      v.play().catch(() => {});
+    }
+    toast('已换新源');
+  } catch (e) {
+    toast('重取失败: ' + ((e && e.message) || e));
+  }
+}
+
+/* ===================== EROSHORT 详情渲染 ===================== */
+function renderMgVid(v) {
+  const meta = v.meta || {};
+  const eps = (v.eps || []).filter(e => e && e.ep);
+  const freeEps = eps.filter(e => e.free !== false);   // 未知一律按可尝试播处理
+  const faved = isFav(meta.id || v.id || '');
+
+  curVid = {
+    id: meta.id || v.id || '',
+    title: meta.title || v.title || '',
+    cover: meta.cover || v.cover || '',
+    epTotal: meta.epTotal || eps.length || 0,
+    tags: meta.tags || [],
+    description: meta.description || '',
+    views: meta.views || '',
+    access: meta.access || '',
+    eps: {},                 // ep 号 → 已解析的流地址
+    _epMap: {},              // ep 号 → 该集的上游内容 id
+    _es: true,
+  };
+  eps.forEach(e => { curVid._epMap[String(e.ep)] = { id: e.id, free: e.free }; });
+  curSrc = 'es';
+
+  const firstFree = eps.length ? String(eps[0].ep) : '1';
+  curEp = firstFree;
+
+  hisPut({ id: curVid.id, title: curVid.title, cover: curVid.cover, ep: firstFree, epTotal: curVid.epTotal });
+
+  const payCount = eps.filter(e => e.free === false).length;
+
+  app().innerHTML =
+    '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
+    '<div class="card">' +
+      '<div class="dhead">' +
+        (curVid.cover ? '<img class="dcover" src="' + esc(coverUrl(curVid.cover, 'es')) + '" data-raw="' + esc(curVid.cover) + '" data-fb="0" onerror="hgImgFallback(this)">' : '') +
+        '<div class="dinfo">' +
+          '<div class="dtitle">' + esc(curVid.title) +
+            '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()">' +
+            (faved ? '♥ 已收藏' : '♡ 收藏') + '</button>' +
+          '</div>' +
+          '<div class="dmeta">' +
+            (curVid.epTotal ? '共 <em>' + curVid.epTotal + '</em> 集' : '') +
+            (payCount ? ' · 付费 ' + payCount + ' 集' : '') +
+            (curVid.views ? ' · 👁 ' + esc(String(curVid.views)) : '') +
+          '</div>' +
+          '<div>' + (curVid.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + '</div>' +
+        '</div>' +
+      '</div>' +
+      (curVid.description ? '<div class="ddesc">' + esc(curVid.description).slice(0, 300) + (curVid.description.length > 300 ? '…' : '') + '</div>' : '') +
+
+      (eps.length
+        ? '<div class="vwrap"><video id="pl" src="" controls playsinline preload="none" poster="' + esc(coverUrl(curVid.cover, 'es')) + '"></video>' +
+          '<div class="playbar">' +
+            '<span class="curep" id="curep">第 ' + firstFree + ' 集</span>' +
+            '<button class="gh" onclick="mgStep(-1)">上一集</button>' +
+            '<button class="gh" onclick="mgStep(1)">下一集</button>' +
+            '<span class="spdwrap" id="spdwrap"></span>' +
+          '</div>' +
+          '<div class="resume" id="resume" style="display:none"></div>' +
+          '</div>'
+        : '<div class="err">这部剧暂无可用集数</div>') +
+
+      '<div class="sec">剧集列表（共 ' + curVid.epTotal + ' 集' +
+        (payCount ? ' · 后 ' + payCount + ' 集需付费' : '') + '）</div>' +
+      '<div class="eps">' +
+        eps.map(e => {
+          const on = String(e.ep) === firstFree ? ' on' : '';
+          const cls = 'ep' + on + (e.free === false ? ' locked' : '');
+          const badge = e.free === false ? '<i class="lockb">币</i>' : '';
+          const handler = e.free === false
+            ? 'mgLocked(' + e.ep + ',0)'
+            : 'mgPlay(' + e.ep + ')';
+          return '<a class="' + cls + '" data-ep="' + e.ep + '" href="javascript:' + handler + '">第' + e.ep + '集' + badge + '</a>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  window.scrollTo(0, 0);
+
+  // 首集自动解析并起播
+  if (eps.length) {
+    initPlayer(0);
+    mgPlay(firstFree);
+  }
+}
+
+/** EROSHORT: 解析并播放某集 (免费集走 resolve, 付费集提示跳原站) */
+async function mgPlay(ep) {
+  ep = String(ep);
+  if (!curVid || !curVid._es) return;
+  const v = document.getElementById('pl');
+  if (!v) return;
+
+  curEp = ep;
+  document.querySelectorAll('.ep').forEach(x => x.classList.remove('on'));
+  const el = document.querySelector('.ep[data-ep="' + ep + '"]');
+  if (el) { el.classList.add('on'); if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); }
+  const ce = document.getElementById('curep');
+  if (ce) ce.textContent = '第 ' + ep + ' 集（解析中…）';
+
+  hisPut({ id: curVid.id, title: curVid.title, cover: curVid.cover, ep, epTotal: curVid.epTotal, pos: 0 });
+
+  // 该集的 episode id (详情页时已从 children 拿到)
+  const rec = (curVid._epMap || {})[ep];
+  const epId = rec && rec.id;
+  if (!epId) { if (ce) ce.textContent = '第 ' + ep + ' 集（缺少集标识）'; return; }
+
+  let u = curVid.eps[ep];
+  let stego = null;
+  if (!u) {
+    try {
+      const r = await esResolveEp(curVid.id, ep, epId);
+      if (r && r.ok && r.format === 'stego_hls' && (r.m3u8 || r.url)) {
+        // stego_hls 不能塞进 <video>.src, 必须挂解封装 loader —— 单独走一条路
+        stego = r;
+      } else if (r && r.ok && r.url) {
+        u = r.url;
+        curVid.eps[ep] = u;
+      } else if (r && r.locked) {
+        mgLocked(ep, 0, r.reason);
+        return;
+      } else if (r && r.netError) {
+        // 网络层故障 (上游 CF 拦截 / 中转限流 / Worker 不可达)
+        // 绝不能伪装成"付费内容"骗用户去原站 —— 给重试入口。
+        mgNetRetry(ep, r.reason);
+        return;
+      } else if (r && r.pending) {
+        // 免费集但需要额外一次 resolve — Worker 已合并, 正常不会走到这
+        if (ce) ce.textContent = '第 ' + ep + ' 集（源不可用）';
+        return;
+      }
+    } catch (e) { /* 下面统一报错 */ }
+  }
+
+  if (!u && !stego) {
+    if (ce) ce.textContent = '第 ' + ep + ' 集（源获取失败）';
+    return;
+  }
+
+  if (stego) { await esPlayStego(v, stego, ep); return; }
+
+  // EROSHORT 源可能是 mp4 (direct) 或 m3u8 (hls) → 统一入口交给 setVideoSrc
+  await setVideoSrc(v, u, {
+    onFatal: () => { if (ce) ce.textContent = '第 ' + ep + ' 集（源加载失败）'; },
+  });
+  v.playbackRate = CUR_SPEED;
+  const rt = document.getElementById('resume');
+  if (rt) rt.style.display = 'none';
+  v.play().catch(() => {});
+  if (ce) ce.textContent = '第 ' + ep + ' 集';
+}
+
+/**
+ * EROSHORT: 网络层取流失败 —— 给重试, 不要谎称"付费内容"。
+ *
+ * 国内直连时上游被 CF 拦 / 中转限流是常态, 同一集多试几次通常能成。
+ * 这里重试 3 次 (间隔递增), 全失败再给原站兜底入口。
+ */
+async function mgNetRetry(ep, reason) {
+  if (!curVid || !curVid._es) return;
+  const v = document.getElementById('pl');
+  const ce = document.getElementById('curep');
+  const rec = (curVid._epMap || {})[ep];
+  const epId = rec && rec.id;
+  if (!epId) { if (ce) ce.textContent = '第 ' + ep + ' 集（缺少集标识）'; return; }
+
+  const delays = [0, 2500, 5000];
+  for (let i = 0; i < delays.length; i++) {
+    if (delays[i]) await new Promise(r => setTimeout(r, delays[i]));
+    if (ce) ce.textContent = '第 ' + ep + ' 集（线路' + (i + 1) + '/' + delays.length + ' 尝试中…）';
+    let r = null;
+    try { r = await esResolveEp(curVid.id, ep, epId); } catch (e) { r = null; }
+    if (r && r.ok && r.format === 'stego_hls' && (r.m3u8 || r.url)) {
+      await esPlayStego(v, r, ep);
+      return;
+    }
+    if (r && r.ok && r.url) {
+      curVid.eps[ep] = r.url;
+      await setVideoSrc(v, r.url, {
+        onFatal: () => { if (ce) ce.textContent = '第 ' + ep + ' 集（源加载失败）'; },
+      });
+      v.playbackRate = CUR_SPEED;
+      v.play().catch(() => {});
+      const rt = document.getElementById('resume');
+      if (rt) rt.style.display = 'none';
+      if (ce) ce.textContent = '第 ' + ep + ' 集';
+      return;
+    }
+    if (r && r.locked) { mgLocked(ep, 0, r.reason); return; }
+  }
+
+  // 三次都没拿到 —— 如实说明是网络/线路问题
+  if (ce) ce.textContent = '第 ' + ep + ' 集（线路暂不可用）';
+  const msg = '第 ' + ep + ' 集 暂时取不到视频流。\n\n' +
+              '原因: 上游站点对非浏览器出口做了限制, 取流通道在抖动。\n' +
+              '（这不是付费内容提示, 稍后再试通常可恢复）\n\n' +
+              '要打开上游原站看吗？';
+  if (confirm(msg)) {
+    window.open('https://eroshort.net/drama/' + curVid.id, '_blank', 'noopener');
+  }
+}
+
+/**
+ * EROSHORT stego_hls 起播。
+ *
+ * 上游部分剧把 MPEG-TS 藏进 PNG 的 "teXt"/Comment chunk 里, manifest 仍是标准
+ * m3u8、分片却是 .png。原生 <video> 与裸 hls.js 都吃不下, 必须:
+ *   1) 用 license 里的 X25519 包裹密钥解出 AES 内容密钥 (hg-stego.js)
+ *   2) 给 hls.js 挂自定义 fLoader: 拉 PNG → 解封装成 TS → 交回 MSE
+ *
+ * manifest 本身走本站 Worker /api/es/raw/* —— 上游 eroshort.net 对数据中心 IP
+ * 硬拦 (403), 只有 Worker 边缘出口被放行; 失败再退回上游直连 (住宅网有时能过)。
+ */
+async function esPlayStego(v, r, ep) {
+  const ce = document.getElementById('curep');
+  const say = (t) => { if (ce) ce.textContent = t; };
+
+  if (!r || !r.license || !r.mediaId) {
+    say('第 ' + ep + ' 集（授权信息缺失）');
+    mgNetRetry(ep, 'stego_meta');
+    return;
+  }
+  if (typeof esOpenDecoder !== 'function') { say('第 ' + ep + ' 集（解封装器未加载）'); return; }
+  if (!HLS_READY()) { say('第 ' + ep + ' 集（此浏览器不支持）'); return; }
+
+  say('第 ' + ep + ' 集（准备中…）');
+  let dec = null;
+  try {
+    dec = await esOpenDecoder(
+      { mediaId: r.mediaId, assetVersion: r.assetVersion, license: r.license },
+      ES_BUILD_PROFILE);
+  } catch (e) {
+    say('第 ' + ep + ' 集（授权解析失败）');
+    console.warn('[ERO stego] openDecoder', e);
+    return;
+  }
+
+  const Loader = esMakeStegoLoader(dec);
+  if (!Loader) { say('第 ' + ep + ' 集（播放器未就绪）'); return; }
+
+  // manifest 候选地址:
+  //   0) 静态快照自带的 m3u8 文本 → 直接做成 blob URL (国内直连走这条)
+  //   1) Worker 原始透传 /api/es/raw/* (Worker 可达时)
+  //   2) 上游直连 / Worker /proxy/
+  const rel = String(r.url || '');
+  const srcs = [];
+  let blobUrl = '';
+  if (r.m3u8 && /^#EXTM3U/.test(r.m3u8)) {
+    try {
+      blobUrl = URL.createObjectURL(new Blob([r.m3u8], { type: 'application/vnd.apple.mpegurl' }));
+      srcs.push(blobUrl);
+    } catch (e) { /* 不支持 blob → 走网络 */ }
+  }
+  if (rel.indexOf('/api/v1/') === 0) {
+    if (typeof API === 'string' && API) srcs.push(API + '/api/es/raw/' + rel.slice('/api/v1/'.length));
+    srcs.push('https://eroshort.net' + rel);
+  } else if (/^https?:/i.test(rel)) {
+    srcs.push(rel);
+    if (typeof API === 'string' && API) srcs.push(API + '/proxy/' + encodeURIComponent(rel));
+  } else if (rel) {
+    if (typeof API === 'string' && API) srcs.push(API + '/proxy/' + encodeURIComponent(rel));
+  }
+
+  destroyHls();
+  const ok = await stegoHlsLoad(v, srcs, Loader);
+  // blob URL 生命周期: hls.js 读完 playlist 后就没用了, 但保守起见留 2 分钟
+  if (blobUrl) setTimeout(() => { try { URL.revokeObjectURL(blobUrl); } catch (e) {} }, 120000);
+  if (!ok) {
+    say('第 ' + ep + ' 集（线路暂不可用）');
+    try { dec.destroy(); } catch (e) {}
+    return;
+  }
+  const rt = document.getElementById('resume');
+  if (rt) rt.style.display = 'none';
+  v.playbackRate = CUR_SPEED;
+  v.play().catch(() => {});
+  say('第 ' + ep + ' 集');
+}
+
+/**
+ * 逐个 manifest 候选地址试挂 hls.js (带 stego fLoader)。
+ * @returns {Promise<boolean>} 是否有一次 MANIFEST_PARSED 成功
+ */
+function stegoHlsLoad(video, srcs, Loader) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => { if (!settled) { settled = true; resolve(v); } };
+    let i = 0;
+
+    const tryNext = () => {
+      if (i >= srcs.length) { finish(false); return; }
+      const src = srcs[i++];
+      const h = new Hls({
+        progressive: false,          // 与上游一致: 分片是普通 TS, 不需要 progressive
+        fLoader: Loader,
+        manifestLoadingMaxRetry: 3,
+        levelLoadingMaxRetry: 3,
+        fragLoadingMaxRetry: 6,
+        manifestLoadingRetryDelay: 400,
+        fragLoadingRetryDelay: 400,
+        fragLoadingMaxRetryTimeout: 20000,
+      });
+      let advanced = false;
+      h.on(Hls.Events.MANIFEST_PARSED, () => finish(true));
+      h.on(Hls.Events.ERROR, (evt, d) => {
+        if (!d || !d.fatal) return;
+        if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { try { h.recoverMediaError(); return; } catch (e) {} }
+        if (advanced) return;
+        advanced = true;
+        try { h.destroy(); } catch (e) {}
+        if (HLS_OBJ === h) HLS_OBJ = null;
+        tryNext();
+      });
+      HLS_OBJ = h;
+      try {
+        h.loadSource(src);
+        h.attachMedia(video);
+      } catch (e) {
+        if (!advanced) { advanced = true; tryNext(); }
+      }
+    };
+
+    setTimeout(() => { if (!settled) { try { destroyHls(); } catch (e) {} finish(false); } }, 20000);
+    tryNext();
+  });
+}
+
+/** EROSHORT: 点到付费集 —— 不请求, 直接提示 + 给原站跳转 */
+function mgLocked(ep, price, reason) {
+  if (!curVid) return;
+  const why = reason === 'login_required' ? '需要登录上游账号'
+            : reason === 'vip_required'   ? '需要上游 VIP'
+            : '是上游付费内容';
+  const msg = '第 ' + ep + ' 集' + why + '。\n\n' +
+              '本站只收录可公开播放的集数。\n\n' +
+              '去上游原站看看？';
+  if (confirm(msg)) {
+    const u = 'https://eroshort.net/drama/' + curVid.id;
+    window.open(u, '_blank', 'noopener');
+  }
+}
+
+/** EROSHORT: 上下集 */
+function mgStep(d) {
+  if (!curVid || !curVid._es) return;
+  const v = document.getElementById('pl');
+  if (v && v.duration && !v.paused) saveProgress(v.currentTime, v.duration);
+  const playable = document.querySelectorAll('.ep:not(.locked)');
+  if (!playable.length) return;
+  const arr = Array.from(playable).map(x => String(x.dataset.ep));
+  let i = arr.indexOf(String(curEp));
+  if (i < 0) i = 0;
+  const n = i + d;
+  if (n < 0) { showToast('已经是第一集'); return; }
+  if (n >= arr.length) { showToast('后面是付费集，需上游解锁'); return; }
+  mgPlay(arr[n]);
+}
+
+/* ===================== 黄豆短剧 · 详情页 ===================== */
+function renderHdVid(v) {
+  const T = VIEW_TOKEN;              // 继承 openVid 的视图令牌
+  const faved = isFav(v.id);
+  curEp = '1';
+  hisPut({ id: v.id, title: v.title, cover: v.cover, ep: '1', epTotal: v.epTotal });
+
+  const h5 = v.h5 || (typeof HDHd !== 'undefined' ? HDHd.h5Url(v.id) : 'https://hddj30.cc/');
+  const heat = v.heatNum ? (v.heatNum >= 10000 ? (v.heatNum / 10000).toFixed(1) + 'w' : String(v.heatNum)) : '';
+
+  const acc = [];
+  if (v.free) acc.push('<span class="tag c">免费 ' + v.free + ' 集</span>');
+  if (v.vip) acc.push('<span class="tag" style="background:#3a2a10;color:#ffc85c">会员 ' + v.vip + ' 集</span>');
+  if (v.coin) acc.push('<span class="tag" style="background:#2a1a3a;color:#c39cff">金币 ' + v.coin + ' 集</span>');
+
+  app().innerHTML =
+    '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
+    '<div class="card">' +
+      '<div class="dhead">' +
+        (v.cover ? '<img class="dcover" src="' + esc(coverUrl(v.cover, curSrc)) + '" data-raw="' + esc(v.cover) + '" data-fb="0" data-hg="' + (curSrc === 'hd' ? '0' : '1') + '" onerror="hgImgFallback(this)">' : '') +
+        '<div class="dinfo">' +
+          '<div class="dtitle">' + esc(v.title) +
+            '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()">' +
+            (faved ? '♥ 已收藏' : '♡ 收藏') + '</button>' +
+          '</div>' +
+          '<div class="dmeta">' +
+            (v.cat ? '分类 <em>' + esc(v.cat) + '</em>' : '') +
+            (v.epTotal ? ' · 共 <em>' + v.epTotal + '</em> 集' : '') +
+            (heat ? ' · 🔥 ' + heat : '') +
+            (v.isEnded ? ' · <span style="color:#5ad1a0">已完结</span>' : ' · <span style="color:#ff9a4d">更新中</span>') +
+            (v.year ? ' · ' + v.year : '') +
+          '</div>' +
+          '<div>' + (v.tags || []).map(t => '<span class="tag">' + esc(t) + '</span>').join('') + ' ' + acc.join(' ') + '</div>' +
+        '</div>' +
+      '</div>' +
+      (v.desc ? '<div class="ddesc">' + esc(v.desc) + '</div>' : '') +
+
+      // ---- 播放器 ----
+      '<div class="vwrap">' +
+        '<video id="pl" controls playsinline preload="metadata" poster="' + esc(coverUrl(v.cover, curSrc)) + '"></video>' +
+        '<div class="hdlock" id="hdlock" style="display:none"></div>' +
+        '<div class="playbar">' +
+          '<span class="curep" id="curep">第 1 集</span>' +
+          '<button class="gh" onclick="hdStep(-1)">上一集</button>' +
+          '<button class="gh" onclick="hdStep(1)">下一集</button>' +
+          '<span class="spdwrap" id="spdwrap"></span>' +
+        '</div>' +
+        '<div class="resume" id="resume" style="display:none"></div>' +
+      '</div>' +
+
+      // ---- 线路切换 ----
+      '<div class="hdlines" id="hdlines"></div>' +
+
+      // ---- 剧集列表 ----
+      (v.epTotal ?
+        '<div class="sec">剧集（共 ' + v.epTotal + ' 集）</div>' +
+        '<div class="eps" id="hdepgrid">' + hdEpList(v) + '</div>'
+        : '');
+
+  window.scrollTo(0, 0);
+  hdLoadEp(v.id, 1, true, T);
+}
+
+// 剧集按钮 (点击切集)
+function hdEpList(v) {
+  const n = Math.min(v.epTotal || 0, 500);
+  if (!n) return '';
+  let s = '';
+  for (let i = 1; i <= n; i++) {
+    s += '<a class="ep' + (i === 1 ? ' on' : '') + '" data-ep="' + i + '" href="javascript:hdPickEp(' + i + ')">第' + i + '集</a>';
+  }
+  return s;
+}
+
+// 当前黄豆剧
+let HD_CUR = null;         // {id, epTotal, title, cover}
+let HD_LINES = [];         // 当前集的多线路
+let HD_LINE_I = 0;
+
+function hdPickEp(ep) {
+  if (!HD_CUR) return;
+  hdLoadEp(HD_CUR.id, ep, false);
+}
+
+function hdStep(d) {
+  if (!HD_CUR) return;
+  const cur = parseInt(curEp, 10) || 1;
+  const next = cur + d;
+  if (next < 1) { toast('已经是第一集'); return; }
+  if (HD_CUR.epTotal && next > HD_CUR.epTotal) { toast('已经是最后一集'); return; }
+  hdLoadEp(HD_CUR.id, next, false);
+}
+
+// 加载某一集: /playback → /play → 视频
+// T: 可选的视图令牌 (首屏由 renderHdVid 传入); 切集时不传, 用当前令牌
+async function hdLoadEp(vid, ep, first, T) {
+  const tok = (T === undefined) ? VIEW_TOKEN : T;
+  if (first) {
+    HD_CUR = { id: vid, epTotal: curVid ? curVid.epTotal : 0, title: curVid ? curVid.title : '', cover: curVid ? curVid.cover : '' };
+  }
+  const box = document.getElementById('hdlock');
+  const video = document.getElementById('pl');
+  if (!video) return;
+  curEp = String(ep);
+
+  // 集号高亮
+  const grid = document.getElementById('hdepgrid');
+  if (grid) {
+    [...grid.querySelectorAll('.ep')].forEach(a =>
+      a.classList.toggle('on', a.getAttribute('data-ep') === String(ep)));
+  }
+  const ce = document.getElementById('curep');
+  if (ce) ce.textContent = '第 ' + ep + ' 集';
+
+  if (box) { box.style.display = 'block'; box.innerHTML = '<span class="spin"></span>正在解析第 ' + ep + ' 集播放地址…'; }
+
+  try {
+    const r = await HDHd.playEp(vid, ep);
+    if (stale(tok)) return;                    // 期间已切走
+    HD_LINES = r.lines || [];
+    HD_LINE_I = 0;
+    if (box) box.style.display = 'none';
+
+    // 记历史
+    hisPut({ id: vid, title: HD_CUR.title, cover: HD_CUR.cover, ep: String(ep), epTotal: HD_CUR.epTotal });
+
+    hdSetSrc(HD_LINES[0] ? HD_LINES[0].url : r.playUrl);
+    renderHdLines();
+  } catch (e) {
+    if (stale(tok)) return;
+    if (e && e.locked) {
+      if (box) {
+        box.style.display = 'block';
+        box.innerHTML = '🔒 ' + esc(e.message) +
+          '<br><a class="hdplaybtn" style="margin-top:10px" href="' + esc(HDHd.h5Url(vid)) +
+          '" target="_blank" rel="noopener noreferrer">去官方解锁</a>';
+      }
+    } else {
+      if (box) { box.style.display = 'block'; box.innerHTML = '⚠ ' + esc(e.message || '解析失败') + '<br><span style="opacity:.7">换个线路试试，或点下方官方线路</span>'; }
+      // 兜底: 给官方入口
+      renderHdLines();
+    }
+  }
+}
+
+// 视频源: 黄豆优先直连 mp4, Worker 流代理仅作备选 —— 修挂代理后的 http 400。
+//
+// 根因 (2026-10): 黄豆 playUrl 是带 ticket 的 mp4 直链, 上游 CDN 不发 ACAO。
+//   <video> 播放媒体本身不做 CORS 检查, 所以【直连一定能播】。
+//   旧代码在 WORKER_OK!==false 时无条件包 Worker 流代理; 挂代理后 Worker 可达
+//   → 强制走 workers.dev → Worker 出口 IP + 短时效 ticket → 上游回 400, 卡死。
+//
+// 新策略:
+//   1) 先探测 Worker 流代理是否真的 200 (HEAD/Range 探测, 800ms 超时);
+//   2) 200 → 用代理 (兼容极少数直连被 CORS/网络挡的场景);
+//      否则 → 直连 (默认路径, 最稳);
+//   3) 播放中若仍出错, onerror 再兜一次。
+let HD_PROXY_OK = null;              // null=未探, true/false=已定
+
+function hdProbeProxy(raw) {
+  if (HD_PROXY_OK !== null) return Promise.resolve(HD_PROXY_OK);
+  if (!API || WORKER_OK === false || typeof fetch !== 'function') {
+    HD_PROXY_OK = false;
+    return Promise.resolve(false);
+  }
+  const u = API + '/api/hd/stream?u=' + encodeURIComponent(raw);
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 800);
+  const opts = { method: 'GET', headers: { Range: 'bytes=0-1' } };
+  if (ctl) opts.signal = ctl.signal;
+  return fetch(u, opts).then(r => {
+    clearTimeout(timer);
+    // 206/200 才算代理可用; 400/403/5xx 一律判死
+    HD_PROXY_OK = (r.status === 200 || r.status === 206);
+    return HD_PROXY_OK;
+  }).catch(() => { clearTimeout(timer); HD_PROXY_OK = false; return false; });
+}
+
+function hdSetSrc(url) {
+  const video = document.getElementById('pl');
+  if (!video || !url) return;
+  const raw = String(url);
+
+  // 切集时重置探测缓存 (ticket 每集都换, 不能用上一集的结论)
+  HD_PROXY_OK = null;
+
+  video.dataset.hdRaw = raw;
+  video.dataset.hdFallback = '';
+  video.onerror = function () {
+    if (video.dataset.hdFallback === '1') return;   // 已回退过, 防死循环
+    video.dataset.hdFallback = '1';
+    // 若当前是代理地址 → 回退直连
+    if (video.src && API && video.src.indexOf(API) === 0) {
+      video.src = raw;
+      video.load();
+      try { video.play().catch(() => {}); } catch (e) {}
+      toast('代理受限，已切直连');
+    }
+  };
+
+  // 先用直连立即起播 (最快路径), 同时后台探测代理是否更优
+  video.src = raw;
+  video.load();
+  try { video.play().catch(() => {}); } catch (e) {}
+
+  // 探测代理: 若直连因网络原因起不来而代理可用, 才切代理
+  hdProbeProxy(raw).then(ok => {
+    if (!ok) return;
+    // 直连已能播就不动; 8 秒后仍 readyState<1 说明直连失败 → 切代理
+    setTimeout(() => {
+      const v2 = document.getElementById('pl');
+      if (v2 && v2 !== video) return;                 // 用户已切走
+      if (v2.readyState < 1 && v2.src === raw) {
+        v2.src = API + '/api/hd/stream?u=' + encodeURIComponent(raw);
+        v2.load();
+        try { v2.play().catch(() => {}); } catch (e) {}
+        toast('已切换代理线路');
+      }
+    }, 8000);
+  });
+}
+
+// 渲染线路按钮
+function renderHdLines() {
+  const box = document.getElementById('hdlines');
+  if (!box) return;
+  const official = HD_CUR ? HDHd.h5Url(HD_CUR.id) : 'https://hddj30.cc/';
+  let h = '';
+  if (HD_LINES.length) {
+    h += '<span class="hdlinetip">播放线路：</span>' +
+      HD_LINES.map((L, i) =>
+        '<a class="hdline' + (i === HD_LINE_I ? ' on' : '') + '" href="javascript:hdUseLine(' + i + ')">' + esc(L.label || ('线路' + (i + 1))) + '</a>'
+      ).join('');
+  }
+  h += '<span class="hdlinetip" style="margin-left:6px">官方：</span>' +
+    '<a class="hdline" href="' + esc(official) + '" target="_blank" rel="noopener noreferrer">官方 H5 播放页</a>';
+  box.innerHTML = h;
+}
+
+function hdUseLine(i) {
+  if (!HD_LINES[i]) return;
+  HD_LINE_I = i;
+  hdSetSrc(HD_LINES[i].url);
+  renderHdLines();
+  toast('已切换到 ' + (HD_LINES[i].label || ('线路' + (i + 1))));
+}
+
+/* ===================== 统一 HLS 播放引擎 =====================
+ * 背景 (2026-10 根因, 直连不播 / 挂代理 400):
+ *
+ *   【黄果直连不播】黄果源是 m3u8 (HLS)。Chrome/Edge/Firefox/Android 的原生
+ *   <video> 只认 mp4, 不认 m3u8。旧代码把 m3u8 裸塞给 <video src>, 在非 Safari
+ *   内核上必然黑屏/转圈 —— 这就是"直连黄果播不了"。
+ *
+ *   【黄豆挂代理 400】黄豆源是带 ticket 的 mp4, 上游 CDN 不发 ACAO。
+ *   <video> 不检查 CORS 所以直连可播; 但旧 hdSetSrc 在 WORKER_OK!==false 时
+ *   无条件包 Worker 流代理, 挂代理后 Worker 可达 → 强制走 workers.dev →
+ *   Worker 出口 + 过期 ticket 触发上游 400, 且无回退 → 卡死。
+ *
+ * 方案:
+ *   1) 统一入口 setVideoSrc(): m3u8 → hls.js 接管; mp4/直链 → 直接 video.src。
+ *   2) 黄果 m3u8 默认【直连】(上游 refererCheck=false 且发 ACAO:*, 直连最稳,
+ *      不受 workers.dev 被墙影响); 仅当直连加载失败才回退 Worker /proxy/。
+ *   3) 黄豆走 mp4 直链优先, Worker 流代理仅作备选, 400 自动回落。
+ */
+let HLS_OBJ = null;                 // 当前 hls.js 实例
+const HLS_READY = () => (typeof Hls !== 'undefined' && Hls.isSupported());
+
+/**
+ * m3u8 播放地址归一 —— 默认直连, 不无脑包 Worker。
+ *
+ * 为什么默认直连:
+ *   黄果 m3u8 及 ts 分片: site.json 标 refererCheck=false, 且上游发 ACAO:*,
+ *   hls.js 从浏览器直接拉完全可行, 且比经 Cloudflare Worker 少一跳、更稳。
+ *   旧逻辑无条件走 /proxy/, 在 Worker 被墙时反而把能播的链路拖死。
+ *
+ * @param {string} url
+ * @param {boolean} viaWorker  true 时强制走 Worker /proxy/ (失败回退用)
+ */
+/**
+ * 决定播放用的 URL。
+ *
+ * viaWorker=false → 直连原地址
+ * viaWorker=true  → 走本站 Worker 代理
+ *
+ * 为什么 mp4 也要能代理 (2026-10):
+ *   ERO 的流地址是 r2.dev / 上游 CDN, 国内直连 .r2.dev 普遍超时。
+ *   原来只有 m3u8 会走代理, mp4 直链原样丢给 <video>, 国内就是一直转圈。
+ *   现在 mp4 也能走 /proxy/*, 由 Worker 边缘代拉。
+ */
+function playSrc(url, viaWorker) {
+  if (!url) return '';
+  const s = String(url).trim();
+  // Worker 代理路径只有 /proxy/ 能透传任意地址 (m3u8 与 mp4 都支持)
+  if (viaWorker && typeof API === 'string' && API && WORKER_OK !== false) {
+    return API + '/proxy/' + encodeURIComponent(s);
+  }
+  return s;
+}
+
+/**
+ * 用 hls.js 加载一个 m3u8 地址 (单次尝试)。
+ * @returns {Promise<'ok'|'fail'>}
+ */
+function hlsLoad(video, src, attemptOpts) {
+  return new Promise(resolve => {
+    const h = new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      // 分片/清单错误重试, 提高弱网抖动下的成功率
+      manifestLoadingMaxRetry: 3,
+      levelLoadingMaxRetry: 3,
+      fragLoadingMaxRetry: 4,
+      manifestLoadingRetryDelay: 400,
+      fragLoadingRetryDelay: 400,
+      fragLoadingMaxRetryTimeout: 12000,
+    });
+
+    let settled = false;
+    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+
+    h.on(Hls.Events.MANIFEST_PARSED, () => done('ok'));
+    h.on(Hls.Events.ERROR, (evt, data) => {
+      if (!data || !data.fatal) return;
+      if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        try { h.recoverMediaError(); return; } catch (e) {}
+      }
+      // 网络类致命错误 → 本次尝试判失败, 交给外层决定是否换 Worker 代理重试
+      done('fail');
+    });
+
+    HLS_OBJ = h;
+    try {
+      h.loadSource(src);
+      h.attachMedia(video);
+    } catch (e) {
+      done('fail');
+    }
+    // 超时兜底: 8 秒还没 parsed 视为失败, 不阻塞 UI
+    setTimeout(() => done('fail'), 8000);
+  });
+}
+
+/**
+ * 统一设置视频源。返回 Promise<void>。
+ *
+ * 黄果 m3u8 策略: 先直连 (refererCheck=false, 直连最快) → 失败再走 Worker /proxy/。
+ * 黄豆/芒果 mp4 或代理地址: 直接设置, 由 video.onerror 兜底。
+ *
+ * @param {HTMLVideoElement} video
+ * @param {string} url   原始播放地址 (m3u8 或 mp4 或 Worker 代理地址)
+ * @param {{onFatal?:Function, isHd?:boolean}} opts
+ */
+async function setVideoSrc(video, url, opts) {
+  opts = opts || {};
+  if (!video || !url) return;
+  destroyHls();
+
+  const raw = String(url).trim();
+  // 已经是 Worker 代理地址 → 原样使用, 不再包
+  const alreadyProxied = (typeof API === 'string' && API && raw.indexOf(API) === 0);
+  const isHls = /\.m3u8(\?|$)/i.test(raw) || (!alreadyProxied && raw.indexOf('m3u8') >= 0) || opts.forceHls === true;
+
+  // ---- 非 HLS (mp4 直链) ----
+  //   国内直连 r2.dev / 上游 CDN 常年超时, 所以 mp4 也要能回退到 Worker 代理。
+  //   先直连 (快、省流量), 超时或 error 再换代理。
+  if (!isHls) {
+    const directMp4 = alreadyProxied ? raw : playSrc(raw, false);
+    const proxMp4 = alreadyProxied ? '' : playSrc(raw, true);
+
+    if (!proxMp4 || proxMp4 === directMp4 || typeof WORKER_OK === 'undefined' || WORKER_OK === false) {
+      video.src = directMp4;
+      video.load();
+      return;
+    }
+
+    // 直连 → 失败自动切代理 (只切一次, 避免死循环)
+    let switched = false;
+    const onErr = () => {
+      if (switched) return;
+      switched = true;
+      video.removeEventListener('error', onErr);
+      video.removeEventListener('stalled', onErr);
+      video.src = proxMp4;
+      video.load();
+      try { video.play().catch(() => {}); } catch (e) {}
+      toast('已切换代理线路');
+    };
+    video.addEventListener('error', onErr);
+    video.addEventListener('stalled', onErr);
+    video.src = directMp4;
+    video.load();
+    return;
+  }
+
+  const direct = playSrc(raw, false);   // 直连地址
+
+  // ---- Safari / iOS: 原生 HLS, 直接 src 最稳 (这些内核 Hls.isSupported() 为 false) ----
+  if (!HLS_READY()) {
+    video.src = alreadyProxied ? raw : direct;
+    video.load();
+    return;
+  }
+
+  // ---- 有 hls.js: 先直连, 失败再走 Worker 代理 ----
+  let r = await hlsLoad(video, alreadyProxied ? raw : direct);
+  if (r === 'ok') return;
+
+  const viaW = playSrc(raw, true);       // Worker 代理地址
+  if (viaW && viaW !== direct) {
+    destroyHls();
+    r = await hlsLoad(video, viaW);
+    if (r === 'ok') { toast('已切换代理线路'); return; }
+  }
+
+  if (typeof opts.onFatal === 'function') opts.onFatal();
+}
+
+function destroyHls() {
+  if (HLS_OBJ) {
+    try { HLS_OBJ.destroy(); } catch (e) {}
+    HLS_OBJ = null;
+  }
+}
+
+/* ===================== 播放器增强: 倍速 + 记忆进度 ===================== */
+const SPD_KEY = 'hg_speed_v1';
+const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+let CUR_SPEED = parseFloat(localStorage.getItem(SPD_KEY) || '1') || 1;
+
+function initPlayer(resumePos) {
+  const v = document.getElementById('pl');
+  if (!v) return;
+
+  // 应用记住的倍速
+  v.playbackRate = CUR_SPEED;
+  renderSpeedBar();
+
+  // 恢复进度
+  if (resumePos > 5) {
+    const go = () => {
+      try { v.currentTime = resumePos; } catch (e) {}
+      showResumeTip(resumePos);
+    };
+    if (v.readyState >= 1) go();
+    else v.addEventListener('loadedmetadata', go, { once: true });
+  }
+
+  // 每 5 秒保存一次进度
+  clearInterval(HIS_TIMER);
+  HIS_TIMER = setInterval(() => {
+    if (!v.duration || v.paused) return;
+    saveProgress(v.currentTime, v.duration);
+  }, 5000);
+
+  // 切走时保存
+  v.addEventListener('pause', () => saveProgress(v.currentTime, v.duration));
+  window.addEventListener('beforeunload', () => {
+    if (v.duration) saveProgress(v.currentTime, v.duration);
+  }, { once: true });
+
+  // 播完自动下一集
+  v.addEventListener('ended', () => {
+    saveProgress(0, v.duration);
+    step(1);
+  });
+}
+
+function saveProgress(pos, dur) {
+  if (!curVid) return;
+  hisPut({
+    id: curVid.id,
+    title: curVid.title,
+    cover: curVid.cover,
+    ep: curEp,
+    epTotal: curVid.epTotal,
+    pos: Math.floor(pos || 0),
+    dur: Math.floor(dur || 0),
+  });
+}
+
+function showResumeTip(pos) {
+  const box = document.getElementById('resume');
+  if (!box) return;
+  const m = Math.floor(pos / 60), s = Math.floor(pos % 60);
+  box.style.display = '';
+  box.innerHTML = '已从上次位置继续播放（' + m + ':' + String(s).padStart(2, '0') + '）';
+  setTimeout(() => { if (box) box.style.display = 'none'; }, 4000);
+}
+
+function renderSpeedBar() {
+  const w = document.getElementById('spdwrap');
+  if (!w) return;
+  w.innerHTML = '倍速 ' + SPEEDS.map(s =>
+    '<button class="spd' + (s === CUR_SPEED ? ' on' : '') + '" onclick="setSpeed(' + s + ')">' + s + 'x</button>'
+  ).join('');
+}
+
+function setSpeed(s) {
+  CUR_SPEED = s;
+  localStorage.setItem(SPD_KEY, String(s));
+  const v = document.getElementById('pl');
+  if (v) v.playbackRate = s;
+  renderSpeedBar();
+}
+
+async function playEp(ep) {
+  if (!curVid) return;
+  const v = document.getElementById('pl');
+  if (!v) return;
+  // 切集前先保存当前进度
+  if (v.duration && !v.paused) saveProgress(v.currentTime, v.duration);
+
+  ep = String(ep);
+  let u = curVid.eps[ep];
+  curEp = ep;
+  document.querySelectorAll('.ep').forEach(x => x.classList.remove('on'));
+  const el = document.querySelector('.ep[data-ep="' + ep + '"]');
+  if (el) { el.classList.add('on'); if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); }
+  document.getElementById('curep').textContent = '第 ' + ep + ' 集' + (u ? '' : '（解析中…）');
+
+  // 先记"看到第几集" — 不管源能不能拿到, 用户点了这集就该记住
+  hisPut({ id: curVid.id, title: curVid.title, cover: curVid.cover, ep, epTotal: curVid.epTotal, pos: 0 });
+
+  if (!u) {
+    try {
+      const j = await api('/api/ep', { id: curVid.id, ep: ep });
+      u = j.url;
+      if (u) curVid.eps[ep] = u;
+    } catch (e) {}
+  }
+  if (!u) { document.getElementById('curep').textContent = '第 ' + ep + ' 集（源获取失败）'; return; }
+  // 统一入口: m3u8 交给 hls.js, mp4 直接播 (修: 之前裸塞 m3u8, Chrome 播不了)
+  await setVideoSrc(v, u, {
+    onFatal: () => {
+      const ce = document.getElementById('curep');
+      if (ce) ce.textContent = '第 ' + ep + ' 集（源加载失败，换集或稍后重试）';
+    }
+  });
+  v.playbackRate = CUR_SPEED;
+
+  const rt = document.getElementById('resume');
+  if (rt) rt.style.display = 'none';
+  v.play().catch(() => {});
+  document.getElementById('curep').textContent = '第 ' + ep + ' 集';
+}
+
+// 一键补齐所有集（后台慢慢拉）
+async function fetchAllEps() {
+  if (!curVid) return;
+  const btn = document.getElementById('fillbtn');
+  if (btn) { btn.disabled = true; btn.textContent = '补齐中…'; }
+  const total = curVid.epTotal || 0;
+  let done = 0;
+  for (let n = 1; n <= total; n++) {
+    if (curVid.eps[String(n)]) { done++; continue; }
+    try {
+      const j = await api('/api/ep', { id: curVid.id, ep: n });
+      if (j.url) { curVid.eps[String(n)] = j.url; done++; }
+    } catch (e) {}
+    if (btn) btn.textContent = '补齐中 ' + done + '/' + total;
+    await new Promise(r => setTimeout(r, 120));
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '✅ 已补齐 ' + done + ' 集'; }
+}
+function step(d) {
+  if (!curVid) return;
+  const keys = Object.keys(curVid.eps).sort((a, b) => +a - +b);
+  // 用记录到的当前集 (比读 DOM 更可靠, 尤其切集后)
+  let i = keys.indexOf(String(curEp));
+  if (i < 0) {
+    const cur = document.querySelector('.ep.on');
+    i = cur ? keys.indexOf(cur.dataset.ep) : 0;
+  }
+  const n = i + d;
+  if (n >= 0 && n < keys.length) playEp(keys[n]);
+  else if (n >= keys.length && curVid.epTotal && i + 1 < curVid.epTotal) {
+    // 下一集还没解析出源, 也试着去拿
+    playEp(String(i + 2));
+  }
+}
+
+/* ===================== 我的 (收藏 / 历史 / 继续观看) ===================== */
+function goMine() {
+  const favs = favList();
+  const his = hisList();
+  const cont = his.filter(x => x.pos > 10 || (x.ep && x.ep !== '1')).slice(0, 12);
+
+  function card(x, sub, act) {
+    // 收藏/历史里存了来源就用存的, 老数据没有就按当前板块猜
+    const src = x.site || SITE;
+    const cv = coverUrl(x.cover, src);
+    // 只有黄果封面是加密的 (必须走 /img, 直连必败); es/hjw/hd 都直接放行
+    const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es') ? '' : ' data-hg="1"';
+    return '<div class="item" data-id="' + esc(x.id) + '" data-site="' + esc(src) + '"' +
+      ' onclick="openVid(\'' + esc(x.id) + '\',\'' + esc(src) + '\')">' +
+      '<div class="thumb">' +
+        (cv ? '<img loading="lazy" src="' + esc(cv) + '" data-raw="' + esc(x.cover) + '" data-fb="0"' + hgFlag + ' onerror="hgImgFallback(this)">' : '') +
+        '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
+        (x.ep ? '<div class="badge">' + x.ep + '集</div>' : '') +
+        '<div class="badge src" style="left:auto;right:6px;background:rgba(10,10,14,.72)">' +
+        (src === 'hd' ? '黄豆' : '黄果') + '</div>' +
+      '</div>' +
+      '<div class="t">' + esc(x.title) + '</div>' +
+      '<div class="e">' + esc(sub || '') + '</div>' +
+      '</div>';
+  }
+
+  let html = '<div class="minehead"><b>我的</b>' +
+    '<span class="mineacts">' +
+    (favs.length ? '<button class="gh" onclick="favClear()">清空收藏</button>' : '') +
+    (his.length ? '<button class="gh" onclick="hisClear()">清空历史</button>' : '') +
+    '</span></div>';
+
+  if (cont.length) {
+    html += '<div class="sec">继续观看</div><div class="grid">' +
+      cont.map(x => card(x, x.ep ? ('看到第 ' + x.ep + ' 集' + (x.pos > 10 ? ' · ' + fmtTime(x.pos) : '')) : '')).join('') +
+      '</div>';
+  }
+  if (favs.length) {
+    html += '<div class="sec">我的收藏（' + favs.length + '）</div><div class="grid">' +
+      favs.map(x => card(x, x.ep ? ('共 ' + x.ep + ' 集') : '')).join('') + '</div>';
+  } else if (!cont.length) {
+    html += '<div class="hint">还没有收藏或观看记录。<br><br>' +
+      '在剧集详情页点 <b>♡ 收藏</b> 就会出现在这里。</div>';
+  }
+  if (his.length && !favs.length) {
+    html += '<div class="sec">最近观看（' + his.length + '）</div><div class="grid">' +
+      his.slice(0, 30).map(x => card(x, '第 ' + (x.ep || 1) + ' 集')).join('') + '</div>';
+  } else if (his.length && favs.length) {
+    html += '<div class="sec">最近观看（' + his.length + '）</div><div class="grid">' +
+      his.slice(0, 30).map(x => card(x, '第 ' + (x.ep || 1) + ' 集')).join('') + '</div>';
+  }
+
+  app().innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+function fmtTime(sec) {
+  sec = Math.floor(sec || 0);
+  const m = Math.floor(sec / 60), s = sec % 60;
+  if (m >= 60) return Math.floor(m / 60) + '时' + (m % 60) + '分';
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+/* ===================== 错误处理 ===================== */
+function showErr(e) {
+  const msg = String(e && e.message || e);
+  app().innerHTML = '<div class="err"><b>出错了</b><br>' + esc(msg) +
+    '<br><br>可能原因：网络不通 / 服务暂时不可用 / 官方站换域名了。<br>' +
+    '稍后重试，或换个网络环境再试。</div>';
+}
+function showNoApi() {
+  app().innerHTML =
+    '<div class="hint"><b>服务暂时不可用</b><br><br>' +
+    '请检查网络连接后重试。</div>';
+}
+
+/* ===================== PWA: 安装提示 ===================== */
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (localStorage.getItem('hg_install_dismissed') === '1') return;
+  showInstallBar();
+});
+
+function showInstallBar() {
+  if (document.getElementById('pwa-bar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'pwa-bar';
+  bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:10px;z-index:999;' +
+    'background:#1b1b21;border:1px solid #ff7a18;border-radius:14px;padding:12px 14px;' +
+    'display:flex;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.6)';
+  bar.innerHTML =
+    '<div style="flex:1;font-size:13px;line-height:1.5">' +
+      '<b style="color:#ff7a18">安装到桌面</b><br>' +
+      '<span style="color:#999">像 App 一样打开，更快更清爽</span>' +
+    '</div>' +
+    '<button id="pwa-install" style="padding:9px 16px;font-size:14px">安装</button>' +
+    '<button id="pwa-close" class="gh" style="padding:9px 12px;font-size:14px">×</button>';
+  document.body.appendChild(bar);
+
+  document.getElementById('pwa-install').onclick = async () => {
+    bar.remove();
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try {
+      const res = await deferredPrompt.userChoice;
+      if (res && res.outcome === 'accepted') localStorage.setItem('hg_installed', '1');
+    } catch (err) {}
+    deferredPrompt = null;
+  };
+  document.getElementById('pwa-close').onclick = () => {
+    bar.remove();
+    localStorage.setItem('hg_install_dismissed', '1');
+  };
+}
+
+// iOS Safari 无 beforeinstallprompt, 手动给提示
+function maybeShowIosHint() {
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const standalone = window.navigator.standalone === true;
+  if (isIos && !standalone && !localStorage.getItem('hg_install_dismissed')) {
+    setTimeout(showInstallBar, 2500);
+  }
+}
+
+// Service Worker 注册 (带自动更新: 发现新版就刷新页面)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then(reg => {
+        // 每 30 分钟检查一次更新
+        setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+
+        // 发现新 SW 已经接管 → 自动刷新一次 (只刷一次, 防止循环)
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'activated' && navigator.serviceWorker.controller) {
+              if (!sessionStorage.getItem('hg_sw_reloaded')) {
+                sessionStorage.setItem('hg_sw_reloaded', '1');
+                location.reload();
+              }
+            }
+          });
+        });
+
+        // 页面重新可见时也检查一次
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update().catch(() => {});
+        });
+      })
+      .catch(() => {});
+  });
+}
+
+/* ===================== 站点切换 ===================== */
+function renderSiteBar() {
+  const el = document.getElementById('sitebar');
+  if (!el) return;
+  el.innerHTML = Object.keys(SITES).map(k => {
+    const s = SITES[k];
+    return '<button class="sitebtn' + (SITE === k ? ' on' : '') + '" data-k="' + k + '" onclick="setSite(\'' + k + '\')">' +
+      '<span class="dot"></span>' + s.short + '</button>';
+  }).join('');
+  document.documentElement.setAttribute('data-site', SITE);
+}
+
+/* ===================== 启动 ===================== */
+renderSiteBar();
+renderTabs();
+document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+goHome();
+maybeShowIosHint();
+
+// 版本自检: 发现线上有新版就清缓存重载一次
+// 机制: 把「线上 index.html」下载下来, 抠出它的 PAGE_BUILD 和当前跑着的比。
+// 为什么不用 sw.js 的 VERSION: SW 自己会被缓存, 断网/弱网时拿到的是旧的,
+// 版本号永远相等 → 自愈逻辑等于没写。
+const PAGE_BUILD = 'hg-v8-20261007';
+(function checkBuild() {
+  if (sessionStorage.getItem('hg_ver_reload')) return;   // 每次会话只自愈一次
+  const url = location.pathname.replace(/[^/]*$/, '') + 'index.html?t=' + Date.now();
+  fetch(url, { cache: 'no-store' })
+    .then(r => (r.ok ? r.text() : ''))
+    .then(t => {
+      if (!t) return;
+      const m = t.match(/PAGE_BUILD\s*=\s*['"]([^'"]+)/);
+      if (!m) return;
+      if (m[1] === PAGE_BUILD) return;                    // 版本一致, 没事
+      console.info('[湟果] 检测到新版 (' + m[1] + ' != ' + PAGE_BUILD + '), 正在更新…');
+      sessionStorage.setItem('hg_ver_reload', '1');
+      const reload = () => location.reload();
+      const killSW = () => {
+        if (!navigator.serviceWorker) return Promise.resolve();
+        return navigator.serviceWorker.getRegistrations()
+          .then(rs => Promise.all(rs.map(r => r.unregister())))
+          .catch(() => {});
+      };
+      const done = () => killSW().then(reload, reload);
+      if (window.caches && caches.keys) {
+        caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))).then(done, done);
+      } else { done(); }
+    })
+    .catch(() => {});
+})();
+</script>
+</body>
+</html>

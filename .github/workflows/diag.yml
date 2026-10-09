@@ -1,0 +1,20 @@
+# 海角空列表诊断 (一次性, 跑完可删)
+name: DiagHJW
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    name: 诊断
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 诊断 Worker + 上游
+        run: |
+          python3 diag_hjw.py | tee -a "$GITHUB_STEP_SUMMARY"
+          exit 0

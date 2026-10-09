@@ -1,0 +1,35 @@
+# ===== 密钥 (绝对不能提交) =====
+deploy.config.psd1
+deploy.github.psd1
+*.key
+*.pem
+.env
+.env.*
+
+# ===== 部署产物 =====
+_assets/
+_site/
+_worker_deploy.js
+wrangler.toml
+.wrangler/
+_deploy.log
+_deploy.out
+
+# ===== 运行日志 =====
+_logs/
+*.log
+
+# ===== 临时/测试文件 =====
+_*.ps1
+_*.mjs
+_*.cjs
+_*.py
+__pycache__/
+*.pyc
+*.tmp
+_backup_*/
+
+# ===== 系统 =====
+Thumbs.db
+desktop.ini
+.DS_Store

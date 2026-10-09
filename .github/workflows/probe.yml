@@ -1,0 +1,282 @@
+# 短剧站批量探测 + 同类扩线 (临时任务, 跑完可删)
+#
+# 用途:
+#   1. 探老板指定的新站 (热浪 relang02.cc / 野果 yeguodj.com)
+#   2. 批量探 candidates.txt 里的同类站
+#   3. 从探通的站出发, 滚雪球挖出更多同类站 (发布页/友链)
+name: ProbeSites
+
+on:
+  workflow_dispatch:
+    inputs:
+      hosts:
+        description: "指定域名 (空格分隔), 留空=只用 candidates.txt"
+        required: false
+        default: "relang02.cc yeguodj.com"
+      do_batch:
+        description: "是否批量跑 candidates.txt"
+        type: boolean
+        default: true
+      do_discover:
+        description: "是否跑同类站发现器 (滚雪球扩线)"
+        type: boolean
+        default: true
+      do_hjw:
+        description: "是否探测海角社区 (hjw01.com / haijiao.ai / hjw1.com)"
+        type: boolean
+        default: true
+      do_live:
+        description: "是否验证线上 Worker 端点 (/api/* 是否真的通)"
+        type: boolean
+        default: true
+      base_url:
+        description: "验证用的基址 (留空=默认 workers.dev 域名)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: 探测
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ---------- 0) 海角社区 (结构 + 付费墙) ----------
+      - name: 探测海角社区
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_probe.py --out hjw-result.json
+
+      # ---------- 0b) 海角原始 HTML dump (JS 壳必须看原文才认得出来) ----------
+      - name: 抓海角原始 HTML
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_dump.py
+
+      # ---------- 0c) 海角深挖: 详情页 + AI中转 + 付费墙取证 ----------
+      - name: 深挖海角详情页
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_deep.py
+
+      # ---------- 0d) 海角 API 真机探通 ----------
+      - name: 探通海角 API
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_api_probe.py
+
+      # ---------- 0e) 海角前端 JS 挖接口 ----------
+      - name: 挖海角前端 JS
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_js_mine.py
+
+      # ---------- 0f) 海角端到端验证 (详情页直取 m3u8) ----------
+      - name: 端到端验证海角
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_verify.py
+
+      # ---------- 0g) 海角图文帖专项 (CORS + 正文 + 图片) ----------
+      - name: 验证海角图文帖
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_article.py
+
+      # ---------- 0h) 海角分类页探测 (反查图文帖板块归属) ----------
+      - name: 探测海角分类页
+        if: inputs.do_hjw
+        continue-on-error: true
+        run: |
+          set +e
+          python hjw_catmap.py
+
+      # ---------- 0i) 线上 Worker 端点验证 (独立于 deploy.yml 的健康检查) ----------
+      # deploy.yml 里自检失败只算 warning, Deploy 照样显示 success。
+      # 这一步把真实响应打出来, 用来确认 /api/* 到底通不通。
+      - name: 验证线上端点
+        if: inputs.do_live
+        continue-on-error: true
+        run: |
+          set +e
+          python verify_live.py "${{ inputs.base_url || 'https://huangguo-web.cxykk919169.workers.dev' }}"
+
+      # ---------- 1) 指定站 (深挖: 详情页 + 试播第1/2/3集) ----------
+      - name: 探测指定站
+        if: inputs.hosts != ''
+        continue-on-error: true
+        run: |
+          set +e
+          python hg_probe_site.py ${{ github.event.inputs.hosts }} --out probe-targets.json
+
+      # ---------- 2) 批量跑候选清单 (深挖) ----------
+      - name: 批量探测候选清单
+        if: inputs.do_batch
+        continue-on-error: true
+        run: |
+          set +e
+          python hg_probe_site.py --file candidates.txt --out probe-batch.json --emit-config probe-usable.json
+
+      # ---------- 3) 同类站发现器 (浅层扩线) ----------
+      - name: 同类站发现器
+        if: inputs.do_discover
+        continue-on-error: true
+        run: |
+          set +e
+          SEEDS="${{ github.event.inputs.hosts }}"
+          if [ -z "$SEEDS" ]; then SEEDS="relang02.cc yeguodj.com"; fi
+          python hg_probe_site.py --discover --rounds 2 --out probe-discover.json $SEEDS
+
+      # ---------- 汇总 ----------
+      - name: 汇总到 Summary
+        if: always()
+        run: |
+          python - <<'PY' >> $GITHUB_STEP_SUMMARY
+          import json, os
+
+          print("# 短剧站探测报告\n")
+
+          def show(fn, title):
+              if not os.path.exists(fn):
+                  return
+              print("\n## %s\n" % title)
+              try:
+                  d = json.load(open(fn, encoding='utf-8'))
+              except Exception as e:
+                  print("读取失败: %s" % e)
+                  return
+              if isinstance(d, dict) and 'related' in d:
+                  print("- 访问过的站: %d" % len(d.get('visited') or []))
+                  print("- 挖出候选域名: %d" % len(d.get('related') or []))
+                  print("\n```")
+                  for x in (d.get('related') or [])[:120]:
+                      print(x)
+                  print("```")
+                  return
+              # 探测结果列表
+              print("| 站 | 状态 | 识别 | 结论 |")
+              print("|---|---|---|---|")
+              for r in d:
+                  cards = ", ".join(r.get('cards') or []) or "-"
+                  if r.get('publish'):
+                      cards = "发布页"
+                  print("| %s | %s | %s | %s |" % (
+                      r.get('host','?'),
+                      r.get('status', r.get('error','?')),
+                      cards[:36],
+                      (r.get('verdict') or r.get('error') or '')[:44]))
+              # 详情
+              for r in d:
+                  if not r.get('play'):
+                      continue
+                  print("\n### %s 详情" % r.get('host'))
+                  print("- title: %s" % r.get('title'))
+                  print("- finalUrl: %s" % r.get('finalUrl'))
+                  print("- 详情页: %s (%sB)" % (r.get('detailUrl'), r.get('detailBytes')))
+                  print("- 数据注入: %s" % r.get('detailSigns'))
+                  print("- 集数: %s" % r.get('epCount'))
+                  print("- 试播: `%s`" % json.dumps(r.get('play'), ensure_ascii=False))
+                  print("- 首页付费字样: %s" % r.get('paywallHome'))
+                  print("\n")
+
+          show('probe-targets.json', '指定站 (热浪 / 野果)')
+          show('probe-batch.json', '批量候选清单')
+          show('probe-discover.json', '同类站发现器扩线结果')
+
+          # 海角社区
+          if os.path.exists('hjw-result.json'):
+              print("\n\n## 海角社区\n")
+              try:
+                  hj = json.load(open('hjw-result.json', encoding='utf-8'))
+                  for r in hj:
+                      print("\n### %s" % r.get('domain'))
+                      print("- 状态: %s | 大小: %s | 标题: %s" % (
+                          r.get('status') or r.get('error'), r.get('bytes'), r.get('title')))
+                      print("- 服务器: %s %s" % (r.get('server'), r.get('poweredBy')))
+                      print("- CMS: %s" % r.get('cms'))
+                      print("- 媒体特征: %s" % r.get('media'))
+                      print("- 付费字样: %s" % r.get('payHome'))
+                      print("- 主要板块:")
+                      for s in (r.get('sections') or [])[:16]:
+                          print("    - /%s x%d" % (s['seg'], s['n']))
+                      print("- 详情页候选: `%s`" % json.dumps(
+                          r.get('detailPatterns') or {}, ensure_ascii=False))
+              except Exception as e:
+                  print("读取失败: %s" % e)
+
+          # 可接入清单
+          if os.path.exists('probe-usable.json'):
+              print("\n\n## ✅ 无付费墙 · 可接入\n")
+              try:
+                  cfg = json.load(open('probe-usable.json', encoding='utf-8'))
+                  us = cfg.get('usable') or []
+                  if not us:
+                      print("本轮没有探到「第1、2集都能直取」的站。")
+                  for u in us:
+                      print("- `%s` — %d 集 · %s" % (u['host'], u['epCount'],
+                            ", ".join(u.get('cards') or []) or '未识别'))
+              except Exception as e:
+                  print("读取失败: %s" % e)
+          PY
+
+      - name: 上传结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-results
+          path: |
+            probe-targets.json
+            probe-batch.json
+            probe-discover.json
+            probe-usable.json
+            hjw-result.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: 上传海角原始页
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hjw-dump
+          path: dump/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: 上传海角深挖
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hjw-deep
+          path: |
+            dump2/
+            dump3/
+            verify/
+            verify2/
+            verify3/
+            hjw_api_report.json
+            hjw_apihosts.json
+            hjw_api_test.json
+            hjw_home.html
+          if-no-files-found: ignore
+          retention-days: 7

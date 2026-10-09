@@ -1,0 +1,215 @@
+# 湟果视频 · 上游定时同步
+# =======================
+# 每 30 分钟跑一次: 抓上游最新剧集 → 生成 data/*.json → 提交回仓库
+# 内容没变就不提交 (sync_upstream.py 里做了幂等判断)
+#
+# ⚠ 重要: 用 GITHUB_TOKEN 推的 commit **不会**触发其它 workflow
+#   (GitHub 的防递归规定)。所以这里必须显式 call deploy.yml,
+#   否则机器人同步的数据永远上不了线。
+#
+# 也可在 Actions 页面手动触发 (workflow_dispatch)。
+
+name: SyncUpstream
+
+on:
+  schedule:
+    # 每 30 分钟 (GitHub 的 cron 用 UTC, 这里就是每小时的 0/30 分)
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "只同步某个源 (mg / hd / hg / hjw), 留空=全部"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: write          # 需要它才能 dispatch deploy.yml
+
+concurrency:
+  group: "sync-upstream"
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: 拉取上游最新数据
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ---- 第一步: 黄果地址自动发现 ----
+      # 上游 (黄果) 会不停换域名, 官方发布页上挂着当前线路。
+      # 这一步抓发布页 → 提取线路 → 实测 → 有变化就写回 site.json。
+      # 退出码 42 表示"有变化", 不当作失败。
+      - name: 检测黄果新地址
+        id: discover
+        continue-on-error: true
+        run: |
+          set +e
+          python hg_discover.py --write
+          RC=$?
+          echo "discover_rc=$RC" >> $GITHUB_OUTPUT
+          if [ "$RC" = "42" ]; then
+            echo "readme: 发现新地址, site.json 已更新"
+          else
+            echo "readme: 地址无变化 (rc=$RC)"
+          fi
+          exit 0
+
+      - name: 同步
+        id: sync
+        run: |
+          set -e
+          ONLY="${{ github.event.inputs.only }}"
+          if [ -n "$ONLY" ]; then
+            python sync_upstream.py --only "$ONLY" --no-discover
+          else
+            python sync_upstream.py --no-discover
+          fi
+          echo "--- 产物 ---"
+          ls -la data/ || true
+          if [ -f data/sync-meta.json ]; then
+            echo "--- 元信息 ---"
+            cat data/sync-meta.json
+          fi
+
+      # ---- EROSHORT (eroshort.net) ----
+      # eroshort.net 挂 Cloudflare 人机校验, 本地/普通代理都拿不到 (403)。
+      # Actions 出口 IP 实测放行, 所以这一源的抓取只能放在这里跑。
+      # 独立脚本 + continue-on-error: 上游挂了不影响其它源同步。
+      - name: 同步 EROSHORT
+        id: es
+        continue-on-error: true
+        run: |
+          set +e
+          ONLY="${{ github.event.inputs.only }}"
+          if [ -n "$ONLY" ] && [ "$ONLY" != "es" ]; then
+            echo "只同步 $ONLY, 跳过 es"
+            exit 0
+          fi
+          echo "--- 连通性探针 (只记录, 不阻断) ---"
+          python sync_es.py --probe || true
+          # 探针失败不再跳过: probe 走的是和中转同一条路, 但公共 CORS 代理是
+          # 间歇性可用, probe 那一刻失败不代表抓取那一刻也失败。直接抓, 抓不到
+          # 也只是白跑一轮 (continue-on-error), 抓到了就有产出。之前"探针失败即
+          # 跳过"是本模块快照长期为空的直接原因。
+          echo "--- 抓取 ---"
+          python sync_es.py
+          echo "rc=$?" >> $GITHUB_OUTPUT
+          # 归并 + 防退化: 把新旧快照合成一份, 条数变少时保留旧的多份,
+          # 避免中转抖动把 18 部覆盖成 0 部 (线上会直接白屏)。
+          python build_es_snapshot.py || echo "归并跳过 (可忽略)"
+          ls -la data/es-*.json 2>/dev/null || echo "(无 es 产物)"
+          exit 0
+
+      # ---- EROSHORT 静态播放快照 ----
+      # ⚠ 旧做法 (fetch_es_play.py) 是把 resolve 出的地址存进 data/es-play.json,
+      #   但授权与 grant 只有 5 分钟寿命, 存下来必然过期 —— 已废弃。
+      #   现在改用 fetch_es_play_static.py: 存「manifest + license」,
+      #   分片地址去掉 grant (上游 R2 桶不校验), license 里的内容密钥按 key_id 静态,
+      #   所以浏览器能本地解出来并直连 r2.dev —— 国内直连可用, 且 0 次实时请求。
+      - name: 生成 ERO 播放快照
+        id: esplay
+        continue-on-error: true
+        run: |
+          set +e
+          ONLY="${{ github.event.inputs.only }}"
+          if [ -n "$ONLY" ] && [ "$ONLY" != "es" ]; then
+            echo "只同步 $ONLY, 跳过 es-play"
+            exit 0
+          fi
+          python fetch_es_play_static.py --skip-done --workers 4
+          ls -la data/es-play/ 2>/dev/null | head -20 || echo "(无 es-play 产物)"
+          exit 0
+
+      # ---- EROSHORT 集数表走 Worker 重建 ----
+      # runner 直连 eroshort 被 CF 拦, 只能蹭公共 CORS 中转 (间歇可用, 18 部要磨半小时)。
+      # 但线上 Worker 的出口是放行的 (探针 /api/es/health 返 via="direct"),
+      # 而 worker.dev 从 runner 可达 → 让 runner 调 Worker 去抓, 又快又稳。
+      # 顺带纠正历史错误: 只取 depth2 的 episode 节点, 不再把 season 节点当第 1 集。
+      - name: 重建 ERO 集数表 (经 Worker)
+        id: eseps
+        continue-on-error: true
+        run: |
+          set +e
+          ONLY="${{ github.event.inputs.only }}"
+          if [ -n "$ONLY" ] && [ "$ONLY" != "es" ]; then
+            echo "只同步 $ONLY, 跳过 es-eps"
+            exit 0
+          fi
+          python fetch_es_eps_worker.py
+          ls -la data/es-detail.json 2>/dev/null || true
+          exit 0
+
+      - name: 提交变更
+        id: commit
+        run: |
+          set -e
+          git config user.name  "huangguo-sync[bot]"
+          git config user.email "huangguo-sync@users.noreply.github.com"
+          # data/ 是抓来的数据; site.json 是自动发现的站点规则 —— 两个都要提交
+          git add data/ site.json
+          if git diff --cached --quiet; then
+            echo "本次没有变化, 跳过提交"
+            echo "pushed=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          COUNT=$(python - <<'PY'
+          import json,os
+          try:
+              d=json.load(open('data/sync-meta.json',encoding='utf-8'))
+              parts=[]
+              for k,v in d.get('sources',{}).items():
+                  parts.append(f"{k}={v.get('count',0)}")
+              disc=d.get('discover') or {}
+              if disc.get('changed'):
+                  parts.append("地址已更新")
+              print(" ".join(parts))
+          except Exception:
+              print("n/a")
+          PY
+          )
+          git commit -m "chore(sync): 上游数据更新 [${COUNT}] $(date -u '+%Y-%m-%d %H:%M UTC')"
+          # push 可能与 API 精准推送 (push_files.py) 撞车 → non-fast-forward。
+          # rebase 后重试, 最多 3 次 (2026-10-08 01:43 UTC 那轮就这样失败的)
+          PUSH_OK=0
+          for i in 1 2 3; do
+            if git push; then PUSH_OK=1; break; fi
+            echo "  [push 第 $i 次失败, pull --rebase 后重试]"
+            git pull --rebase=merges origin main || git rebase --abort
+            sleep 3
+          done
+          if [ "$PUSH_OK" = "1" ]; then
+            echo "pushed=1" >> $GITHUB_OUTPUT
+          else
+            echo "::warning::push 三次重试后仍失败, 数据留在下轮"
+          fi
+
+      # ---- 显式触发部署 ----
+      # GITHUB_TOKEN 推的 commit 不会自动触发 deploy.yml (防递归),
+      # 所以这里得手动 dispatch 一次, 否则数据上不了线。
+      - name: 触发部署
+        if: steps.commit.outputs.pushed == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          echo "触发 Deploy workflow ..."
+          gh workflow run deploy.yml --ref main 2>&1 || \
+            curl -sS -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+              -d '{"ref":"main"}' && echo "已触发"
+          exit 0
+
+      - name: 汇总
+        run: |
+          echo "### 同步结果" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat data/sync-meta.json >> $GITHUB_STEP_SUMMARY || echo "{}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

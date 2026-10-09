@@ -1,0 +1,462 @@
+# 湟果视频 · 双部署流水线
+# ============================
+# push 到 main 时:
+#   1. 发布 GitHub Pages  (静态前端, 国内可直连)
+#   2. 部署 Cloudflare Worker (API 代理 + 静态托管 + 自愈)
+#
+# 需要在 GitHub 仓库配置 Secrets:
+#   CLOUDFLARE_API_TOKEN   - Cloudflare Token (权限: Workers Scripts:Edit)
+#   CLOUDFLARE_ACCOUNT_ID  - Cloudflare 账户 ID
+# 没配 Secret 时只跑 Pages, 不会失败。
+
+name: Deploy
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      force_recreate:
+        description: "先删除 Worker 再重建 (配置被 dashboard 旧配置锁死时用)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "deploy"
+  cancel-in-progress: false
+
+jobs:
+  # ============================================================
+  # Job 1: GitHub Pages
+  # ============================================================
+  pages:
+    name: GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      # 首轮成功用首轮输出, 首轮失败走重试就用重试的输出
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 组装发布目录
+        run: |
+          set -e
+          mkdir -p _site
+          # 前端文件 (白名单, 避免源码泄露)
+          for f in index.html hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
+            if [ -f "$f" ]; then
+              cp "$f" _site/
+              echo "  + $f"
+            else
+              echo "  ! 缺少 $f"
+            fi
+          done
+          # 上游数据快照 (Actions 定时同步生成, 前端离线兜底用)
+          if [ -d "data" ]; then
+            mkdir -p _site/data
+            cp data/*.json _site/data/ 2>/dev/null && echo "  + data/*.json"
+            # ERO 播放快照 (国内直连必需: 绕开 workers.dev 被墙)
+            if [ -d "data/es-play" ]; then
+              mkdir -p _site/data/es-play
+              cp data/es-play/*.json _site/data/es-play/ 2>/dev/null && \
+                echo "  + data/es-play/*.json ($(ls data/es-play | wc -l) 个)"
+            fi
+          fi
+          echo "--- 发布目录 ---"
+          ls -la _site/
+
+      - name: 安全检查 (禁止源码进入发布目录)
+        run: |
+          for bad in worker.js wrangler.toml deploy.ps1 deploy.config.psd1 watch.ps1 doctor.ps1; do
+            if [ -f "_site/$bad" ]; then
+              echo "::error::源码文件泄露到发布目录: $bad"
+              exit 1
+            fi
+          done
+          echo "安全检查通过"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      # actions/deploy-pages 偶发报
+      #   No artifacts named "github-pages" were found for this workflow run
+      # (上传步骤显示成功, 但 GitHub 侧检索 artifacts 元数据失败 —— 平台瞬时故障)。
+      # 加一次原地重试自愈, 避免整轮部署被这种抖动卡死。
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Deploy (重试自愈)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+
+      - name: 记录部署结果
+        run: |
+          echo "首次: ${{ steps.deployment.outcome }}"
+          echo "重试: ${{ steps.deployment_retry.outcome }}"
+
+  # ============================================================
+  # Job 2: Cloudflare Worker
+  # ============================================================
+  cloudflare:
+    name: Cloudflare Worker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查 Secret
+        id: chk
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "::notice::未配置 CLOUDFLARE_API_TOKEN, 跳过 Cloudflare 部署"
+            echo "skip=1" >> $GITHUB_OUTPUT
+          else
+            echo "skip=0" >> $GITHUB_OUTPUT
+          fi
+
+      - if: steps.chk.outputs.skip == '0'
+        uses: actions/setup-node@v4
+        with:
+          # wrangler 4.147 要求 Node >= 22
+          node-version: '22'
+
+      - name: 组装部署文件
+        if: steps.chk.outputs.skip == '0'
+        run: |
+          set -e
+          cp worker.js _worker_deploy.js
+          echo "worker.js: $(wc -c < worker.js) B  sha256=$(sha256sum worker.js | cut -c1-16)"
+          echo "_worker_deploy.js: $(wc -c < _worker_deploy.js) B  sha256=$(sha256sum _worker_deploy.js | cut -c1-16)"
+          BUILD=$(grep -o 'hg-worker-[0-9a-z.-]*' worker.js | head -1)
+          echo "本次构建标记: $BUILD"
+          mkdir -p _assets
+          for f in index.html hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
+            [ -f "$f" ] && cp "$f" _assets/
+          done
+          if [ -d "data" ]; then
+            mkdir -p _assets/data
+            cp data/*.json _assets/data/ 2>/dev/null || true
+          fi
+          if [ -d "data/es-play" ]; then
+            mkdir -p _assets/data/es-play
+            cp data/es-play/*.json _assets/data/es-play/ 2>/dev/null || true
+          fi
+
+          # 写 wrangler.toml。
+          # ⚠️ 不能用带缩进的 heredoc: YAML 的 run: | 每行都有前导空格,
+          # <<'EOF' 不会去掉它们, 于是 wrangler.toml 每一行都带 10 个空格。
+          # wrangler 虽然多数情况能忍, 但配置一旦被判成"读不出来"就会静默回退到
+          # dashboard 上的旧配置 —— 表现为 run_worker_first 失效、/api/* 全 404。
+          # 用 printf 逐行写, 保证顶格。
+          #
+          # run_worker_first 用"路由数组"而不是 true:
+          #   只有这些路径先跑 Worker, 其余静态资源直通 assets (更快)。
+          #   用 true 的话 /sw.js /index.html 这些命中了 assets 的请求会被
+          #   Cloudflare 走快路径跳过 Worker, 我加的缓存头就永远不生效。
+          #   缓存头改由 _headers 文件声明 (见下面)。
+          {
+            printf '%s\n' 'name = "huangguo-web"'
+            printf '%s\n' 'main = "_worker_deploy.js"'
+            printf '%s\n' 'compatibility_date = "2026-10-01"'
+            printf '%s\n' ''
+            printf '%s\n' '[assets]'
+            printf '%s\n' 'directory = "_assets"'
+            printf '%s\n' 'binding = "ASSETS"'
+            printf '%s\n' 'not_found_handling = "none"'
+            # 源码保护路径也走 Worker, 否则 assets 会把它们兜底送出去
+            # 注意: 规则不允许冗余 ("/api/img" 会被 "/api/*" 覆盖, 写了会报错)
+            printf '%s\n' 'run_worker_first = ["/api/*", "/img", "/proxy/*", "/sw.js", "/worker.js", "/wrangler.toml", "/*.ps1", "/*.py", "/_*"]'
+            printf '%s\n' ''
+            printf '%s\n' '[triggers]'
+            printf '%s\n' 'crons = ["*/10 * * * *"]'
+          } > wrangler.toml
+
+          echo "--- wrangler.toml ---"
+          cat wrangler.toml
+          if grep -qE '^[[:space:]]+(name|main|compatibility_date|\[)' wrangler.toml; then
+            echo "::error::wrangler.toml 行首有空格, wrangler 会静默忽略!"
+            exit 1
+          fi
+          # 用真 TOML 解析器验一遍: 语法错了必须当场炸, 不能等 wrangler 报一句看不懂的错
+          # (校验逻辑放外部 py 文件, 避免 YAML 里的 heredoc 缩进地狱)
+          python3 .github/check_toml.py wrangler.toml || { echo "::error::wrangler.toml 校验未通过"; exit 1; }
+
+          # _headers: Cloudflare 静态资源的响应头声明文件 (放在 assets 目录里, 自己不会被发布)。
+          # 解决"改了页面但用户看到旧版"——HTML/JS/SW 一律不缓存。
+          # 规则语法: 路径前缀匹配, 每行一条; 头部行必须缩进两个空格。
+          {
+            printf '%s\n' '/sw.js'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' '  Service-Worker-Allowed: /'
+            printf '%s\n' ''
+            printf '%s\n' '/'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/index.html'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/hg-direct.js'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/hg-hd.js'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/hg-es.js'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/hg-stego.js'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/hg-hjw.js'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/manifest.json'
+            printf '%s\n' '  Cache-Control: no-cache'
+            printf '%s\n' '  Content-Type: application/manifest+json; charset=utf-8'
+          } > _assets/_headers
+          if grep -qE '^[[:space:]]+[^ ]' _assets/_headers && ! grep -qE '^  [A-Za-z-]+:' _assets/_headers; then
+            echo "::error::_headers 头部行必须缩进两个空格"
+            exit 1
+          fi
+
+          echo "--- _assets/_headers ---"
+          cat _assets/_headers
+          echo "--- _assets ---"
+          ls -la _assets/
+
+      # ---------- 可选: 删除 Worker 彻底重置 (配置被旧配置锁死时的核弹档) ----------
+      # 2026-10-08 实测: wrangler.toml 校验全 OK 但线上 run_worker_first 未生效,
+      # /api/* 全 404 且响应无 X-Build → Worker 被旁路。勾选 force_recreate 时先删后建。
+      - name: 删除 Worker (force_recreate)
+        if: steps.chk.outputs.skip == '0' && inputs.force_recreate == true
+        run: |
+          set +e
+          ACC="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          TOK="${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          echo "删除 Worker (routes/crons 会由下一步重建)..."
+          CODE=$(curl -s -o /tmp/del.json -w '%{http_code}' -X DELETE \
+            -H "Authorization: Bearer $TOK" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/workers/scripts/huangguo-web")
+          echo "  DELETE http=$CODE"
+          python3 -c "import json;d=json.load(open('/tmp/del.json'));print('  success:',d.get('success'),d.get('errors'))" 2>/dev/null || true
+          sleep 3
+
+      - name: 部署
+        if: steps.chk.outputs.skip == '0'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # ⚠️ 必须锁定版本: action 默认装的是老 wrangler, 老版本不认
+          # [assets] 里的 run_worker_first, 只会打一句 "Unexpected fields" 警告
+          # 然后静默忽略 —— 表现为 /api/* 全 404、源码保护失效。
+          wranglerVersion: "4.147.0"
+          command: deploy --config wrangler.toml
+
+      # ---------- 部署后取证: 直接问 Cloudflare「线上到底跑的什么配置」 ----------
+      # 背景: wrangler 报 success ≠ 配置生效。这里从 CF API 拿三样东西:
+      #   1. 脚本设置 (settings) —— 看 main_module 大小 / bindings
+      #   2. 部署记录 (deployments) —— 看最新版本是否已 100% 流量
+      #   3. 子域路由 —— 确认 workers.dev 开着
+      - name: Cloudflare 配置取证
+        if: steps.chk.outputs.skip == '0'
+        run: |
+          set +e
+          ACC="${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          TOK="${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          CF="https://api.cloudflare.com/client/v4/accounts/$ACC"
+          get() { curl -s --max-time 30 -H "Authorization: Bearer $TOK" "$CF$1"; }
+          echo "--- 1) Worker 脚本清单 ---"
+          get "/workers/scripts" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          for s in (d.get('result') or []):
+              print('  script:', s.get('id'), '| modified:', s.get('modified_on'), '| 部署态:', s.get('deployment_state'))
+          "
+          echo "--- 2) huangguo-web 设置 ---"
+          get "/workers/scripts/huangguo-web/settings" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          r=d.get('result') or {}
+          print('  success:', d.get('success'), '| errors:', d.get('errors'))
+          print('  main_module:', (r.get('main_module') or '?'), '| 大小:', r.get('size') or r.get('main_module_size') or '?')
+          print('  compatibility_date:', r.get('compatibility_date'))
+          for b in (r.get('bindings') or []):
+              print('  binding:', b.get('type'), b.get('name'), (b.get('namespace') or b.get('bucket_name') or ''))
+          "
+          echo "--- 3) 部署记录 (最近 3 条) ---"
+          get "/workers/scripts/huangguo-web/deployments" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          items=d.get('result',{}).get('deployments') if isinstance(d.get('result'),dict) else d.get('result')
+          for dep in (items or [])[:3]:
+              print('  ver:', (dep.get('version') or '')[:12], '| created:', dep.get('created_on'),
+          '| source:', dep.get('source'), '| strategy:', json.dumps(dep.get('strategy') or '')[:120])
+          "
+          echo "--- 4) workers.dev 子域启用状态 ---"
+          get "/workers/scripts/huangguo-web/subdomain" | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          print('  result:', d.get('result'), '| errors:', d.get('errors'))
+          "
+
+      - name: 部署后自检
+        if: steps.chk.outputs.skip == '0'
+        run: |
+          # Cloudflare 版本全球传播需要时间, 8 秒常常还在滚动更新
+          sleep 25
+          SUB=$(curl -s -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/workers/subdomain" \
+            | python3 -c "import sys,json;print(json.load(sys.stdin)['result']['subdomain'])" 2>/dev/null || echo "")
+          if [ -z "$SUB" ]; then echo "::warning::拿不到子域名, 跳过验证"; exit 0; fi
+          URL="https://huangguo-web.$SUB.workers.dev"
+          echo "验证地址: $URL"
+
+          # 等新版本真正生效: 反复请求 /api/version 直到拿到本次构建标记
+          echo "等待新版本生效..."
+          READY=0
+          for i in $(seq 1 20); do
+            B=$(curl -s --max-time 20 "$URL/api/version" | grep -o 'hg-worker-[0-9a-z.-]*' || echo "")
+            if [ -n "$B" ]; then
+              echo "  [第 ${i} 次] 版本: $B"
+              READY=1
+              break
+            fi
+            echo "  [第 ${i} 次] 还没生效, 等 5 秒"
+            sleep 5
+          done
+          if [ "$READY" = "0" ]; then
+            echo "::error::版本探针一直没响应 —— 新版本没上线 (run_worker_first/配置问题)。"
+            echo "::error::修复: 勾选 force_recreate 手动触发一次 deploy (删除重建)。"
+            exit 1
+          fi
+
+          fail=0
+          check() {
+            want=$1; p=$2
+            got=$(curl -s -o /tmp/r -w '%{http_code}' --max-time 25 "$URL$p" || true)
+            got=${got:-000}
+            n=$(wc -c < /tmp/r 2>/dev/null || echo 0)
+            if [ "$got" = "$want" ]; then
+              echo "  [OK] $got ${n}B  $p"
+            else
+              echo "  [X ] $got (期望 $want)  $p"
+              fail=$((fail+1))
+            fi
+          }
+
+          echo ""
+          echo "--- 黄果短剧 ---"
+          check 200 /api/health
+          check 200 /api/list
+          check 404 /worker.js
+
+          #
+          # 封面链路自检 (外部 python 脚本, 避免 YAML 缩进地狱)
+          #
+          echo "--- 黄果封面 (图片不显示问题) ---"
+          python3 .github/cover_check.py "$URL" > /tmp/cov.txt 2>&1 || true
+          sed 's/^/  /' /tmp/cov.txt
+          if ! grep -q 'RESULT OK' /tmp/cov.txt; then fail=$((fail+1)); fi
+
+          echo "--- 封面包批量验证 ---"
+
+          python3 .github/cover_batch.py "$URL" 10 2>&1 | sed "s/^/  /" || fail=$((fail+1))
+
+          python3 .github/search_probe.py "$URL" 2>&1 | tail -50 | sed "s/^/  /" || true
+
+
+          echo "--- 黄豆短剧 ---"
+          check 200 "/api/hd/health?page=1"
+          check 200 "/api/hd/list?page=1"
+          check 200 "/api/hd/categories"
+          check 200 "/api/hd/video?id=3670"
+          check 200 "/api/hd/ep?videoId=3670&seq=1"
+
+          echo "--- EROSHORT ---"
+          # ⚠ eroshort.net 对所有数据中心/CI 出口做 CF 硬拦, 只能经公共 CORS 中转取数,
+          #   中转本身限流严重 (429/520/522)。所以这里只做「非破坏性探针」:
+          #   /api/es/health 必须回答 200 或明确的 502 JSON (说明 Worker 路由通了),
+          #   真正的取数可用性以 sync_es.py 的快照产物为准, 不在此处判死。
+          es_probe() {
+            p=$1
+            # ⚠ 必须带 || true: curl 超时退出码 28, 在 set -e 下会直接把整步干掉
+            #   ("Process completed with exit code 28"), 掩盖后面所有自检结论。
+            code=$(curl -s -o /tmp/esr.json -w '%{http_code}' --max-time 40 "$URL$p" || true)
+            code=${code:-000}
+            body=$(head -c 400 /tmp/esr.json 2>/dev/null || true)
+            if [ "$code" = "200" ]; then
+              echo "  [OK] 200  $p"
+            # JSON 序列化会写成 "service": "es" (冒号后带空格), 所以用宽松匹配。
+            # 之前写死 '"service":"es"' 导致永远匹配不上 → 探针误报失败。
+            elif [ "$code" = "502" ] && echo "$body" | grep -qE '"service"[[:space:]]*:[[:space:]]*"es"'; then
+              echo "  [--] 502 (上游 CF 拦截/中转限流, 非路由故障)  $p"
+            else
+              echo "  [X ] $code (期望 200)  $p"
+              echo "        $body"
+              fail=$((fail+1))
+            fi
+          }
+          es_probe "/api/es/health"
+          # 路径要和前端 esApi 的映射一致: /api/list → /shorts。
+          # 之前写 /api/es/list 会被 Worker 透传成上游 /api/v1/list (不存在) → 502。
+          es_probe "/api/es/shorts?page=1&page_size=4"
+          # 列表必须能出内容 —— 实时通道挂时靠 CI 快照兜, 这里要求「一定有 data」
+          es_body=$(curl -s --max-time 40 "$URL/api/es/shorts?page=1&page_size=4" || true)
+          if echo "$es_body" | grep -q '"data"'; then
+            echo "  [OK] /api/es/shorts 返回 data (快照或实时)"
+          else
+            echo "  [--] /api/es/shorts 暂无 data (上游不可达且快照未产出): $(echo "$es_body" | head -c 160)"
+          fi
+          if curl -s --max-time 40 "$URL/data/es-list.json" | grep -q '"items"'; then
+            echo "  [OK] /data/es-list.json 快照存在"
+          else
+            echo "  [--] /data/es-list.json 尚无 (等 CI 侧 sync_es 产出)"
+          fi
+
+          echo "--- 前端资源 ---"
+          check 200 /hg-hd.js
+          check 200 /hg-es.js
+          check 200 /hg-stego.js
+          check 200 /hg-hjw.js
+          check 200 /hg-direct.js
+          check 200 /
+
+          echo "--- 海角 (Worker 出网) ---"
+          check 200 "/api/hjw/health"
+          check 200 "/api/hjw/list?page=1"
+          check 200 "/api/hjw/video?id=193379"
+          check 200 "/data/hjw-cats.json"
+          # 反查表首次同步后才生成, 缺失只提示不判失败
+          if curl -s --max-time 25 "$URL/data/hjw-catmap.json" | grep -q '"map"'; then
+            echo "  [OK] /data/hjw-catmap.json"
+          else
+            echo "  [--] /data/hjw-catmap.json 尚无 (等首轮同步)"
+          fi
+
+          echo "--- 黄豆播放地址抽查 ---"
+          EP=$(curl -s --max-time 25 "$URL/api/hd/play?episodeId=106379" | head -c 300)
+          echo "  /api/hd/play → $EP"
+          if echo "$EP" | grep -q managed-media; then
+            echo "  [OK] 播放地址解析正常"
+          else
+            echo "  [X ] 播放地址异常"; fail=$((fail+1))
+          fi
+
+          if [ "$fail" -gt 0 ]; then
+            echo "::warning::自检有 $fail 项异常"
+          else
+            echo "全部自检通过"
+          fi
+# touch 2026-10-06T03:30

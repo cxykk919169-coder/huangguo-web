@@ -1,0 +1,84 @@
+# 重建 ERO 集数表 (经线上 Worker)
+# =================================
+# runner 直连 eroshort.net 被 CF 拦; 线上 Worker 的出口是放行的, 而 worker.dev
+# 从 runner 可达 → 于是"runner 调 Worker, Worker 去抓上游"是最稳的一条路。
+#
+# 单独做成一个 workflow, 是因为 sync.yml 里还挂着探针 + 中转抓取 (慢),
+# 只想快速纠正集数时不必等那一串。
+#
+# 手动触发即可; SyncUpstream 每 30 分钟也会跑同样的步骤。
+
+name: RebuildEsEps
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: "rebuild-es-eps"
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    name: 重建 ERO 集数 (depth2 episode 层)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 经 Worker 抓集数
+        run: |
+          set -e
+          python fetch_es_eps_worker.py
+          echo "--- 产物 ---"
+          ls -la data/es-*.json
+          python - <<'PY'
+          import json
+          d = json.load(open('data/es-detail.json', encoding='utf-8'))
+          det = d.get('details') or {}
+          ok = [v for v in det.values() if v.get('eps')]
+          tot = sum(len(v.get('eps') or []) for v in det.values())
+          print("有集数 %d/%d 部, 共 %d 集" % (len(ok), len(det), tot))
+          for v in sorted(det.values(), key=lambda x: -(len(x.get('eps') or []))):
+              print("  %-18s %d 集" % (v.get('title'), len(v.get('eps') or [])))
+          PY
+          # 归并归一, 保证形状一致
+          python build_es_snapshot.py || echo "归并跳过"
+
+      - name: 提交
+        run: |
+          set +e
+          git config user.name  "huangguo-sync[bot]"
+          git config user.email "huangguo-sync@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "无变化"
+            exit 0
+          fi
+          git commit -m "fix(es): 按 depth2 episode 层重建集数 $(date -u '+%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git push && break
+            git pull --rebase=merges origin main || git rebase --abort
+            sleep 3
+          done
+          exit 0
+
+      - name: 触发部署
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          gh workflow run deploy.yml --ref main 2>&1 || \
+            curl -sS -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+              -d '{"ref":"main"}'
+          exit 0
