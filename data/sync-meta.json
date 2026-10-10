@@ -1,27 +1,27 @@
 {
- "generatedAt": "2026-10-10T22:50:06Z",
+ "generatedAt": "2026-10-10T23:09:28Z",
  "sources": {
   "hd": {
    "count": 1006,
-   "elapsed": 21.5,
+   "elapsed": 31.0,
    "errors": [],
    "ok": true
   },
   "hg": {
    "count": 189,
-   "elapsed": 6.5,
+   "elapsed": 7.9,
    "errors": [],
    "ok": true
   },
   "hjw": {
    "count": 205,
-   "elapsed": 53.8,
+   "elapsed": 78.5,
    "errors": [],
    "ok": true
   },
   "mg": {
    "count": 229,
-   "elapsed": 5.3,
+   "elapsed": 9.4,
    "errors": [],
    "ok": true
   }
