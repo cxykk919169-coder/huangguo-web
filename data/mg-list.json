@@ -362,17 +362,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f74/cover.jpg",
-   "ep": "6",
-   "epLabel": "更新至6集",
-   "id": "6aa1064a7c68f1b88c2a8f74",
-   "title": "合租",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f76/cover.jpg",
    "ep": "8",
    "epLabel": "更新至8集",
@@ -1132,17 +1121,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6aa/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6aabb4eaca57c75f779ac6aa",
-   "title": "将黄毛变成我的母狗",
-   "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6ab/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -1198,17 +1176,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6b2/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6aabb4eaca57c75f779ac6b2",
-   "title": "绝世仙宗",
-   "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6b3/cover.jpg",
    "ep": "47",
    "epLabel": "更新至47集",
@@ -1226,17 +1193,6 @@
    "id": "6aabb4eaca57c75f779ac6b4",
    "title": "老头修仙记",
    "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6b5/cover.jpg",
-   "ep": "6",
-   "epLabel": "全6集",
-   "id": "6aabb4eaca57c75f779ac6b5",
-   "title": "雌性友人",
-   "updating": false
   },
   {
    "cats": [
@@ -1352,17 +1308,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260918191252/6aad1cb4ca57c75f779adc70/cover.jpg",
-   "ep": "1",
-   "epLabel": "全1集",
-   "id": "6aad1cb4ca57c75f779adc70",
-   "title": "七龙珠之龟仙人大战18号",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260918191252/6aad1cb4ca57c75f779adc71/cover.jpg",
    "ep": "9",
    "epLabel": "全9集",
@@ -1379,17 +1324,6 @@
    "epLabel": "全5集",
    "id": "6aad1cb4ca57c75f779adc72",
    "title": "少妇白洁（漫剧版）",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260918191252/6aad1cb4ca57c75f779adc73/cover.jpg",
-   "ep": "10",
-   "epLabel": "全10集",
-   "id": "6aad1cb4ca57c75f779adc73",
-   "title": "山海快递",
    "updating": false
   },
   {
@@ -1413,17 +1347,6 @@
    "id": "6aad1cb4ca57c75f779adc76",
    "title": "末雪禁城",
    "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260918191252/6aad1cb4ca57c75f779adc77/cover.jpg",
-   "ep": "7",
-   "epLabel": "全7集",
-   "id": "6aad1cb4ca57c75f779adc77",
-   "title": "深度交流会",
-   "updating": false
   },
   {
    "cats": [
@@ -1515,17 +1438,6 @@
   },
   {
    "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260919122423/6aae0e77ca57c75f779afa03/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6aae0e77ca57c75f779afa03",
-   "title": "淫荡童话小红帽",
-   "updating": true
-  },
-  {
-   "cats": [
     "adult-short-drama"
    ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260919152147/6aae380cca57c75f779b23e5/cover.jpg",
@@ -1544,6 +1456,17 @@
    "epLabel": "更新至71集",
    "id": "6aae380cca57c75f779b23e7",
    "title": "四合院里的幸福保卫战",
+   "updating": true
+  },
+  {
+   "cats": [
+    "adult-short-drama"
+   ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260919152147/6aae380cca57c75f779b23ec/cover.jpg",
+   "ep": "82",
+   "epLabel": "更新至82集",
+   "id": "6aae380cca57c75f779b23ec",
+   "title": "天黑了，可爸爸还在",
    "updating": true
   },
   {
@@ -1605,17 +1528,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260919182044/6aae61fcca57c75f779b24f3/cover.jpg",
-   "ep": "10",
-   "epLabel": "全10集",
-   "id": "6aae61fcca57c75f779b24f3",
-   "title": "无敌的我在异世界只想做爱",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260919182044/6aae61fcca57c75f779b24f6/cover.jpg",
    "ep": "9",
    "epLabel": "更新至9集",
@@ -1632,28 +1544,6 @@
    "epLabel": "全43集",
    "id": "6aae61fcca57c75f779b24f8",
    "title": "长生录",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260919191551/6aae6ee7ca57c75f779b2e38/cover.jpg",
-   "ep": "12",
-   "epLabel": "全12集",
-   "id": "6aae6ee7ca57c75f779b2e38",
-   "title": "式守同学不只可爱而已",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260920150140/6aaf84d5ca57c75f779b3d5e/cover.jpg",
-   "ep": "6",
-   "epLabel": "全6集",
-   "id": "6aaf84d5ca57c75f779b3d5e",
-   "title": "少女弹珠汽水",
    "updating": false
   },
   {
@@ -2262,17 +2152,6 @@
   },
   {
    "cats": [
-    "adult-short-drama"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260928204910/6aba6248ca57c75f779bfe85/cover.jpg",
-   "ep": "29",
-   "epLabel": "全29集",
-   "id": "6aba6248ca57c75f779bfe85",
-   "title": "高手下山，mei女请留步",
-   "updating": false
-  },
-  {
-   "cats": [
     "ca-bian-duan-ju"
    ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260929105247/6abb2800ca57c75f779c3bd4/cover.jpg.jpg",
@@ -2468,6 +2347,17 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261006111737/6ac46851ca57c75f779c71d9/cover.jpg",
+   "ep": "4",
+   "epLabel": "更新至4集",
+   "id": "6ac46851ca57c75f779c71d9",
+   "title": "嫂子哄睡觉成就侯爷",
+   "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261006111737/6ac46851ca57c75f779c71dd/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
@@ -2500,6 +2390,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182138/6ac8c032ca57c75f779c7783/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2532,6 +2425,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182229/6ac8c065ca57c75f779c778b/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -2540,6 +2436,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182249/6ac8c079ca57c75f779c778d/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2548,6 +2447,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182259/6ac8c083ca57c75f779c778f/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2588,6 +2490,28 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182402/6ac8c0c2ca57c75f779c779b/cover.jpg",
+   "ep": "9",
+   "epLabel": "更新至9集",
+   "id": "6ac8c0c2ca57c75f779c779b",
+   "title": "雪狼太子神兔妻",
+   "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182618/6ac8c14aca57c75f779c77a9/cover.jpg",
+   "ep": "10",
+   "epLabel": "更新至10集",
+   "id": "6ac8c14aca57c75f779c77a9",
+   "title": "从杂役到万界至尊",
+   "updating": true
+  },
+  {
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009184317/6ac8c545ca57c75f779c77e3/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2604,6 +2528,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009184317/6ac8c545ca57c75f779c77e5/cover.jpg",
    "ep": "8",
    "epLabel": "更新至8集",
@@ -2612,6 +2539,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c77ff/cover.jpg",
    "ep": "5",
    "epLabel": "更新至5集",
@@ -2620,6 +2550,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7800/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2628,6 +2561,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7801/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
