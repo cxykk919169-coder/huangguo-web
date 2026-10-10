@@ -1,27 +1,27 @@
 {
- "generatedAt": "2026-10-09T23:04:39Z",
+ "generatedAt": "2026-10-09T23:43:56Z",
  "sources": {
   "hd": {
    "count": 1002,
-   "elapsed": 29.2,
+   "elapsed": 29.3,
    "errors": [],
    "ok": true
   },
   "hg": {
    "count": 185,
-   "elapsed": 7.5,
+   "elapsed": 9.0,
    "errors": [],
    "ok": true
   },
   "hjw": {
    "count": 197,
-   "elapsed": 85.1,
+   "elapsed": 88.2,
    "errors": [],
    "ok": true
   },
   "mg": {
    "count": 237,
-   "elapsed": 9.3,
+   "elapsed": 9.4,
    "errors": [],
    "ok": true
   }
@@ -29,7 +29,6 @@
  "written": [
   "hg-lock.json",
   "hg-list.json",
-  "hjw-catmap.json",
   "hjw-list.json"
  ]
 }
