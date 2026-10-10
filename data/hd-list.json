@@ -5514,14 +5514,6 @@
   },
   {
    "category": "黄豆原创",
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/e4d54169140eb179.jpg",
-   "desc": "",
-   "ep": "3",
-   "id": "4406",
-   "title": "我把兄弟变母狗"
-  },
-  {
-   "category": "黄豆原创",
    "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/0598836173d17cc0.jpg",
    "desc": "黄豆首部第一视角短剧，身临其境被榨干。公司唯一男人被轮流榨干",
    "ep": "7",
@@ -6570,9 +6562,9 @@
   },
   {
    "category": "黄豆原创",
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/6cd6b09e323d5db6.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/556f5637b9751f8d.jpg",
    "desc": "城市里的口爆馆，是各个阶层男人获取快乐的最便捷的途径。欢迎大家，来口爆馆。",
-   "ep": "2",
+   "ep": "3",
    "id": "5326",
    "title": "欢迎来口爆馆"
   },
@@ -6727,6 +6719,22 @@
    "ep": "1",
    "id": "5345",
    "title": "爱情公寓"
+  },
+  {
+   "category": "大神精选",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009020722/6ac7dbdaca57c75f779c76b4/cover.jpg",
+   "desc": "",
+   "ep": "5",
+   "id": "5346",
+   "title": "釜山行 釜山裸行"
+  },
+  {
+   "category": "大神精选",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009014529/6ac7d6b9ca57c75f779c76a3/cover.jpg",
+   "desc": "",
+   "ep": "3",
+   "id": "5347",
+   "title": "母恋在青春期"
   },
   {
    "category": "大神精选",
@@ -8033,5 +8041,5 @@
    "title": "夫人她专治不服4"
   }
  ],
- "total": 1004
+ "total": 1006
 }
