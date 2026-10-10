@@ -28,6 +28,7 @@ __pycache__/
 *.pyc
 *.tmp
 _backup_*/
+_scan/
 
 # ===== 系统 =====
 Thumbs.db

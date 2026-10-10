@@ -19,28 +19,42 @@
  */
 
 // 官方站镜像列表 (自动选第一个可用的)
-// 2026-10 更新: 老域名全部失效, huangguo10/8 已变"地址发布页", 真站迁到 vchllzwu.cc
+// 2026-10 更新: vchllzwu.cc 整池失效, 真站已迁到 wrjmtnebd.cc 站群;
+//   huangguo10/8/9 已变"地址发布页"(不含剧集数据), 只能用来发现新域名。
 const MIRRORS = [
-  // ---- 当前主站 (与 site.json origin / hg-direct.js 保持一致) ----
-  "https://th10.vchllzwu.cc",
-  // ---- 当前真站候补 ----
-  "https://fo3l.vchllzwu.cc",
-  "https://vqi6.vchllzwu.cc",
-  "https://o092.vchllzwu.cc",
-  "https://ale0.vchllzwu.cc",
-  "https://s8m5.vchllzwu.cc",
-  "https://s1er.vchllzwu.cc",
-  "https://z5b68b.vchllzwu.cc",
-  "https://bqvspv.vchllzwu.cc",
-  "https://nkjl.vchllzwu.cc",
-  "https://vir2.vchllzwu.cc",
-  "https://e6xyzf.vchllzwu.cc",
-  // ---- 地址发布页 (兜底发现用) ----
-  "https://huangguo9.com",
+  // ---- 当前主线路 (来源: huangguo10.com 发布页 2026-10-10 线路表) ----
+  "https://qazn.wrjmtnebd.cc",
+  "https://ne7d.wrjmtnebd.cc",
+  "https://ie70.wrjmtnebd.cc",
+  // ---- 当前站群其它在线节点 ----
+  "https://flq7.wrjmtnebd.cc",
+  "https://b0eu.wrjmtnebd.cc",
+  "https://cbl8.wrjmtnebd.cc",
+  "https://g9u8.wrjmtnebd.cc",
+  "https://xaq0.wrjmtnebd.cc",
+  "https://b48r0.wrjmtnebd.cc",
+  "https://ij2i7.wrjmtnebd.cc",
+  // ---- 漫剧线 (备用结构, 解析器已兼容 /detail/) ----
+  "https://b7eb5.fyxybiblx.cc",
+  // ---- 地址发布页 (只用于自动发现新域名, 永不作为数据源) ----
   "https://huangguo10.com",
   "https://huangguo8.com",
+  "https://huangguo9.com",
   "https://hgai1.com",
 ];
+
+// 死域后缀 (已整池失效) 与推广/宣传域 (播放会落到官方宣传物料)
+const DEAD_SUFFIX = /\.(?:vchllzwu|gkudvxhjh|ngfxaxnp|igjktqpd)\.[a-z]+$/i;
+const PROMO_HOST = /(?:^|\.)(?:wqgkfvxk|fakieggtv|mqahxxhp|eisees)\.|huangguoai|\/chan\//i;
+
+// 推广/宣传源判定 —— 命中即丢弃, 绝不当成剧集播放源
+function isPromoUrl(u) {
+  if (!u) return true;
+  const s = String(u);
+  if (PROMO_HOST.test(s)) return true;
+  if (/pages\.dev|t\.me|youtube|tiktok/i.test(s)) return true;
+  return false;
+}
 
 // 地址发布页主机 (命中则提取真站域名, 不作数据源)
 const PUBLISH_HOSTS = [
@@ -297,7 +311,26 @@ async function fetchWithMirror(path, extraHeaders) {
         }
       } catch (e) { /* r.url 不可解析就算了 */ }
 
-      if (r.status === 200) return { r, base };
+      if (r.status === 200) {
+        // 命中"地址发布页" → 只用来提取真站域名, 绝不把发布页 HTML 当数据返回。
+        // 旧逻辑直接 return {r, base}, 于是 /api/list 拿到的是发布页(0 条剧集),
+        // /api/video 拿到的是发布页里的推广位 —— 表现就是"能播但播的是官方宣传物料"。
+        const host = base.replace(/^https?:\/\//, "");
+        if (PUBLISH_HOSTS.indexOf(host) >= 0) {
+          let txt = "";
+          try { txt = await r.text(); } catch (e) { /* 读不出来就算了 */ }
+          for (const h of extractRealHosts(txt).reverse()) {
+            const u = "https://" + h;
+            if (MIRRORS.indexOf(u) >= 0) continue;
+            if (DEAD_SUFFIX.test(h) || isPromoUrl(u)) continue;
+            MIRRORS.unshift(u);
+          }
+          markBadMirror(base);          // 发布页不是数据源, 拉黑后改走真站
+          lastErr = new Error("publish-page");
+          continue;
+        }
+        return { r, base };
+      }
       lastErr = new Error("status " + r.status);
       markBadMirror(base);
     } catch (e) { lastErr = e; markBadMirror(base); }
@@ -548,8 +581,9 @@ function parseCards(html) {
       if (!o || typeof o !== "object") continue;
       if (o.isAd === true) continue;                    // 广告丢弃
       const href = o.href || o.detailHref || "";
-      const idm = String(href).match(/\/video\/(\d+)/);
+      const idm = String(href).match(/\/(?:video|detail)\/(\d+)/);
       if (!idm) continue;                               // 无内链的推广位也丢弃
+      if (isPromoUrl(href)) continue;                   // 推广位丢弃
       const epTxt = clean(o.episode);
       const epm = epTxt.match(/(\d+)\s*集/);
       put(idm[1], {
@@ -572,8 +606,8 @@ function parseCards(html) {
       if (!o || typeof o !== "object") return;
       const ty = o["@type"];
       if (ty === "ListItem" || ty === "VideoObject" || ty === "CreativeWork" || ty === "ItemList") {
-        const u = o.url || o.contentUrl || o["@id"] || "";
-        const idm = String(u).match(/\/video\/(\d+)/);
+          const u = o.url || o.contentUrl || o["@id"] || "";
+          const idm = String(u).match(/\/(?:video|detail)\/(\d+)/);
         if (idm) put(idm[1], { title: clean(o.name || o.headline || "") });
       }
       for (const v of Object.values(o)) walk(v);
@@ -585,7 +619,7 @@ function parseCards(html) {
   const blocks = html.split('<div class="hg-drama-card"').slice(1);
   for (let blk of blocks) {
     blk = blk.slice(0, 3500);
-    const mid = blk.match(/data-track-id="(\d+)"/) || blk.match(/href="\/video\/(\d+)/);
+    const mid = blk.match(/data-track-id="(\d+)"/) || blk.match(/href="\/(?:video|detail)\/(\d+)/);
     if (!mid) continue;
     const alt = blk.match(/<img[^>]*\balt="([^"]*)"/);
     const dtt = blk.match(/data-track-title="([^"]*)"/);
@@ -607,7 +641,7 @@ function parseCards(html) {
   }
 
   // ---- 源4: hg-category-item (分类网格) ----
-  for (const m of html.matchAll(/<a[^>]*class="hg-category-item"[^>]*href="\/video\/(\d+)\/"[^>]*>([\s\S]*?)<\/a>/g)) {
+  for (const m of html.matchAll(/<a[^>]*class="hg-category-item"[^>]*href="\/(?:video|detail)\/(\d+)\/"[^>]*>([\s\S]*?)<\/a>/g)) {
     const blk = m[2];
     const tt = blk.match(/__title[^>]*>([\s\S]*?)<\/div>/);
     const cover = extractCover(blk);
@@ -620,14 +654,14 @@ function parseCards(html) {
   }
 
   // ---- 源5: 热搜榜 (带热度) ----
-  for (const m of html.matchAll(/hg-search-suggest__hot-item"[^>]*>[\s\S]*?<a[^>]*href="\/video\/(\d+)\/"[^>]*>([^<]*)<\/a>[\s\S]*?__heat[^>]*>([^<]*)</g)) {
+  for (const m of html.matchAll(/hg-search-suggest__hot-item"[^>]*>[\s\S]*?<a[^>]*href="\/(?:video|detail)\/(\d+)\/"[^>]*>([^<]*)<\/a>[\s\S]*?__heat[^>]*>([^<]*)</g)) {
     put(m[1], { title: clean(m[2]), heat: clean(m[3]) });
   }
 
   const out = [];
   for (const it of items.values()) {
     if (it.isAd === true) continue;
-    if (!it.title) it.title = "鍓ч泦 " + it.id;
+    if (!it.title) it.title = "剧集 " + it.id;
     out.push(it);
   }
   return out;
@@ -637,21 +671,36 @@ function parseVideo(html) {
   if (!m) return null;
   let data;
   try { data = JSON.parse(m[1]); } catch (e) { return null; }
+  const vid = String(data.id || "");
   const eps = {};
+  // 权威源: videoInitialData.epPlaySrcs —— 上游按剧下发的"集号 -> m3u8"表
   for (const [k, v] of Object.entries(data.epPlaySrcs || {})) {
-    if (/^\d+$/.test(k) && typeof v === "string" && v.startsWith("http")) eps[k] = v.replace(/&amp;/g, "&");
+    if (!/^\d+$/.test(k) || typeof v !== "string" || !v.startsWith("http")) continue;
+    const u = v.replace(/&amp;/g, "&").replace(/\\u0026/g, "&");
+    if (isPromoUrl(u)) continue;                       // 推广/宣传物料丢弃
+    eps[k] = u;
   }
-  // HTML 里的 data-play-src 兜底
-  for (const mm of html.matchAll(/data-play-src="([^"]+\.m3u8[^"]*)"/g)) {
-    const u = mm[1].replace(/&amp;/g, "&");
-    if (!Object.values(eps).includes(u)) { const n = String(Object.keys(eps).length + 1); if (!eps[n]) eps[n] = u; }
+  // 只有当页面上确实存在 data-play-id === 本剧ID 的播放块时才补第 1 集。
+  // 旧逻辑把页面里"所有" data-play-src 按序号塞进 eps —— 带推荐位轮播播放器的
+  // 详情页上, 这会把别的剧/推广位的 m3u8 混成第 2、3、4…集: 用户点选集,
+  // 播出来的却是官方宣传片或别的剧。这是本次"播放全是宣传广告"的直接成因之一。
+  const own1 = html.match(/data-play-id="(\d+)"[^>]*data-play-src="([^"]+)"/)
+            || html.match(/data-play-src="([^"]+)"[^>]*data-play-id="(\d+)"/);
+  if (own1 && !eps["1"]) {
+    const aIsId = /^\d+$/.test(own1[1]);
+    const pid = aIsId ? own1[1] : own1[2];
+    const srcU = aIsId ? own1[2] : own1[1];
+    if (pid === vid) {
+      const u = String(srcU).replace(/&amp;/g, "&");
+      if (!isPromoUrl(u)) eps["1"] = u;
+    }
   }
   let total = 0;
-  for (const mm of html.matchAll(new RegExp("/video/" + data.id + "/ep-(\\d+)/", "g"))) {
+  for (const mm of html.matchAll(new RegExp("/video/" + vid + "/ep-(\\d+)/", "g"))) {
     total = Math.max(total, parseInt(mm[1], 10));
   }
   return {
-    id: String(data.id || ""),
+    id: vid,
     title: data.title || "",
     author: data.author || "",
     views: data.views || "",
@@ -773,7 +822,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-09-v9-wallet";
+const BUILD_ID = "hg-worker-2026-10-10-v10-huanggofix";
 
 export default {
   async fetch(request, env, ctx) {
@@ -949,7 +998,11 @@ export default {
           if (!v.epTotal) v.epTotal = Math.max(Object.keys(v.eps).length, 1);
           // 上游锁形态: 黄果把全部集的 m3u8 一次性印在 HTML 里, 无服务端鉴权。
           // 这里如实附上探测到的信息, 前端据此决定展示策略。
-          v.lock = { epCount: Object.keys(v.eps).length, serverSide: false };
+          const epsN = Object.keys(v.eps).length;
+          v.lock = { epCount: epsN, serverSide: false };
+          // 落点校验: /video/{id}/ 若被 301 到别的剧, 不能把那一部当成结果返回
+          if (v.id && v.id !== id) v.mismatch = { want: id, got: v.id };
+          if (!epsN && v.mismatch) return json({ error: "上游落点不匹配", ...v.mismatch }, h, 502);
           return json(v, h);
         }
 
@@ -964,25 +1017,30 @@ export default {
           // 关键: 上游的 data-play-id 是【剧ID】不是集号!
           //   第 1 集: <article data-play-id="12" data-play-src="https://...m3u8?...">
           //   集号列表: <a class="hg-play__ep-item" href="/video/12/ep-2/" data-ep-id="2">02</a>
-          let src = "";
-          const own = [...html.matchAll(/data-play-id="(\d+)"[^>]*data-play-src="([^"]+)"/g)]
-            .filter((x) => x[1] === id);
-          if (own.length) src = own[0][2].replace(/&amp;/g, "&");
-          if (!src) {
-            const rev = [...html.matchAll(/data-play-src="([^"]+)"[^>]*data-play-id="(\d+)"/g)]
-              .filter((x) => x[2] === id);
-            if (rev.length) src = rev[0][1].replace(/&amp;/g, "&");
+          const srcs = [];
+          for (const x of html.matchAll(/data-play-id="(\d+)"[^>]*data-play-src="([^"]+)"/g)) {
+            srcs.push({ pid: x[1], src: x[2].replace(/&amp;/g, "&") });
           }
-          if (!src) {
-            const anym = html.match(/data-play-src="([^"]+\.m3u8[^"]*)"/);
-            if (anym) src = anym[1].replace(/&amp;/g, "&");
+          for (const x of html.matchAll(/data-play-src="([^"]+)"[^>]*data-play-id="(\d+)"/g)) {
+            srcs.push({ pid: x[2], src: x[1].replace(/&amp;/g, "&") });
           }
-          if (!src) {
-            const vv = parseVideo(html);
-            if (vv && vv.eps && vv.eps[String(ep)]) src = vv.eps[String(ep)];
-            else if (vv && vv.eps && Object.keys(vv.eps).length) src = Object.values(vv.eps)[0];
+
+          // 1) 本剧权威源: videoInitialData.epPlaySrcs (按集号精确命中, 且剧ID要对得上)
+          const vv = parseVideo(html);
+          if (vv && vv.id === id && vv.eps && vv.eps[String(ep)]) {
+            return json({ id, ep, url: vv.eps[String(ep)], videoId: vv.id }, h);
           }
-          return json({ id, ep, url: src }, h);
+          // 2) 本剧的播放块 (data-play-id === 剧ID, 且非推广域)
+          const own = srcs.filter((x) => x.pid === id && !isPromoUrl(x.src));
+          if (own.length) return json({ id, ep, url: own[0].src, videoId: id }, h);
+          // 3) 本剧其它集的源 (仍属本剧, 只是集号兜底)
+          if (vv && vv.id === id && vv.eps) {
+            const keys = Object.keys(vv.eps);
+            if (keys.length) return json({ id, ep, url: vv.eps[keys[0]], videoId: vv.id, fuzzy: true }, h);
+          }
+          // 旧逻辑的第 3 步"任意 m3u8 兜底"已删除 —— 那是页面上的推荐位/推广位,
+          // 命中就会把"官方宣传物料 / 别人的剧"当成这一集播出去。
+          return json({ id, ep, url: "", error: "找不到本剧播放地址" }, h, 404);
         }
 
         if (path.startsWith("/proxy/")) {
@@ -993,7 +1051,7 @@ export default {
           let ref = MIRRORS[0] + "/";
           if (/mgmg10\.com/i.test(target)) ref = "https://mgmg10.com/";
           else if (/zen-vip\.com|hddj/i.test(target)) ref = "https://hddj30.cc/";
-          else if (/gkudvxhjh|ngfxaxnp|vchllzwu/i.test(target)) ref = (LEARNED_MIRROR || MIRRORS[0]) + "/";
+          else if (/wrjmtnebd|fyxybiblx|tktjpm|wirqed|vchllzwu|gkudvxhjh|ngfxaxnp/i.test(target)) ref = (LEARNED_MIRROR || MIRRORS[0]) + "/";
           // EROSHORT: 流地址来自 eroshort.net 或其 R2 桶, 上游对热链敏感,
           // 不带原站 Referer 容易被拦; R2 桶本身不校验, 补上也无害。
           else if (/eroshort\.net/i.test(target)) ref = "https://eroshort.net/";
