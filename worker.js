@@ -996,10 +996,40 @@ export default {
           const v = parseVideo(html);
           if (!v) return json({ error: "解析失败" }, h, 502);
           if (!v.epTotal) v.epTotal = Math.max(Object.keys(v.eps).length, 1);
-          // 上游锁形态: 黄果把全部集的 m3u8 一次性印在 HTML 里, 无服务端鉴权。
+          // 上游反抓取 (2026-10-10 实测 8350《西游之白骨精》):
+          //   epPlaySrcs 是"滑动窗口"—— 主页面只暴露 {1,2}, ep-2 页暴露 {1,2,3},
+          //   ep-4 页暴露 {3,4}。仅凭详情页永远"已解析 2 个播放源", 其余集
+          //   必须逐个访问 /video/{id}/ep-N/ 才能拿到。这里并发补齐缺失集,
+          //   一次 /api/video 就给全, 前端不再依赖"补齐全部播放源"按钮。
+          const missing = [];
+          for (let n = 1; n <= v.epTotal; n++) if (!v.eps[String(n)]) missing.push(n);
+          let filled = 0;
+          if (missing.length) {
+            const CAP = 6;   // 子请求预算: 免费版 Worker 每请求上限 50, 留足余量
+            const CONC = 3;
+            const todo = missing.slice(0, CAP);
+            let cursor = 0;
+            const grab = async () => {
+              while (cursor < todo.length) {
+                const n = todo[cursor++];
+                try {
+                  const { r: rr } = await fetchWithMirror("/video/" + id + "/ep-" + n + "/", {});
+                  const hh = await rr.text();
+                  const pv = parseVideo(hh);
+                  if (pv && pv.id === id) {
+                    for (const [k, u] of Object.entries(pv.eps)) {
+                      if (!v.eps[k]) { v.eps[k] = u; filled++; }
+                    }
+                  }
+                } catch (e) { /* 单集失败不阻塞整体, /api/ep 仍可单点补 */ }
+              }
+            };
+            await Promise.all(Array.from({ length: Math.min(CONC, todo.length) }, grab));
+          }
+          // 上游锁形态: 无服务端鉴权, 但按滑动窗口分页下发。
           // 这里如实附上探测到的信息, 前端据此决定展示策略。
           const epsN = Object.keys(v.eps).length;
-          v.lock = { epCount: epsN, serverSide: false };
+          v.lock = { epCount: epsN, serverSide: false, filled, missingTotal: missing.length };
           // 落点校验: /video/{id}/ 若被 301 到别的剧, 不能把那一部当成结果返回
           if (v.id && v.id !== id) v.mismatch = { want: id, got: v.id };
           if (!epsN && v.mismatch) return json({ error: "上游落点不匹配", ...v.mismatch }, h, 502);
@@ -1012,34 +1042,39 @@ export default {
           const mm = raw.match(/\d+/);
           if (!mm) return json({ error: "需要剧集ID" }, h, 400);
           const id = mm[0];
-          const { r } = await fetchWithMirror("/video/" + id + (ep > 1 ? "/ep-" + ep + "/" : "/"), {});
-          const html = await r.text();
-          // 关键: 上游的 data-play-id 是【剧ID】不是集号!
-          //   第 1 集: <article data-play-id="12" data-play-src="https://...m3u8?...">
-          //   集号列表: <a class="hg-play__ep-item" href="/video/12/ep-2/" data-ep-id="2">02</a>
-          const srcs = [];
-          for (const x of html.matchAll(/data-play-id="(\d+)"[^>]*data-play-src="([^"]+)"/g)) {
-            srcs.push({ pid: x[1], src: x[2].replace(/&amp;/g, "&") });
-          }
-          for (const x of html.matchAll(/data-play-src="([^"]+)"[^>]*data-play-id="(\d+)"/g)) {
-            srcs.push({ pid: x[2], src: x[1].replace(/&amp;/g, "&") });
-          }
 
-          // 1) 本剧权威源: videoInitialData.epPlaySrcs (按集号精确命中, 且剧ID要对得上)
-          const vv = parseVideo(html);
-          if (vv && vv.id === id && vv.eps && vv.eps[String(ep)]) {
-            return json({ id, ep, url: vv.eps[String(ep)], videoId: vv.id }, h);
+          // 滑窗现实 (2026-10-10 实测 8350): 任一集页会顺带暴露相邻集的 epPlaySrcs
+          //   (ep-2 页={1,2,3}, ep-4 页={3,4}), 且单页抓取偶发失败。
+          // 抓取顺序: 本集页 → 邻集页 (ep-1 / ep+1), 任一页的权威表精确命中本集即返回。
+          const pages = [ep, ep - 1, ep + 1].filter((n) => n >= 1);
+          let lastHtml = null;
+          for (const pn of pages) {
+            let html = null;
+            try {
+              const { r } = await fetchWithMirror("/video/" + id + (pn > 1 ? "/ep-" + pn + "/" : "/"), {});
+              html = await r.text();
+            } catch (e) { continue; }
+            const vv = parseVideo(html);
+            if (vv && vv.id === id && vv.eps && vv.eps[String(ep)] && !isPromoUrl(vv.eps[String(ep)])) {
+              return json({ id, ep, url: vv.eps[String(ep)], videoId: vv.id, via: pn }, h);
+            }
+            if (!lastHtml && html) lastHtml = html;
           }
-          // 2) 本剧的播放块 (data-play-id === 剧ID, 且非推广域)
-          const own = srcs.filter((x) => x.pid === id && !isPromoUrl(x.src));
-          if (own.length) return json({ id, ep, url: own[0].src, videoId: id }, h);
-          // 3) 本剧其它集的源 (仍属本剧, 只是集号兜底)
-          if (vv && vv.id === id && vv.eps) {
-            const keys = Object.keys(vv.eps);
-            if (keys.length) return json({ id, ep, url: vv.eps[keys[0]], videoId: vv.id, fuzzy: true }, h);
+          // data-play 兜底: 老版页面上 data-play-id=剧ID 的播放块 (仍限本剧、非推广域)
+          if (lastHtml) {
+            const srcs = [];
+            for (const x of lastHtml.matchAll(/data-play-id="(\d+)"[^>]*data-play-src="([^"]+)"/g)) {
+              srcs.push({ pid: x[1], src: x[2].replace(/&amp;/g, "&") });
+            }
+            for (const x of lastHtml.matchAll(/data-play-src="([^"]+)"[^>]*data-play-id="(\d+)"/g)) {
+              srcs.push({ pid: x[2], src: x[1].replace(/&amp;/g, "&") });
+            }
+            const own = srcs.filter((x) => x.pid === id && !isPromoUrl(x.src));
+            if (own.length) return json({ id, ep, url: own[0].src, videoId: id }, h);
           }
-          // 旧逻辑的第 3 步"任意 m3u8 兜底"已删除 —— 那是页面上的推荐位/推广位,
-          // 命中就会把"官方宣传物料 / 别人的剧"当成这一集播出去。
+          // (已删除) 旧 fuzzy 兜底: 返回 vv.eps[第一集] —— 拿"别的集"冒充
+          //    当前集, 用户点第 4 集播出来的是第 1 集。宁可 404 让前端重试,
+          //    也不放错集。
           return json({ id, ep, url: "", error: "找不到本剧播放地址" }, h, 404);
         }
 
