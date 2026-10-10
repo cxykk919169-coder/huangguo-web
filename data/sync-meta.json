@@ -1,34 +1,37 @@
 {
- "generatedAt": "2026-10-09T23:43:56Z",
+ "generatedAt": "2026-10-10T00:16:41Z",
  "sources": {
   "hd": {
-   "count": 1002,
-   "elapsed": 29.3,
+   "count": 996,
+   "elapsed": 22.2,
    "errors": [],
    "ok": true
   },
   "hg": {
-   "count": 185,
-   "elapsed": 9.0,
+   "count": 186,
+   "elapsed": 4.9,
    "errors": [],
    "ok": true
   },
   "hjw": {
    "count": 197,
-   "elapsed": 88.2,
+   "elapsed": 60.1,
    "errors": [],
    "ok": true
   },
   "mg": {
-   "count": 237,
-   "elapsed": 9.4,
+   "count": 234,
+   "elapsed": 5.3,
    "errors": [],
    "ok": true
   }
  },
  "written": [
+  "mg-list.json",
+  "hd-list.json",
   "hg-lock.json",
   "hg-list.json",
+  "hjw-catmap.json",
   "hjw-list.json"
  ]
 }
