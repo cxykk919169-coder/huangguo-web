@@ -1198,6 +1198,17 @@
    "cats": [
     "ai-comic-drama"
    ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6b2/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6aabb4eaca57c75f779ac6b2",
+   "title": "绝世仙宗",
+   "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6b3/cover.jpg",
    "ep": "47",
    "epLabel": "更新至47集",
@@ -1336,6 +1347,17 @@
    "id": "6aacf746ca57c75f779adbd0",
    "title": "阴森美女邪修，竟是我的救命符",
    "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260918191252/6aad1cb4ca57c75f779adc70/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6aad1cb4ca57c75f779adc70",
+   "title": "七龙珠之龟仙人大战18号",
+   "updating": false
   },
   {
    "cats": [
@@ -1489,6 +1511,17 @@
    "epLabel": "更新至44集",
    "id": "6aad40a5ca57c75f779aef06",
    "title": "许小姐 高调辞职了",
+   "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260919122423/6aae0e77ca57c75f779afa03/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6aae0e77ca57c75f779afa03",
+   "title": "淫荡童话小红帽",
    "updating": true
   },
   {
@@ -2485,10 +2518,10 @@
   {
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182205/6ac8c04dca57c75f779c7787/cover.jpg",
    "ep": "10",
-   "epLabel": "更新至10集",
+   "epLabel": "全10集",
    "id": "6ac8c04dca57c75f779c7787",
    "title": "原神 人物志",
-   "updating": true
+   "updating": false
   },
   {
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182220/6ac8c05cca57c75f779c7789/cover.jpg",
@@ -2499,9 +2532,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182229/6ac8c065ca57c75f779c778b/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -2510,9 +2540,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182249/6ac8c079ca57c75f779c778d/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2601,9 +2628,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7801/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
