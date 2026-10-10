@@ -308,8 +308,8 @@
     "du-jia-shuang-ju"
    ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260909101007/6aa0bfff7c68f1b88c2a8eac/cover.jpg",
-   "ep": "30",
-   "epLabel": "更新至30集",
+   "ep": "31",
+   "epLabel": "更新至31集",
    "id": "6aa0bfff7c68f1b88c2a8eac",
    "title": "弱点",
    "updating": true
@@ -543,17 +543,6 @@
    "epLabel": "更新至1集",
    "id": "6aa1850c7c68f1b88c2a91dc",
    "title": "恋乳菜单",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260910102602/6aa2153a7c68f1b88c2a9221/cover.jpg",
-   "ep": "8",
-   "epLabel": "更新至8集",
-   "id": "6aa2153a7c68f1b88c2a9221",
-   "title": "旅途失洁",
    "updating": true
   },
   {
@@ -2459,6 +2448,17 @@
    "updating": true
   },
   {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261006161610/6ac4ae4aca57c75f779c72bb/cover.jpg",
+   "ep": "4",
+   "epLabel": "更新至4集",
+   "id": "6ac4ae4aca57c75f779c72bb",
+   "title": "系统逼我啪啪啪",
+   "updating": true
+  },
+  {
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009182058/6ac8c00aca57c75f779c7781/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2577,9 +2577,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009184317/6ac8c545ca57c75f779c77e5/cover.jpg",
    "ep": "8",
    "epLabel": "更新至8集",
@@ -2604,6 +2601,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7801/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
