@@ -1187,17 +1187,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6b5/cover.jpg",
-   "ep": "6",
-   "epLabel": "全6集",
-   "id": "6aabb4eaca57c75f779ac6b5",
-   "title": "雌性友人",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6b6/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -1303,6 +1292,17 @@
    "id": "6aacf746ca57c75f779adbd0",
    "title": "阴森美女邪修，竟是我的救命符",
    "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d3rorc0p4i1kyz.cloudfront.net/B20260918191252/6aad1cb4ca57c75f779adc71/cover.jpg",
+   "ep": "9",
+   "epLabel": "全9集",
+   "id": "6aad1cb4ca57c75f779adc71",
+   "title": "双生道侣",
+   "updating": false
   },
   {
    "cats": [
