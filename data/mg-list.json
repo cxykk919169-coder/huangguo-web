@@ -2390,9 +2390,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261007121146/6ac5c682ca57c75f779c752c/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2417,9 +2414,6 @@
    "updating": false
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261007160705/6ac5fda9ca57c75f779c7560/cover.jpg",
    "ep": "38",
    "epLabel": "更新至38集",
@@ -2428,9 +2422,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261007184500/6ac622acca57c75f779c75bf/cover.jpg",
    "ep": "15",
    "epLabel": "更新至15集",
@@ -2439,9 +2430,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261007204140/6ac63e04ca57c75f779c75d0/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2450,9 +2438,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261007204140/6ac63e04ca57c75f779c75d1/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2461,9 +2446,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261007204140/6ac63e04ca57c75f779c75d2/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2472,9 +2454,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261007204140/6ac63e04ca57c75f779c75d3/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2483,9 +2462,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261008105719/6ac7068fca57c75f779c75f0/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -2494,9 +2470,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261008162136/6ac75290ca57c75f779c761d/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2615,9 +2588,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261010153048/6ac9e9a8ca57c75f779c78d0/cover.jpg",
    "ep": "6",
    "epLabel": "更新至6集",
@@ -2627,8 +2597,7 @@
   },
   {
    "cats": [
-    "du-jia-shuang-ju",
-    "remixed-short-drama"
+    "du-jia-shuang-ju"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261012125819/6acc68ebca57c75f779c79e6/cover.jpg",
    "ep": "7",
