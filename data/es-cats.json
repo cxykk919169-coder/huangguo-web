@@ -113,20 +113,20 @@
    "slug": "少妇"
   },
   {
-   "code": "ongoing",
-   "color": "#6366f1",
-   "count": 4,
-   "group": "display_status",
-   "name": "更新中",
-   "slug": "ongoing"
-  },
-  {
    "code": "completed",
    "color": "#6366f1",
    "count": 2,
    "group": "display_status",
    "name": "已完结",
    "slug": "completed"
+  },
+  {
+   "code": "ongoing",
+   "color": "#6366f1",
+   "count": 5,
+   "group": "display_status",
+   "name": "更新中",
+   "slug": "ongoing"
   }
  ],
  "count": 16
