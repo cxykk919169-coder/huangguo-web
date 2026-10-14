@@ -302,17 +302,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f74/cover.jpg",
-   "ep": "6",
-   "epLabel": "更新至6集",
-   "id": "6aa1064a7c68f1b88c2a8f74",
-   "title": "合租",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f76/cover.jpg",
    "ep": "8",
    "epLabel": "更新至8集",
@@ -2566,6 +2555,7 @@
   },
   {
    "cats": [
+    "du-jia-shuang-ju",
     "remixed-short-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261014171253/6acf4795ca57c75f779cb83f/cover.jpg",
