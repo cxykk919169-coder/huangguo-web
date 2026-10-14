@@ -1,27 +1,27 @@
 {
- "generatedAt": "2026-10-14T06:30:01Z",
+ "generatedAt": "2026-10-14T12:17:49Z",
  "sources": {
   "hd": {
-   "count": 1010,
-   "elapsed": 29.5,
+   "count": 1011,
+   "elapsed": 30.2,
    "errors": [],
    "ok": true
   },
   "hg": {
-   "count": 183,
-   "elapsed": 7.8,
+   "count": 188,
+   "elapsed": 6.2,
    "errors": [],
    "ok": true
   },
   "hjw": {
-   "count": 204,
-   "elapsed": 83.2,
+   "count": 208,
+   "elapsed": 56.2,
    "errors": [],
    "ok": true
   },
   "mg": {
-   "count": 238,
-   "elapsed": 6.4,
+   "count": 235,
+   "elapsed": 5.2,
    "errors": [],
    "ok": true
   }

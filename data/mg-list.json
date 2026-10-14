@@ -45,17 +45,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907200741/6a9ea90de53e713f3c6feb77/cover.jpg",
-   "ep": "7",
-   "epLabel": "更新至7集",
-   "id": "6a9ea90de53e713f3c6feb77",
-   "title": "成为男友兄弟的母畜",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907201430/6a9eaaa6e53e713f3c6feb8d/cover.jpg",
    "ep": "30",
    "epLabel": "更新至30集",
@@ -121,6 +110,17 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907210253/6a9eb5fde53e713f3c6fec45/cover.jpg",
+   "ep": "10",
+   "epLabel": "更新至10集",
+   "id": "6a9eb5fde53e713f3c6fec45",
+   "title": "老公要求别人玩弄我",
+   "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907211916/6a9eb9d4e53e713f3c6fec7c/cover.jpg",
    "ep": "13",
    "epLabel": "更新至13集",
@@ -146,7 +146,8 @@
   },
   {
    "cats": [
-    "adult-short-drama"
+    "adult-short-drama",
+    "du-jia-shuang-ju"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908105113/6a9f7821e53e713f3c6fed03/cover.jpg",
    "ep": "3",
@@ -268,17 +269,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908204604/6aa0038c7c68f1b88c2a8e53/cover.jpg",
-   "ep": "5",
-   "epLabel": "更新至5集",
-   "id": "6aa0038c7c68f1b88c2a8e53",
-   "title": "妻孝",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909101007/6aa0bfff7c68f1b88c2a8eac/cover.jpg",
    "ep": "32",
    "epLabel": "更新至32集",
@@ -302,8 +292,8 @@
     "du-jia-shuang-ju"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f71/cover.jpg",
-   "ep": "28",
-   "epLabel": "更新至28集",
+   "ep": "29",
+   "epLabel": "更新至29集",
    "id": "6aa1064a7c68f1b88c2a8f71",
    "title": "交换游戏",
    "updating": true
@@ -387,28 +377,6 @@
   },
   {
    "cats": [
-    "du-jia-shuang-ju"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909165501/6aa11ee57c68f1b88c2a9009/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa11ee57c68f1b88c2a9009",
-   "title": "苗疆少女",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909165506/6aa11eea7c68f1b88c2a900b/cover.jpg",
-   "ep": "4",
-   "epLabel": "更新至4集",
-   "id": "6aa11eea7c68f1b88c2a900b",
-   "title": "暮色心囚",
-   "updating": true
-  },
-  {
-   "cats": [
     "er-ci-yuan"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909165913/6aa11fe17c68f1b88c2a9015/cover.jpg",
@@ -416,17 +384,6 @@
    "epLabel": "更新至1集",
    "id": "6aa11fe17c68f1b88c2a9015",
    "title": "义母和义妹的娇喘",
-   "updating": true
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909182700/6aa134747c68f1b88c2a9036/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa134747c68f1b88c2a9036",
-   "title": "复仇催眠",
    "updating": true
   },
   {
@@ -801,6 +758,17 @@
    "epLabel": "全11集",
    "id": "6aa3aa2a7c68f1b88c2a9795",
    "title": "蜜月有毒",
+   "updating": false
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260911163706/6aa3bdb27c68f1b88c2a97f6/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6aa3bdb27c68f1b88c2a97f6",
+   "title": "住在隔壁的她",
    "updating": false
   },
   {
@@ -2440,6 +2408,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261008162136/6ac75290ca57c75f779c7619/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2465,8 +2436,8 @@
   },
   {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261008162136/6ac75290ca57c75f779c761d/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
+   "ep": "3",
+   "epLabel": "更新至3集",
    "id": "6ac75290ca57c75f779c761d",
    "title": "花魁试玉录",
    "updating": true
@@ -2622,6 +2593,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261013214851/6ace36c3ca57c75f779c7da0/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
