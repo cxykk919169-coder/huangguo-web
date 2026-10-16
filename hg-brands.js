@@ -88,9 +88,37 @@
   var CACHE = {};        // { key: { at, data } }
   var CACHE_TTL = 10 * 60 * 1000;
 
+  /**
+   * 解析 Worker 基址 (所有品牌板块的取数与探测都要用它)。
+   *
+   * 【为什么旧写法一定会挂 —— 就是"禁果提示未配置"的根因】
+   *   index.html 里是这样声明的:
+   *       const DEFAULT_API = 'https://…workers.dev';
+   *       let API = localStorage.getItem('hg_api') || DEFAULT_API;
+   *   顶层 `let` / `const` 属于**脚本作用域**, 不会成为 window 的属性
+   *   (只有顶层 `var` 和裸赋值才会)。而本文件拿的是 `root.API` (= window.API),
+   *   于是它**永远是 undefined** → apiBase() 恒返回 '' →
+   *   probe() 走 `reason: 'no-worker'` 分支 → 界面显示
+   *   "未配置 Worker 地址, 无法在服务端探测。请先在「服务器设置」里填 Worker。"
+   *
+   *   修法: 不再依赖"全局变量一定挂到 window"这个不成立的假设, 改成显式解析链,
+   *   顺序与 index.html 保持一致 (用户覆盖 > 页面注入 > 全局 > 同源兜底)。
+   */
   function apiBase() {
-    var a = root.API || (root.localStorage && localStorage.getItem('hg_api')) || '';
-    return String(a).replace(/\/+$/, '');
+    var v = '';
+    try {
+      // 1) 用户在「服务器设置」里的覆盖值 —— 与 index.html 的优先级一致
+      if (root.localStorage) v = root.localStorage.getItem('hg_api') || '';
+      // 2) index.html 显式注入的解析结果 (见 window.HG_API_BASE = API)
+      if (!v) v = root.HG_API_BASE || '';
+      // 3) 兼容用 var 声明 API 的老页面
+      if (!v && typeof root.API === 'string') v = root.API;
+      // 4) 兜底: 页面本身由 Worker 提供 (自定义域名 / workers.dev) → 用同源
+      if (!v && root.location && /^https?:$/i.test(root.location.protocol || '')) {
+        v = root.location.origin;
+      }
+    } catch (e) {}
+    return String(v || '').replace(/\/+$/, '');
   }
 
   function brand(key) {

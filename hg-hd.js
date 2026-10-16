@@ -49,8 +49,61 @@
 
   function markBad(u) { BAD[u] = Date.now() + BAD_TTL; if (ACTIVE === u) ACTIVE = null; }
 
-  /** 带线路切换的 GET */
+  /* ===================== 本站 Worker 优先 =====================
+   * 为什么播放链必须走 Worker, 不能浏览器直连上游:
+   *   1) IP 保护 —— 直连的话访客真实 IP 会进 hddj.zen-vip.com 的 CDN 日志,
+   *      而 README 明确声明"访客和你自己都不直连上游"
+   *   2) 可达性 —— 上游域名在国内网络经常不可达, 直连表现就是"一直转圈"
+   *   3) 一致性 —— 黄果/橙果本来就只走 Worker, 黄豆没理由例外
+   * 探测不到 Worker 地址时自动回落直连 (原有逻辑完全保留在 apiDirect 里)。
+   * ========================================================= */
+  function workerBase() {
+    var v = '';
+    try {
+      if (root.localStorage) v = root.localStorage.getItem('hg_api') || '';
+      if (!v) v = root.HG_API_BASE || '';
+      if (!v && typeof root.API === 'string') v = root.API;
+    } catch (e) {}
+    return String(v || '').replace(/\/+$/, '');
+  }
+
+  /** 上游路径 → 本站 /api/hd/* 路径 (worker.js 的黄豆代理路由表) */
+  function workerPath(path) {
+    var m;
+    if ((m = /^\/videos\/(\d+)/.exec(path))) return '/video?id=' + m[1];
+    if (/^\/videos(\?|$)/.test(path)) return '/list' + path.slice('/videos'.length);
+    if (/^\/playback/.test(path)) return '/ep' + path.slice('/playback'.length);
+    if (/^\/player-notice/.test(path)) return '/notice' + path.slice('/player-notice'.length);
+    if (/^\/play(\?|$)/.test(path)) return path;
+    if (/^\/(categories|rankings|wishes|distribution)(\?|$)/.test(path)) return path;
+    return '';
+  }
+
+  /** 带线路切换的 GET —— Worker 优先, 失败回落直连 */
   function apiGet(path, timeoutMs) {
+    var wb = workerBase(), wp = wb ? workerPath(path) : '';
+    if (wb && wp) {
+      var wctl = ('AbortController' in root) ? new root.AbortController() : null;
+      var wtimer = setTimeout(function () { if (wctl) wctl.abort(); }, timeoutMs || 9000);
+      var wopts = { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'omit' };
+      if (wctl) wopts.signal = wctl.signal;
+      return fetch(wb + '/api/hd' + wp, wopts).then(function (r) {
+        clearTimeout(wtimer);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (j) {
+        if (!j || j.ok !== true) throw new Error((j && j.message) || '返回异常');
+        return j;
+      }).catch(function () {
+        clearTimeout(wtimer);
+        return apiDirect(path, timeoutMs);      // Worker 不可用 → 回落直连
+      });
+    }
+    return apiDirect(path, timeoutMs);
+  }
+
+  /** 直连上游 (原有逻辑, 一字未改) */
+  function apiDirect(path, timeoutMs) {
     var order = lineOrder(), i = 0, tmo = timeoutMs || 9000;
 
     function tryNext(lastErr) {

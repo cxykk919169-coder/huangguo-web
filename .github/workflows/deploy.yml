@@ -444,21 +444,36 @@ jobs:
           fi
 
           echo ""
-          echo "--- 橙果播放链不变量 (分片必须是站内相对路径) ---"
+          echo "--- 橙果播放链不变量 (分片必须是本站 origin 的绝对地址) ---"
           cg_ep=$(curl -s --max-time 40 "$URL/api/cg/ep?id=214&ep=1" || true)
           cg_m3u=$(echo "$cg_ep" | grep -o '"url":"[^"]*"' | head -1 | sed 's/^"url":"//; s/"$//')
           if [ -z "$cg_m3u" ]; then
             echo "  [--] 拿不到橙果播放源, 跳过此项"
           else
-            cg_pl=$(curl -s --max-time 40 "$URL$cg_m3u" || true)
-            if echo "$cg_pl" | grep -q 'workers\.dev/api/cg/media'; then
-              echo "::error::m3u8 里出现 workers.dev 绝对地址 —— 自定义域名下分片会被墙"
+            case "$cg_m3u" in
+              http*) cg_abs="$cg_m3u" ;;
+              *)     cg_abs="$URL$cg_m3u" ;;
+            esac
+            cg_pl=$(curl -s --max-time 40 "$cg_abs" || true)
+            # ★ 不变量 = 每条分片/KEY 都是**绝对地址**, 且 origin 等于本次请求的 URL。
+            #   为什么不是相对路径: 前端常在 GitHub Pages, API 在 Worker (不同源),
+            #   相对路径会被浏览器解析到 pages 域名下 → 404 → "列表能看、点开播不了"
+            #   (线上实测)。也不能硬编码 workers.dev: 用户挂自定义域名时分片会被拉回
+            #   被墙的域名。正解 = 绝对地址 + origin 取自请求本身, 在哪访问就回哪。
+            cg_bare=$(echo "$cg_pl" | grep -v '^#' | grep -v '^[[:space:]]*$' || true)
+            cg_bad=$(echo "$cg_bare" | grep -v -F "$URL/api/cg/media?u=" || true)
+            if [ -z "$cg_bare" ]; then
+              echo "::error::m3u8 里没有任何分片行"
               fail=$((fail+1))
-            elif echo "$cg_pl" | grep -q '/api/cg/media?u='; then
-              echo "  [OK] 分片与 AES KEY 均为站内相对路径"
+            elif [ -n "$cg_bad" ]; then
+              echo "::error::m3u8 里有不指向本次 origin 的地址 —— 跨源部署下会 404 / 分片被墙"
+              echo "$cg_bad" | head -2
+              fail=$((fail+1))
+            elif echo "$cg_bare" | grep -qv '^https\?://'; then
+              echo "::error::m3u8 里出现相对路径 —— 页面在 Pages 域下会 404"
+              fail=$((fail+1))
             else
-              echo "::error::m3u8 里找不到站内代理地址"
-              fail=$((fail+1))
+              echo "  [OK] 分片与 AES KEY 全为本站绝对地址 (origin=$URL)"
             fi
           fi
 

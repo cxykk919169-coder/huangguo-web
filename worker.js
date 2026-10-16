@@ -1472,7 +1472,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-17-v14-relative-media";
+const BUILD_ID = "hg-worker-2026-10-17-v15-abs-media-worker-hd";
 
 export default {
   async fetch(request, env, ctx) {
@@ -1780,7 +1780,16 @@ export default {
             return json({ ok: false, url: "", error: j.msg || "上游没有这一集", status: j.status }, h, 404);
           }
           // 播放地址改成走本站的媒体代理 —— 播放器的每一步都被 Cloudflare 挡住
-          const proxied = "/api/hg/media?u=" + encodeURIComponent(d.video_url);
+          //
+          // ★ 必须是**绝对地址**, 且 origin 取自本次请求 (不硬编码域名)。
+          //   原因: 前端页面和 Worker 常常不同源 —— 页面在 GitHub Pages,
+          //   API 在 Worker。此时返回相对路径 "/api/hg/media?u=…", 浏览器会把它
+          //   解析成 https://<pages域名>/api/hg/media → 404 (实测),
+          //   表现为"列表正常、点开播不了"。取请求自己的 origin, 在哪访问就回哪。
+          const epOrigin = (function () {
+            try { return new URL(request.url).origin; } catch (e) { return ""; }
+          })();
+          const proxied = epOrigin + "/api/hg/media?u=" + encodeURIComponent(d.video_url);
           return json({
             ok: true,
             url: proxied,
@@ -1836,13 +1845,21 @@ export default {
 
           if (isPlaylist) {
             const txt = await r.text();
-            // ★ 相对路径, 不拼绝对地址。拼绝对地址会把分片钉死在 xxx.workers.dev,
-            //   而 workers.dev 在国内被墙: 用户挂自定义域名时清单能取到、分片全连不上,
-            //   表现为"进得了播放页但一直转圈"。相对路径在任何域名下都成立。
+            // ★ 用**本次请求自己的 origin** 拼绝对地址 —— 三种部署下都成立:
+            //   1) 页面与 Worker 同源 (workers.dev / 自定义域名) → 分片回同源, 通
+            //   2) 页面在 GitHub Pages, API 在 Worker (**不同源**) → 相对路径会被
+            //      解析到 pages 域名下 → 404 (实测), 必须绝对地址
+            //   3) 自定义域名 → 分片走自定义域名, 通
+            //   关键: 不硬编码 workers.dev, origin 来自请求本身, 在哪访问就回哪。
+            //   (2026-10-17 修正: 上一版统一用相对路径修好了同源场景, 却把
+            //    "Pages 前端 + Worker API" 这个真实部署打成了 404。)
+            const mediaOrigin = (function () {
+              try { return new URL(request.url).origin; } catch (e) { return ""; }
+            })();
             const mk = function (u) {
               let abs;
               try { abs = new URL(u, target).href; } catch (e) { return u; }
-              return "/api/hg/media?u=" + encodeURIComponent(abs);
+              return mediaOrigin + "/api/hg/media?u=" + encodeURIComponent(abs);
             };
             const out = txt.split("\n").map(function (line) {
               const t = line.trim();
@@ -2019,7 +2036,14 @@ export default {
                           hasMedia: !!d.media }, h, 404);
           }
           // 播放地址改成本站媒体代理 —— 播放器每一步都被 Cloudflare 挡住
-          const proxied = "/api/cg/media?u=" + encodeURIComponent(src);
+          //
+          // ★ 绝对地址, origin 取自本次请求 (不硬编码域名)。
+          //   页面在 GitHub Pages、API 在 Worker 时, 相对路径会被解析到 pages 域名下
+          //   → 404 → "能进播放页但永远转圈"。取请求 origin 则在哪访问就回哪。
+          const epOrigin = (function () {
+            try { return new URL(request.url).origin; } catch (e) { return ""; }
+          })();
+          const proxied = epOrigin + "/api/cg/media?u=" + encodeURIComponent(src);
           return json({
             ok: true,
             url: proxied,
@@ -2102,15 +2126,24 @@ export default {
 
           if (isPlaylist) {
             const txt = await r.text();
-            // ★ 必须改写为**相对路径**, 不能拼绝对地址。
-            //   拼绝对地址 (= request.url 的 origin) 会把分片请求钉死在
-            //   xxx.workers.dev 上, 而 workers.dev 在国内是被墙的 ——
-            //   用户挂着自定义域名点播时, 清单本身能拿到, 分片却全部连不上,
-            //   表现就是"能进播放页但永远转圈"。相对路径在任何域名下都成立。
+            // ★ 用**本次请求自己的 origin** 拼绝对地址。
+            //
+            //   上一版统一写相对路径, 理由是"别把 workers.dev 钉死"。方向没错, 但代价是
+            //   把"页面与 API 不同源"这种真实部署打死了:
+            //     页面在 GitHub Pages, API 在 Worker → 浏览器把 "/api/cg/media" 解析成
+            //     https://<pages域名>/api/cg/media → 404 → 能进播放页、永远转圈。
+            //
+            //   正解 = "绝对地址, 但 origin 来自请求" —— 不硬编码任何域名, 在哪访问就回哪:
+            //     workers.dev      → 分片走 workers.dev
+            //     自定义域名        → 分片走自定义域名
+            //     Pages + Workers  → 分片走 Worker (与清单请求同一条路, 可达性自洽)
+            const mediaOrigin = (function () {
+              try { return new URL(request.url).origin; } catch (e) { return ""; }
+            })();
             const mk = function (u) {
               let abs;
               try { abs = new URL(u, target).href; } catch (e) { return u; }
-              return "/api/cg/media?u=" + encodeURIComponent(abs);
+              return mediaOrigin + "/api/cg/media?u=" + encodeURIComponent(abs);
             };
             const out = txt.split("\n").map(function (line) {
               const t = line.trim();

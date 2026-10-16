@@ -270,6 +270,12 @@ html[data-site="hjw"] .hgtoast{border-color:#5a2a3e}
 const DEFAULT_API = 'https://huangguo-web.cxykk919169.workers.dev';
 let API = localStorage.getItem('hg_api') || DEFAULT_API;
 
+// ★ 显式导出到 window —— 顶层 `let` 不会成为 window 的属性, 而多品牌模块
+//   hg-brands.js 需要这个值 (它读的是 window.API)。少了这一行,
+//   禁果/橙果/蜜桃/2048 一律提示「未配置 Worker 地址, 无法在服务端探测」。
+window.HG_API_BASE = API;
+
+
 // 记录 Worker 是否可用 (第一次失败后就不再重试, 直接用直连模式)
 let WORKER_OK = null;      // null=未知, true=可用, false=不可用
 let MODE_TOLD = false;     // 是否已经提示过用户
@@ -3311,38 +3317,49 @@ function hdSetSrc(url) {
 
   video.dataset.hdRaw = raw;
   video.dataset.hdFallback = '';
+
+  const viaW = (API && WORKER_OK !== false)
+    ? (API + '/api/hd/stream?u=' + encodeURIComponent(raw)) : '';
+
+  // 双向兜底: 当前是代理就回直连, 当前是直连就回代理。只切一次, 防死循环。
   video.onerror = function () {
-    if (video.dataset.hdFallback === '1') return;   // 已回退过, 防死循环
+    if (video.dataset.hdFallback === '1') return;
     video.dataset.hdFallback = '1';
-    // 若当前是代理地址 → 回退直连
-    if (video.src && API && video.src.indexOf(API) === 0) {
+    const cur = String(video.src || '');
+    const onProxy = !!(API && cur.indexOf(API) === 0);
+    if (onProxy && raw) {
       video.src = raw;
       video.load();
       try { video.play().catch(() => {}); } catch (e) {}
       toast('代理受限，已切直连');
+    } else if (!onProxy && viaW) {
+      video.src = viaW;
+      video.load();
+      try { video.play().catch(() => {}); } catch (e) {}
+      toast('直连受限，已切代理');
     }
   };
 
-  // 先用直连立即起播 (最快路径), 同时后台探测代理是否更优
-  video.src = raw;
-  video.load();
-  try { video.play().catch(() => {}); } catch (e) {}
-
-  // 探测代理: 若直连因网络原因起不来而代理可用, 才切代理
-  hdProbeProxy(raw).then(ok => {
-    if (!ok) return;
-    // 直连已能播就不动; 8 秒后仍 readyState<1 说明直连失败 → 切代理
-    setTimeout(() => {
+  // ★ 起播顺序改成「Worker 代理优先, 直连兜底」。
+  //   旧代码直连优先、要等 8 秒超时才切代理 —— 而上游 hddj.zen-vip.com 在国内
+  //   网络经常根本不可达, 用户看到的就是一直转圈, 甚至直接失败。
+  //   现在先用 800ms 探一下代理通不通: 通就直接代理起播
+  //     · 出网在 Cloudflare 边缘, 不受本地线路影响
+  //     · 访客真实 IP 不会进上游 CDN 日志 (与 README 的 IP 保护声明一致)
+  //   不通才直连, 行为不比旧版差。
+  if (!viaW) {
+    video.src = raw;
+    video.load();
+    try { video.play().catch(() => {}); } catch (e) {}
+  } else {
+    hdProbeProxy(raw).then(ok => {
       const v2 = document.getElementById('pl');
-      if (v2 && v2 !== video) return;                 // 用户已切走
-      if (v2.readyState < 1 && v2.src === raw) {
-        v2.src = API + '/api/hd/stream?u=' + encodeURIComponent(raw);
-        v2.load();
-        try { v2.play().catch(() => {}); } catch (e) {}
-        toast('已切换代理线路');
-      }
-    }, 8000);
-  });
+      if (v2 !== video) return;                     // 用户已切走
+      video.src = ok ? viaW : raw;
+      video.load();
+      try { video.play().catch(() => {}); } catch (e) {}
+    });
+  }
 }
 
 // 渲染线路按钮
@@ -3481,10 +3498,23 @@ async function setVideoSrc(video, url, opts) {
   if (!video || !url) return;
   destroyHls();
 
-  const raw = String(url).trim();
+  // ★ 归一化: Worker 可能返回站内相对路径 (以 /api/ 开头)。
+  //   页面在 GitHub Pages、API 在 Worker 时, 浏览器会把 "/api/hg/media?u=…"
+  //   解析到 pages 域名下 → 404 (线上实测) → 清单拉不到 → 一直转圈。
+  //   这里统一补上 Worker 基址, 同源 / 跨源两种部署都能播。
+  const raw0 = String(url).trim();
+  const raw = (raw0.charAt(0) === '/' && typeof API === 'string' && API)
+    ? (API + raw0) : raw0;
   // 已经是 Worker 代理地址 → 原样使用, 不再包
   const alreadyProxied = (typeof API === 'string' && API && raw.indexOf(API) === 0);
-  const isHls = /\.m3u8(\?|$)/i.test(raw) || (!alreadyProxied && raw.indexOf('m3u8') >= 0) || opts.forceHls === true;
+  // ★ HLS 判定修正。走本站媒体代理的清单地址长这样:
+  //     /api/hg/media?u=https%3A%2F%2F…%2Fxxxx.m3u8%3Fauth_key%3D…
+  //   ".m3u8" 后面跟的是 %3F ('?' 的编码), 第一条判据匹配不到;
+  //   第二条又因为 alreadyProxied=true 被短路 —— 结果 m3u8 被当成 mp4
+  //   直接塞给 <video>, Chrome 播不了。去掉 alreadyProxied 这个短路条件。
+  const isHls = /\.m3u8(\?|$)/i.test(raw)
+    || raw.indexOf('m3u8') >= 0
+    || opts.forceHls === true;
 
   // ---- 非 HLS (mp4 直链) ----
   //   国内直连 r2.dev / 上游 CDN 常年超时, 所以 mp4 也要能回退到 Worker 代理。
