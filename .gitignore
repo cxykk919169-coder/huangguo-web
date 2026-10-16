@@ -34,3 +34,6 @@ _scan/
 Thumbs.db
 desktop.ini
 .DS_Store
+_commitmsg.txt
+_m.txt
+_push.tmp
