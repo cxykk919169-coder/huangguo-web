@@ -748,10 +748,21 @@ const UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Geck
     my: { key: "my", name: "蜜月传媒", api: "https://api.amiyue.com",    site: "https://amiyue.com" },
   };
 
-  // 媒体 / 图片 CDN 放行规则。两个站共用 file.amiyue.com / api.amiyue.com。
+  // 媒体 / 图片 CDN 放行规则。这两个板块共用这几台主机:
+  //   file.amiyue.com / wp.amiyue.com (媒体)   api.amiyue.com / api.xindongcm.com (接口)
   // 依旧保留"路径必须像上游媒体布局"这一层, 避免 Worker 被当通用代理。
   const XD_MEDIA_HOST_RE = /^(?:[a-z0-9-]+\.)?(?:amiyue\.com|xindongcm\.com)$/i;
-  const XD_MEDIA_PATH_RE = /^\/(?:video|image|uploads)\/[A-Za-z0-9_\/.\-]+\.(?:ts|m3u8|m4s|mp4|key|webp|png|jpe?g)$/i;
+  // ★ 2026-10-18 (v19) 修: 路径根必须同时认单数 video 与复数 videos。
+  //
+  //   实测枚举 20+ 部之后发现, 这两个板块的媒体分散在两台主机、两种目录布局上,
+  //   而且两边都在用:
+  //     file.amiyue.com /video/202609/<hash>/index.m3u8       ← 老布局
+  //     wp.amiyue.com   /videos/202608/<hash>/hls/index.m3u8  ← 新布局
+  //   原来只写了 `video` 且后面紧跟 `/`, 所以 `/videos/…` 一律不匹配 ——
+  //   这部分视频的清单会被这里以 403 挡回去, 前端的表现就是
+  //   "蜜月显示了集数、播放器却一直出不来"(用户最初的反馈之一)。
+  //   分片(段)走的是同一条规则, 所以这一处修好, 清单和分片一起通。
+  const XD_MEDIA_PATH_RE = /^\/(?:videos?|image|uploads)\/[A-Za-z0-9_\/.\-]+\.(?:ts|m3u8|m4s|mp4|key|webp|png|jpe?g)$/i;
   const XD_PRIVATE_HOST_RE = /^(?:localhost|0\.0\.0\.0|127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|\[?::1\]?$|\[?f[cd][0-9a-f]{2}:)/i;
 
   function xdMediaAllowed(host, pathname) {
@@ -1702,7 +1713,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-18-v18-probe-ssrf-guard";
+const BUILD_ID = "hg-worker-2026-10-18-v19-player-always-on";
 
 export default {
   async fetch(request, env, ctx) {
@@ -1816,92 +1827,17 @@ export default {
           return json(out, h);
         }
 
-        // ============ 品牌落地页探测 (禁果 / 橙果 / 蜜桃 / 2048 …) ============
-        // 上游这些品牌与黄果同平台: 都是「APP 下载落地页 + 加密 API」, 网页侧没有剧集数据。
-        // 这个接口在【服务端】把落地页取回来并解码, 返回:
-        //   - 最新 / 官方 / 永久 线路
-        //   - WebApp 入口
-        //   - landing 标记 (true → 前端应显示"内容仅在 APP 内", 而不是塞一个空列表)
-        //   - 可选: 顺手探一下同平台 API 主机能不能用
-        // 关键: 访客和你自己都不直连上游 → 不暴露任何人的真实 IP。
-        if (path === "/api/brand/probe") {
-          const u = q.get("u") || "";
-          if (!/^https?:\/\//i.test(u)) return json({ ok: false, error: "bad url" }, h, 400);
-          // ★ SSRF 防线 (2026-10-18 补): 这个端点会替调用者出网抓任意 URL,
-          //   必须挡住内网 / 回环 / 云元数据 / 保留段。Cloudflare 出口本身对这些
-          //   会回 403/530 (已实测 127.0.0.1 / 169.254.169.254 / 10.x / [::1] /
-          //   metadata.google.internal 全部拿不到数据), 但那是**边缘的副作用**,
-          //   不是本端点的保证 —— 不依赖它, 这里做第二道闸。
-          //   注意: 只查**入参主机**, 不改 redirect: follow —— 品牌落地页本来就会
-          //   跳到 CloudFront 之类, 跳转目标由 Cloudflare 自己管。
-          let pu = null;
-          try { pu = new URL(u); } catch (e) { return json({ ok: false, error: "bad url" }, h, 400); }
-          if (pu.protocol !== "http:" && pu.protocol !== "https:") {
-            return json({ ok: false, error: "bad scheme" }, h, 400);
-          }
-          const phost = String(pu.hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
-          if (/^(?:localhost$|.*\.local$|.*\.internal$|metadata\.google\.internal$|0\.0\.0\.0$|127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[0-2]\d)\.|::1$|f[cd][0-9a-f]{2}:|fe80:)/.test(phost)) {
-            return json({ ok: false, error: "host not allowed: " + phost }, h, 403);
-          }
-          try {
-            const ctl = new AbortController();
-            const timer = setTimeout(() => ctl.abort(), 12000);
-            const r = await fetch(u, {
-              headers: {
-                "User-Agent": UA,
-                "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-                "Accept-Language": "zh-CN,zh;q=0.9",
-                "Accept-Encoding": "identity",
-              },
-              redirect: "follow",
-              signal: ctl.signal,
-            });
-            clearTimeout(timer);
-            // 只取头部 1MB —— 落地页配置与标题都在前面, 防止大响应打爆 Worker 内存
-            const body = (await r.text()).slice(0, 1000000);
-            const cfg = extractLandingConfig(body);
-            let finalHost = "";
-            try { finalHost = new URL(r.url).host; } catch (e) { /* ignore */ }
-            const tm = body.match(/<title[^>]*>([\s\S]{0,120}?)<\/title>/i);
-            const out = {
-              ok: r.status === 200,
-              http: r.status,
-              url: r.url || u,
-              finalHost: finalHost,
-              landing: isLandingPage(body),
-              title: tm ? tm[1].trim() : "",
-              links: { latest: cfg.latest, official: cfg.official, permanent: cfg.permanent },
-              webAppUrl: cfg.webAppUrl,
-              tpl: cfg.tpl,
-            };
-            const guess = (q.get("apiHost") || "").trim();
-            if (/^[a-z0-9\.\-]+$/i.test(guess)) {
-              try {
-                const c2 = new AbortController();
-                const t2 = setTimeout(() => c2.abort(), 8000);
-                const r2 = await fetch("https://" + guess + "/api/app/videos?page=1", {
-                  headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://hddj30.cc/" },
-                  signal: c2.signal,
-                });
-                clearTimeout(t2);
-                const t = (await r2.text()).slice(0, 200000);
-                let jj = null;
-                try { jj = JSON.parse(t); } catch (e) { /* 不是 JSON */ }
-                out.api = {
-                  host: guess,
-                  http: r2.status,
-                  ok: !!(jj && jj.ok === true && Array.isArray(jj.items)),
-                  total: (jj && jj.total) || 0,
-                };
-              } catch (e) {
-                out.api = { host: guess, ok: false, error: String((e && e.message) || e) };
-              }
-            }
-            return json(out, h);
-          } catch (e) {
-            return json({ ok: false, error: String((e && e.message) || e) }, h, 502);
-          }
-        }
+        // ============ 品牌落地页探测 (已于 v19 删除) ============
+        // 原来这里是 /api/brand/probe —— 一个"替调用者抓任意 URL 再解码落地页"
+        // 的通用抓取器, 只服务禁果/橙果/蜜桃/2048 这四个已下线的板块。
+        //
+        // 删掉它的第二个理由比第一个更硬: 它接受外部传入的 ?u=<任意地址> 并代为出网,
+        // 天然是个 SSRF 面 (v18 为此补过内网/回环/云元数据黑名单)。既然前端四个板块
+        // 已经下线、没有任何调用方, 就没有理由继续对外留着一个"通用抓取器"。
+        // 不依赖云厂商边缘行为, 直接从根上把面去掉。
+        //
+        // 落地页解码器本身 (isLandingPage / decodeLandingPayload / extractLandingConfig)
+        // 保留 —— 黄果自己的落地页识别还在用它们 (见 /api/health 的 mirror 探测)。
 
         // ============ 黄果官方 JSON API (huangguoai.com) ============
         // 2026-10 实测确认: 黄果的剧集并不只在 APP 里。站方自己的 Web 前端调的就是这套公开 JSON:

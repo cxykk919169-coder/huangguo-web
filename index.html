@@ -323,46 +323,16 @@ const SITES = {
     hasEps: false,   // 单帖单视频, 不做选集
   },
 
-  /* ===== 多品牌板块 (2026-10-16 新增) =====
-   * 与黄果同一个运营方、同一套架构: 下载落地页 + APP 内加密接口。
-   * 网页侧没有剧集数据 (实测: 落地页零条剧集, 接口 POST /api/v1/* 返回 AES 密文)。
-   * 所以这些板块做的是:
-   *   1. 服务端探测落地页 → 显示【当前官方地址 + APP 下载入口】(访客不直连上游, 不露 IP)
-   *   2. 顺手探同平台公开 API → 哪天开了接口就自动升级成完整内容板块
-   *   3. 绝不把落地页上的品牌宣传片当成剧集播 (这正是黄果那个 bug 的成因)
-   * ====================================== */
-  jg: {
-    key: 'jg',
-    name: '禁果短剧',
-    short: '禁果',
-    color: '#ff4d6d',
-    desc: '官方入口 · 剧集在其 APP 内',
-    hasEps: false,
-  },
-  cg: {
-    key: 'cg',
-    name: '橙果短剧',
-    short: '橙果',
-    color: '#ff9f1c',
-    desc: '官方入口 · 剧集在其 APP 内',
-    hasEps: false,
-  },
-  mt: {
-    key: 'mt',
-    name: '蜜桃短剧',
-    short: '蜜桃',
-    color: '#f472b6',
-    desc: '官方入口 · 剧集在其 APP 内',
-    hasEps: false,
-  },
-  b2048: {
-    key: 'b2048',
-    name: '2048成人短剧',
-    short: '2048',
-    color: '#38bdf8',
-    desc: '官方入口 · 剧集在其 APP 内',
-    hasEps: false,
-  },
+  /* ===== 多品牌板块 (禁果/橙果/蜜桃/2048) 已于 2026-10-18 v19 整体下线 =====
+   * 下线原因: 这四个板块是「APP 下载落地页 + 加密接口」形态 —— 网页侧拿不到任何剧集,
+   * 板块里能给的只有官方地址和 APP 下载入口, 等价于"去官网看"。
+   * 一并清掉的还有: index.html 的 brandApi() 与 api() 里的品牌兜底分支、
+   * hg-brands.js 里四个品牌的登记项、worker.js 的 /api/brand/probe。
+   * 老用户的 localStorage 里如果还留着 'jg'/'cg'/'mt'/'b2048', 会被下面那句
+   *   if (!SITES[SITE]) SITE = 'hg';
+   * 归一到黄果, 不会白屏, 也不会留下一个点进去就没内容的空板块。
+   * 保留的是真正能播的内容板块: 黄果 / 心动 / 蜜月 (外加黄豆 / ERO / 海角)。
+   * ======================================================================== */
 
   /* ===== 心动传媒 / 蜜月传媒 (2026-10-18 新增) =====
    * 与上面几个"只有落地页"的板块不同 —— 这两个是**完整可播内容板块**:
@@ -415,61 +385,12 @@ function setSite(k) {
  *
  * 黄豆短剧 (hd) 走它自己的 API + /api/hd 代理, 不参与上面的降级。
  */
-/* ===================== 多品牌板块 (禁果/橙果/蜜桃/2048) =====================
- * 数据来源分两层:
- *   1) Worker /api/brand/probe  —— 服务端去取落地页并解码
- *      → 当前官方地址 / 官方站 / 永久地址 / WebApp 入口
- *      ★ 访客和你自己都不直连上游, 不暴露任何人的真实 IP
- *   2) 同平台公开 API (<品牌码>dj.zen-vip.com/api/app)
- *      → 通了就是完整内容板块 (复用黄豆那套适配器)
- *
- * 没内容时返回 { items: [], notice } —— 空列表会走空状态提示, 不假装有数据。
- * ========================================================================= */
-function brandApi(key, path, params) {
-  if (typeof HGBrands === 'undefined') return Promise.reject(new Error('品牌模块 hg-brands.js 未加载'));
-  const b = HGBrands.get(key);
-  if (!b) return Promise.reject(new Error('未知品牌: ' + key));
-  const p = params || {};
-
-  return HGBrands.probe(key).then(function (j) {
-    const L = j.links || {};
-    const lines = [];
-    lines.push('【' + (b.name || key) + '】');
-    if (j.title) lines.push(j.title);
-    if (L.official) lines.push('官方站: ' + L.official);
-    if (L.latest) lines.push('最新地址: ' + L.latest);
-    if (L.permanent) lines.push('永久发布页: ' + L.permanent);
-    if (j.webAppUrl) lines.push('APP / 网页入口: ' + j.webAppUrl);
-    if (!L.official && !L.latest && !L.permanent && j.landingUrl) lines.push('入口: ' + j.landingUrl);
-    if (j.landing) lines.push('该站目前是下载落地页, 网页侧不提供剧集列表。');
-    if (j.notice) lines.push(j.notice);
-    const note = lines.join('\n');
-
-    if (path === '/api/health') return { ok: !!j.ok, items: [], notice: note };
-
-    if (path === '/api/list' || path === '/api/search') {
-      const hasApi = j.hasContentApi || (j.api && j.api.ok);
-      if (!hasApi) return { items: [], total: 0, notice: note };
-      const A = HGBrands.Api(key);
-      return A.list(p.page || 1, p.cat || '').then(function (res) {
-        return {
-          items: (res.items || []).map(function (x) {
-            return { id: x.id, title: x.title, cover: x.cover || '', desc: x.desc || '', site: key };
-          }),
-          total: res.total || 0,
-          notice: '',
-        };
-      });
-    }
-
-    if (path === '/api/video') {
-      // 没有内容接口时, 详情页直接把"去哪儿看"讲清楚
-      return Promise.reject(new Error(note));
-    }
-
-    return { ok: !!j.ok, items: [], notice: note };
-  });
-}
+/* ===================== 多品牌取数层 (已于 v19 删除) =====================
+ * 原来这里是 brandApi() —— 走 Worker 的 /api/brand/probe 取落地页并解码,
+ * 再把「官方地址 / 下载入口 / notice」拼成一段文字塞给列表页。
+ * 因为它只服务禁果/橙果/蜜桃/2048 这四个"去官网看"的板块, 随板块一起删除。
+ * 保留在这里的只是一行说明, 便于日后对照 git 历史。
+ * ====================================================================== */
 
 /**
  * 心动传媒 / 蜜月传媒取数 —— 走 Worker 的 /api/xd/* 或 /api/my/*
@@ -515,25 +436,18 @@ function xdApi(path, params) {
 }
 
 function api(path, params) {
-  // ---- 心动传媒 / 蜜月传媒分支 (2026-10-18 新增) ----
-  // ★ 必须排在下面那条 brandApi 总兜底之前: 它们同样是 HGBrands.BRANDS 的成员,
-  //   否则会被 landing 探测分支接走, 拿不到真正的剧集数据。
+  // ---- 心动传媒 / 蜜月传媒板块 ----
+  // 它们同样是 hg-brands.js 的 BRANDS 成员, 所以这个分支必须排在最前面,
+  // 否则会被后面的通用兜底接走, 拿不到真正的剧集数据。
   if (typeof HGBrands !== 'undefined' && HGBrands.BRANDS[SITE]
       && HGBrands.BRANDS[SITE].kind === 'xd') return xdApi(path, params);
 
-  // ---- 多品牌分支 (禁果 / 橙果 / 蜜桃 / 2048) ----
-  if (typeof HGBrands !== 'undefined' && HGBrands.BRANDS[SITE]) return brandApi(SITE, path, params);
 
   // ---- 黄果短剧分支 ----
   // 上游把剧集放在站方自己的公开 JSON API 里 (huangguoai.com + *.rxzfszht.cc)。
   // 全部经 Worker 出网: 访客和你自己都不直连上游, m3u8 分片也由 /api/hg/media 重写回源。
   if (SITE === 'hg') return hgApi(path, params);
 
-  // ---- 橙果短剧分支 ----
-  // 橙果的加密信封密钥就明文写在站点公开的 bundle 里, 已完整还原;
-  // 全站目录 + 逐集播放源都可取, 不需要登录、不需要 APP。
-  // 同样只走 Worker: /api/cg/media 会把分片和 AES key 重写回本站, 不暴露访客 IP。
-  if (SITE === 'cg') return cgApi(path, params);
 
   // ---- 黄豆短剧分支 (经本站 Worker 代理) ----
   if (SITE === 'hd') return hdApi(path, params);
@@ -1473,20 +1387,33 @@ async function hgSearchFallback(kw, err) {
   return { ok: true, items, snapshot: true, source: 'hg' };
 }
 
-/* ===================== 黄豆短剧取数 ===================== */
+/* ===================== 指定来源取数 ===================== */
 /**
- * 指定来源取数 (全站搜索用):
- *   apiOf('hd', '/api/video', {id})  → 无论当前在哪个板块, 都走黄豆
- *   apiOf('hg', '/api/video', {id})  → 都走黄果
+ * 指定来源取数 (全站搜索 / 历史列表跨板块点进详情):
+ *   apiOf('xd', '/api/video', {id}) → 无论当前在哪个板块, 都走心动
+ *   apiOf('hg', '/api/video', {id}) → 都走黄果
  * 和 api() 的区别只是 api() 跟随当前板块。
+ *
+ * ★ 2026-10-18 (v19) 修: 原来第三行判的是**当前板块**而不是**目标板块**:
+ *       if (SITE === 'hg') return api(path, params);
+ *   于是只要用户停在黄果板块, 任何来源的请求都会被当成黄果 ——
+ *   历史列表里一条心动/蜜月的记录点进去, 会拿它的 id 去查黄果详情,
+ *   结果要么空、要么串成别的内容。
+ *   (实测: SITE='hg' 时 apiOf('xd','/api/video',{id:26}) 请求的是
+ *    /api/hg/detail?id=26, 而正确答案是 /api/xd/detail?id=26。)
+ *
+ *   正解: 按**目标板块**分派 —— 目标与当前一致就直接用 api();
+ *   不一致就把 SITE 临时切过去, 取完立刻切回来。
+ *   api() 的板块判定全部发生在拼 URL 之前 (同步), 所以
+ *   "切过去 → 发请求 → 切回来" 不会让异步回来的响应认错板块。
  */
 function apiOf(src, path, params) {
   if (src === 'hd') return hdApi(path, params);
   if (src === 'es') return esApi(path, params);
-  if (SITE === 'hg') return api(path, params);
-  // 当前不在黄果板块但要取黄果的数据: 临时切一下再切回来, 避免污染全局状态
+  if (src === SITE) return api(path, params);
+  // 目标板块 ≠ 当前板块: 临时切过去取数, 取完切回来, 不污染全局状态
   const keep = SITE;
-  SITE = 'hg';
+  SITE = src;
   const p = api(path, params);
   SITE = keep;
   return p;
@@ -1526,42 +1453,7 @@ function hgApi(path, params) {
     });
 }
 
-/**
- * 橙果短剧取数 —— 走 Worker 的 /api/cg/*
- *
- * 【为什么橙果也能直接播】
- *   站方前端的加密只是"看着吓人": key / iv / sign_key 全部明文写在站点公开的
- *   bundle (/_nuxt/BIb7tDp8.js) 里。AES-128-CBC + MD5(SHA256(...)) 签名,
- *   逆出来之后全站目录、详情、逐集播放源全部可取 —— 不需要登录, 也不需要 APP。
- *
- * 【为什么坚持服务端出网 —— IP 保护】
- *   橙果的 m3u8 在 hls.tpbbwcc.cn, 分片和 AES key 在上游轮换的媒体域名上
- *   (实测一路见过 mts.hhjd.mobi / tx.doudou520.online / ts.zhixunkeji.xyz)。
- *   浏览器直连的话, 访客的真实 IP 就进了上游 CDN 的日志。
- *   所以橙果这一路也只走 Worker, 由 /api/cg/media 重写分片与 key 的 URL,
- *   播放器一次都不会直连上游。
- */
-function cgApi(path, params) {
-  const p = params || {};
-  const map = {
-    '/api/list':   '/api/cg/list',
-    '/api/search': '/api/cg/search',
-    '/api/video':  '/api/cg/detail',
-    '/api/ep':     '/api/cg/ep',
-    '/api/home':   '/api/cg/home',
-  };
-  const cp = map[path];
-  if (!cp) return Promise.reject(new Error('未知接口: ' + path));
-  if (!API) return Promise.reject(new Error('Worker 未配置 —— 橙果必须走 Worker 出网'));
-  return fetch(API + cp + '?' + new URLSearchParams(p).toString(), { method: 'GET' })
-    .then(function (r) {
-      return r.json().then(function (j) {
-        if (j && j.ok === false) throw new Error(j.error || '上游失败');
-        if (!r.ok && !(j && j.items)) throw new Error(j && j.error ? j.error : ('HTTP ' + r.status));
-        return j;
-      });
-    });
-}
+
 
 function  hdApi(path, params) {
   if (typeof HDHd === 'undefined') return Promise.reject(new Error('黄豆短剧模块未加载'));
@@ -2459,6 +2351,21 @@ async function openVid(id, from) {
     hisPut({ id: v.id, title: v.title, cover: v.cover, ep: startEp, epTotal: v.epTotal });
 
     const faved = isFav(v.id);
+    // ★ 2026-10-18 (v19) 关键修复: 「显示集数、却没有播放器」
+    //
+    //   详情接口**故意不预取播放地址** —— /api/hg/detail 与 /api/xd|my/detail
+    //   都只回"有几集", 地址留给 /api/hg/ep、/api/xd/ep 按需取。这样做是对的:
+    //   上游 m3u8 带时效签名 (auth_key), 提前取回来放着, 等用户点开时可能已经作废。
+    //
+    //   但上一版把**播放器容器**的渲染条件错绑在 first (= v.eps[startEp]) 上:
+    //     没有预取源 → first 是空串 → 整个 <video> 连同 playbar 都不渲染
+    //     → 页面上只剩一排集数按钮, 看起来"只有集数没有播放器";
+    //     用户去点集数 → playEp() 第二行 getElementById('pl') 拿到 null 直接 return
+    //     → 点击毫无反应, 用户自然认为"一直无法获取上游播放源"。
+    //   (实测: /api/hg/ep 与 /api/xd/ep 本身都是 200 + 正常 m3u8, 上游没问题。)
+    //
+    //   正解: 只要有集数就把播放器摆出来, 首播交给 playEp 现取现播 (见下面首播分支)。
+    const playable = !!(v.epTotal || epsKeys.length);
     app().innerHTML =
       '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
       '<div class="card">' +
@@ -2467,7 +2374,8 @@ async function openVid(id, from) {
           '<div class="dinfo">' +
             '<div class="dtitle">' + esc(v.title) +
               '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()">' +
-              (faved ? '♥ 已收藏' : '♡ 收藏') + '</button>' +
+              (faved ? '♥ 已收藏' : '♡ 收藏') +
+            '</button>' +
             '</div>' +
             '<div class="dmeta">' +
               (v.epTotal ? '共 <em>' + v.epTotal + '</em> 集' : '') +
@@ -2479,7 +2387,7 @@ async function openVid(id, from) {
           '</div>' +
         '</div>' +
         (v.description ? '<div class="ddesc">' + esc(v.description).slice(0,300) + (v.description.length > 300 ? '…' : '') + '</div>' : '') +
-        (first ?
+        (playable ?
           '<div class="vwrap"><video id="pl" controls playsinline preload="metadata" poster="' + esc(coverUrl(v.cover, curSrc)) + '"></video>' +
           '<div class="playbar">' +
             '<span class="curep" id="curep">第 ' + startEp + ' 集</span>' +
@@ -2500,6 +2408,12 @@ async function openVid(id, from) {
     pushDetailState();
 
     // 首播: 走统一入口 (m3u8 → hls.js), 再挂播放器增强
+    //
+    //   ★ v19: 详情接口不预取源时 (first 为空), 以前这里只调 initPlayer() 就完事,
+    //     播放器永远是空的。现在改成主动去取第一集的源 —— playEp() 内部就是
+    //     api('/api/ep') → 板块对应的 /api/<板块>/ep, 与手动点集数走同一条路。
+    //   ★ 先 initPlayer 再 playEp: initPlayer 负责倍速/续播/进度保存/自动下一集,
+    //     playEp 负责取源并 setVideoSrc, 两者顺序反了会丢掉进度条增强。
     if (first) {
       setVideoSrc(document.getElementById('pl'), first, {
         onFatal: () => {
@@ -2507,6 +2421,9 @@ async function openVid(id, from) {
           if (ce) ce.textContent = '第 ' + startEp + ' 集（源加载失败，换集或稍后重试）';
         }
       }).then(() => initPlayer(startPos)).catch(() => initPlayer(startPos));
+    } else if (playable) {
+      initPlayer(startPos);
+      playEp(startEp);
     } else {
       initPlayer(startPos);
     }
@@ -2607,10 +2524,20 @@ function renderHjwVid(v) {
       '</div>';
   }
 
-  // 视频帖离线快照: 无时效内 m3u8, 说明一下而不是静默没有播放器
+  // 视频帖离线快照: 快照里**刻意不放 m3u8** (那是带 auth_key 的时效签名,
+  //   存下来几小时后就失效了), 所以快照态确实取不到播放地址。
+  //   上一版只写了一句"离线模式暂不能播放"就结束了 —— 用户看到的是"看不到视频"
+  //   却没有任何可操作的东西, 只能自己想到去刷新页面。这正是"海角偶尔离线"的来源:
+  //   Worker 可达时一切正常, 偶发不可达就落到快照, 然后**卡在没有出路的一页**。
+  //   现在补两件事: ① 明确说清为什么会这样; ② 给一个「重新取源」按钮 ——
+  //   它走 hjwRefresh(), 拿到源后会把整页重渲染成带播放器的版本。
   if (isVideo && !v.m3u8) {
     body += '<div style="padding:12px 14px;background:#f6f1e8;border:1px solid #e5d9c3;border-radius:8px;color:#7a653d;font-size:13px">' +
-      '🎬 该帖为视频帖, 视频源带时效签名 —— 离线模式暂不能播放, 联网后重新打开即恢复; 下方图文部分可正常浏览。</div>';
+      '🎬 该帖是视频帖, 但当前是<b>离线快照</b> —— 视频源带时效签名, 离线包里不放播放地址, 所以这里暂时没有播放器。<br>' +
+      '点下面的「重新取源」联网再取一次即可播放 (网络恢复后也可直接刷新页面)。</div>' +
+      '<div class="rows" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="sitebtn" onclick="hjwRefresh()">↻ 重新取源</button>' +
+      '</div>';
   }
 
   // 正文
@@ -2833,11 +2760,18 @@ async function hjwRefresh() {
     if (!d || !d.isVideo || !d.m3u8) { toast('该帖没有可用视频源'); return; }
     curVid.eps = { '1': d.m3u8 };
     if (v) {
-      // m3u8 → hls.js 统一入口
+      // 页面上已有播放器 → 只换源, 不重绘 (避免打断播放)
       await setVideoSrc(v, hjwProxied(d.m3u8), {
         onFatal: () => toast('新源加载失败'),
       });
       v.play().catch(() => {});
+    } else {
+      // ★ v19: 从离线快照进来的页面**根本没有 <video>** (见 renderHjwVid 里
+      //   isVideo && !v.m3u8 那条分支)。以前这里只 toast 一句就结束了,
+      //   用户拿到的"重新取源"是个空按钮。现在取到源就整页重渲染成可播版本。
+      renderHjwVid(d);
+      toast('已取到播放源');
+      return;
     }
     toast('已换新源');
   } catch (e) {
