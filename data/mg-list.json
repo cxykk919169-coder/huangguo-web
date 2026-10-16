@@ -209,17 +209,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908203731/6aa0018b7c68f1b88c2a8e3f/cover.jpg",
-   "ep": "7",
-   "epLabel": "更新至7集",
-   "id": "6aa0018b7c68f1b88c2a8e3f",
-   "title": "飘飘欲仙：富二代征服校园母狗",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908204203/6aa0029b7c68f1b88c2a8e49/cover.jpg",
    "ep": "8",
    "epLabel": "更新至8集",
@@ -2614,6 +2603,7 @@
   },
   {
    "cats": [
+    "du-jia-shuang-ju",
     "remixed-short-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261016183734/6ad1fe6eca57c75f779cba3c/cover.jpg",
