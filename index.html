@@ -360,8 +360,32 @@ const SITES = {
     name: '2048成人短剧',
     short: '2048',
     color: '#38bdf8',
-    desc: '待补官方入口 · 剧集在其 APP 内',
+    desc: '官方入口 · 剧集在其 APP 内',
     hasEps: false,
+  },
+
+  /* ===== 心动传媒 / 蜜月传媒 (2026-10-18 新增) =====
+   * 与上面几个"只有落地页"的板块不同 —— 这两个是**完整可播内容板块**:
+   *   上游 FastAPI 接口完全公开 (/openapi.json 敞着, 内容面全在 /api/site/*),
+   *   零登录零签名零信封; 详情直接回 video_url 的 m3u8 直链, 且明文免解密。
+   *   实测可播: m3u8 200 + 分片 video/mp2t 776440B + 188 对齐 0x47。
+   *   取数与媒体全走 Worker (Cloudflare 出口), 访客不碰上游。
+   * ================================================ */
+  xd: {
+    key: 'xd',
+    name: '心动传媒',
+    short: '心动',
+    color: '#a78bfa',
+    desc: '完整可播 · 公开 JSON 接口 · 明文切片免解密',
+    hasEps: true,
+  },
+  my: {
+    key: 'my',
+    name: '蜜月传媒',
+    short: '蜜月',
+    color: '#fb923c',
+    desc: '完整可播 · 公开 JSON 接口 · 明文切片免解密',
+    hasEps: true,
   },
 };
 let SITE = localStorage.getItem('hg_site') || 'hg';
@@ -447,7 +471,56 @@ function brandApi(key, path, params) {
   });
 }
 
+/**
+ * 心动传媒 / 蜜月传媒取数 —— 走 Worker 的 /api/xd/* 或 /api/my/*
+ *
+ * 【为什么这两个能直接播】
+ *   上游是 Nuxt 前台 + FastAPI 后端, 而且后端**接口完全公开**:
+ *     根路径就自报家门 {"app":"xindongcm","docs":"/docs"}, /openapi.json 敞着,
+ *     内容面全在 /api/site/* —— 零登录、零签名、零 token、零 AES 信封。
+ *     详情接口直接回 episodes[].video_url (m3u8 直链), 而且是**明文流**:
+ *     实测 m3u8 200 + 分片 video/mp2t 776440B + 首字节 0x47 + 188 字节对齐。
+ *   所以这两个和黄果/橙果一样是"完整可播内容板块", 不是只显示下载入口的落地页。
+ *
+ * 【为什么坚持服务端出网 —— IP 保护】
+ *   取数和媒体都由 Worker 从 Cloudflare 出口走, 访客浏览器一次都不碰
+ *   api.xindongcm.com / file.amiyue.com, m3u8 里的分片地址全部重写回本站 /api/xdm/media。
+ *
+ * 【两个站是同一套 CMS】只有 title 不同, 所以共用一份 Worker 实现 (XD_SITES 参数化)。
+ */
+function xdApi(path, params) {
+  const p = params || {};
+  const fam = (HGBrands.BRANDS[SITE] && HGBrands.BRANDS[SITE].xdFamily) || SITE;
+  const map = {
+    '/api/list':   '/api/' + fam + '/list',
+    '/api/search': '/api/' + fam + '/list',   // 搜索复用列表的 keyword 参数
+    '/api/video':  '/api/' + fam + '/detail',
+    '/api/ep':     '/api/' + fam + '/ep',
+    '/api/home':   '/api/' + fam + '/home',
+  };
+  const cp = map[path];
+  if (!cp) return Promise.reject(new Error('未知接口: ' + path));
+  if (!API) return Promise.reject(new Error('Worker 未配置 —— 心动/蜜月必须走 Worker 出网'));
+  const qs = path === '/api/search'
+    ? new URLSearchParams({ q: p.q || '', page: p.page || 1, size: 24 }).toString()
+    : new URLSearchParams(p).toString();
+  return fetch(API + cp + '?' + qs, { method: 'GET' })
+    .then(function (r) {
+      return r.json().then(function (j) {
+        if (j && j.ok === false) throw new Error(j.error || '上游失败');
+        if (!r.ok && !(j && j.items)) throw new Error(j && j.error ? j.error : ('HTTP ' + r.status));
+        return j;
+      });
+    });
+}
+
 function api(path, params) {
+  // ---- 心动传媒 / 蜜月传媒分支 (2026-10-18 新增) ----
+  // ★ 必须排在下面那条 brandApi 总兜底之前: 它们同样是 HGBrands.BRANDS 的成员,
+  //   否则会被 landing 探测分支接走, 拿不到真正的剧集数据。
+  if (typeof HGBrands !== 'undefined' && HGBrands.BRANDS[SITE]
+      && HGBrands.BRANDS[SITE].kind === 'xd') return xdApi(path, params);
+
   // ---- 多品牌分支 (禁果 / 橙果 / 蜜桃 / 2048) ----
   if (typeof HGBrands !== 'undefined' && HGBrands.BRANDS[SITE]) return brandApi(SITE, path, params);
 

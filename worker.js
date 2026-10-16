@@ -716,6 +716,180 @@ const UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Geck
     return last;
   }
 
+  /* ============ 心动传媒 / 蜜月传媒 (同一套 CMS) ============
+   * 2026-10-18 新增。来源: 用户情报 —— xindongcm.com / amiyue.com。
+   *
+   * 【为什么这两个能直接接进来 (而禁果/蜜桃不行)】
+   *   它们是 Nuxt SSR 前台 + FastAPI 后端, 后端**接口完全公开**:
+   *     0. 根路径自报身份: {"app":"xindongcm","docs":"/docs"}
+   *     1. /openapi.json 直接敞着 —— 公开面 15 条, 内容面全在 /api/site/*
+   *     2. 零登录 / 零签名 / 零 token / 零 AES 信封
+   *     3. 详情接口直接回 video_url (m3u8 直链), 且**明文不加密**(无 EXT-X-KEY)
+   *   实测链路 (2026-10-18):
+   *     GET  api.xindongcm.com/api/site/series?size=1   -> items/total/page
+   *     GET  api.xindongcm.com/api/site/series/26       -> episodes[] 带 video_url
+   *     GET  file.amiyue.com/.../index.m3u8             -> 200 application/vnd.apple.mpegurl
+   *     GET  .../seg_00000.ts                           -> 200 video/mp2t 776440B
+   *     分片首字节 47 40 11 10, 188 字节对齐同步字 = 真 MPEG-TS
+   *
+   * 【IP 保护】与黄果/橙果一致: 取数与媒体全部从 Cloudflare 出口走,
+   *   访客浏览器一次都不碰 api.xindongcm.com / file.amiyue.com;
+   *   m3u8 里的分片地址全部重写回本站 /api/xdm/media。
+   *
+   * 【接口要点】
+   *   /api/site/series 分页参数是 page + size (**不是 page_size**, 实测 page_size 被忽略
+   *     仍回 12 条), 筛选是 category_id / recommend / top / keyword
+   *   /api/site/series/{id}/play 只回 {"ok":true} —— 那是播放计数, **不给播放地址**;
+   *     真正的播放地址在详情接口的 episodes[].video_url 里
+   *   两个站共用同一个媒体 CDN (file.amiyue.com), 所以放行规则只认 CDN 主机
+   */
+  const XD_SITES = {
+    xd: { key: "xd", name: "心动传媒", api: "https://api.xindongcm.com", site: "https://xindongcm.com" },
+    my: { key: "my", name: "蜜月传媒", api: "https://api.amiyue.com",    site: "https://amiyue.com" },
+  };
+
+  // 媒体 / 图片 CDN 放行规则。两个站共用 file.amiyue.com / api.amiyue.com。
+  // 依旧保留"路径必须像上游媒体布局"这一层, 避免 Worker 被当通用代理。
+  const XD_MEDIA_HOST_RE = /^(?:[a-z0-9-]+\.)?(?:amiyue\.com|xindongcm\.com)$/i;
+  const XD_MEDIA_PATH_RE = /^\/(?:video|image|uploads)\/[A-Za-z0-9_\/.\-]+\.(?:ts|m3u8|m4s|mp4|key|webp|png|jpe?g)$/i;
+  const XD_PRIVATE_HOST_RE = /^(?:localhost|0\.0\.0\.0|127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|\[?::1\]?$|\[?f[cd][0-9a-f]{2}:)/i;
+
+  function xdMediaAllowed(host, pathname) {
+    if (!host) return false;
+    if (XD_PRIVATE_HOST_RE.test(host)) return false;
+    if (!XD_MEDIA_HOST_RE.test(host)) return false;
+    if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return false;
+    return XD_MEDIA_PATH_RE.test(pathname || "");
+  }
+
+  function xdSite(key) {
+    return XD_SITES[key] || XD_SITES.xd;
+  }
+
+  // 从详情页的 episodes[] 里取第 ep 集的 video_url (ep 从 1 开始)。
+  // 上游的 episode_no 是 1 基, 但也做过 sort —— 这里按 episode_no 精确匹配,
+  // 匹配不到就按顺序兜底, 两条路都堵不上才报缺源。
+  function xdPickEpisode(eps, ep) {
+    if (!eps || !eps.length) return null;
+    const want = parseInt(ep, 10) || 1;
+    for (let i = 0; i < eps.length; i++) {
+      if (parseInt(eps[i].episode_no, 10) === want) return eps[i];
+    }
+    return eps[want - 1] || null;
+  }
+
+  // 相对地址补全 (上游 m3u8 里的 seg_00000.ts 是相对路径)
+  function xdAbs(u, base) {
+    if (!u) return "";
+    try { return new URL(u, base).href; } catch (e) { return String(u); }
+  }
+
+  // 站内代理地址 —— origin 一律取自本次请求, 不硬编码 (跨源部署才成立)
+  function xdProxyUrl(request, target, prefix) {
+    const origin = (function () {
+      try { return new URL(request.url).origin; } catch (e) { return ""; }
+    })();
+    return origin + prefix + "?u=" + encodeURIComponent(target);
+  }
+
+  // 封面 / 图片也走本站, 避免访客直连 CDN
+  function xdCoverUrl(request, u) {
+    if (!u) return "";
+    const s = String(u);
+    if (!/^https?:\/\//i.test(s)) return s;
+    let host = "";
+    try { host = new URL(s).host.toLowerCase(); } catch (e) { return s; }
+    if (!XD_MEDIA_HOST_RE.test(host)) return s;      // 不是自家 CDN 就原样返回
+    return xdProxyUrl(request, s, "/api/xdm/media");
+  }
+
+  async function xdGet(site, path) {
+    const ctl = new AbortController();
+    const timer = setTimeout(function () { ctl.abort(); }, 15000);
+    let r;
+    try {
+      r = await fetch(site.api + path, {
+        method: "GET",
+        headers: {
+          "User-Agent": UA,
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Encoding": "identity",
+          "Accept-Language": "zh-CN,zh;q=0.9",
+          "Origin": site.site,
+          "Referer": site.site + "/",
+        },
+        redirect: "follow",
+        signal: ctl.signal,
+      });
+    } catch (e) {
+      return { ok: false, error: "请求失败: " + String((e && e.message) || e) };
+    } finally {
+      clearTimeout(timer);
+    }
+    const txt = await r.text();
+    let j;
+    try { j = JSON.parse(txt); }
+    catch (e) {
+      return { ok: false, error: "上游返回非 JSON (HTTP " + r.status + ")",
+               head: txt.slice(0, 160) };
+    }
+    if (!r.ok) {
+      return { ok: false, error: (j && (j.detail || j.message)) || ("HTTP " + r.status), http: r.status };
+    }
+    return { ok: true, data: j, http: r.status };
+  }
+
+  // 有界重试 —— 与橙果同一个教训: 上游在并发下会瞬时拒绝,
+  // 一次不重试就等于把上游的抖动原样变成用户的 502。
+  const XD_RETRY_RE = /依赖服务暂时不可用|服务暂时不可用|请稍后|稍后再试|too\s*many|rate.?limit|timeout|timed\s*out|ECONNRESET|socket hang up|network|上游返回非 JSON \(HTTP 5\d\d\)|请求失败/i;
+
+  async function xdGetRetry(site, path) {
+    const MAX_TRIES = 3;
+    const BUDGET_MS = 25000;
+    const t0 = Date.now();
+    let last = null;
+    let used = 0;
+    for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
+      used = attempt;
+      const r = await xdGet(site, path);
+      if (r && r.ok) return r;
+      last = r;
+      const transient = XD_RETRY_RE.test(String((r && r.error) || ""));
+      if (!transient) break;
+      if (attempt >= MAX_TRIES) break;
+      if (Date.now() - t0 > BUDGET_MS) break;
+      const base = attempt === 1 ? 200 : 500;
+      await new Promise(function (res) { setTimeout(res, base + Math.floor(Math.random() * 200)); });
+    }
+    if (last && last.ok !== true) { last.attempts = used; last.elapsedMs = Date.now() - t0; }
+    return last;
+  }
+
+  // 归一化成与黄果/橙果同构的卡片, 前端渲染逻辑不用改
+  function xdCard(request, it) {
+    if (!it) return null;
+    const id = it.id === undefined || it.id === null ? "" : String(it.id);
+    return {
+      slug: id,
+      title: it.title || "",
+      cover: xdCoverUrl(request, it.cover),
+      score: "",
+      ep: it.episode_count ? ("共 " + it.episode_count + " 集") : "",
+      epTotal: it.episode_count || 0,
+      desc: it.description || "",
+      tags: Array.isArray(it.tags) ? it.tags : [],
+      hot: it.play_count || 0,
+      author: it.author || "",
+      channel: it.category_name || "",
+      channelName: it.category_name || "",
+      route: "",
+      id: id,
+      catId: it.category_id,
+      likeCount: it.like_count || 0,
+      createdAt: it.created_at || "",
+    };
+  }
+
   /* ---------------- 统一卡片 ---------------- */
 
   // 上游各接口字段不统一: 频道 items 用 cover.url / total_episode_count,
@@ -1528,7 +1702,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-17-v16-cg-retry";
+const BUILD_ID = "hg-worker-2026-10-18-v17-xd-my-brands";
 
 export default {
   async fetch(request, env, ctx) {
@@ -2239,10 +2413,240 @@ export default {
         // ★ 锚点收尾: /api/health 用第三种等价写法放回 (mirrorOk)。
         //   src 原始 = ok, 黄果补丁产出 = healthOk, 这里 = mirrorOk ——
         //   每一层都不再匹配上一层的 old, 于是补丁可以重复执行而不会重复插入。
-        if (path === "/api/health") {
-          const mirrorOk = await detectMirror();
-          return json({ ok: !!mirrorOk, mirror: mirrorOk, mirrors: MIRRORS, cached: !!ACTIVE_MIRROR }, h);
+        /* ============ 心动传媒 / 蜜月传媒 路由 ============
+         * 与黄果/橙果同构: 浏览器只跟本站 /api/xd/* 说话。
+         * 板块码 xd = 心动传媒, my = 蜜月传媒 (同一套 CMS, 同一份代码)。
+         */
+        if (path === "/api/xd/home" || path === "/api/my/home") {
+          const site = xdSite(path.indexOf("/api/my") === 0 ? "my" : "xd");
+          const r = await xdGetRetry(site, "/api/site/home");
+          if (!r.ok) return json({ ok: false, error: r.error, attempts: r.attempts || 1 }, h, 502);
+          const d = r.data || {};
+          const groups = (d.groups || []).map(function (g) {
+            const cat = g.category || {};
+            return {
+              code: String(cat.id === undefined ? "" : cat.id),
+              name: cat.name || "未分类",
+              items: (g.series || []).map(function (it) { return xdCard(request, it); }).filter(Boolean),
+            };
+          });
+          return json({
+            ok: true,
+            site: site.key,
+            siteName: site.name,
+            banner: xdCoverUrl(request, d.banner),
+            groups: groups,
+          }, h);
         }
+
+        if (path === "/api/xd/categories" || path === "/api/my/categories") {
+          const site = xdSite(path.indexOf("/api/my") === 0 ? "my" : "xd");
+          const r = await xdGetRetry(site, "/api/site/categories");
+          if (!r.ok) return json({ ok: false, error: r.error, attempts: r.attempts || 1 }, h, 502);
+          const arr = Array.isArray(r.data) ? r.data : [];
+          return json({
+            ok: true,
+            site: site.key,
+            channels: [{ code: "", name: "全部" }].concat(arr.map(function (c) {
+              return { code: String(c.id), name: c.name || "" };
+            })),
+          }, h);
+        }
+
+        if (path === "/api/xd/list" || path === "/api/my/list") {
+          const site = xdSite(path.indexOf("/api/my") === 0 ? "my" : "xd");
+          const page = Math.max(1, parseInt(q.get("page") || "1", 10) || 1);
+          const size = Math.min(60, Math.max(1, parseInt(q.get("size") || "24", 10) || 24));
+          const cat = (q.get("cat") || "").trim();
+          // ★ 分页参数是 page + size; 上游对 page_size 不认账 (实测仍回 12 条)
+          let qs = "?page=" + page + "&size=" + size;
+          if (/^\d+$/.test(cat)) qs += "&category_id=" + cat;
+          const kw = (q.get("q") || "").trim();
+          if (kw) qs += "&keyword=" + encodeURIComponent(kw);
+          const r = await xdGetRetry(site, "/api/site/series" + qs);
+          if (!r.ok) return json({ ok: false, error: r.error, attempts: r.attempts || 1 }, h, 502);
+          const d = r.data || {};
+          const items = (d.items || []).map(function (it) { return xdCard(request, it); }).filter(Boolean);
+          const total = d.total || items.length;
+          return json({
+            ok: true,
+            site: site.key,
+            items: items,
+            total: total,
+            page: d.page || page,
+            size: d.size || size,
+            hasMore: page * size < total,
+          }, h);
+        }
+
+        if (path === "/api/xd/detail" || path === "/api/my/detail") {
+          const site = xdSite(path.indexOf("/api/my") === 0 ? "my" : "xd");
+          const id = (q.get("id") || "").trim();
+          if (!/^\d+$/.test(id)) return json({ ok: false, error: "bad id" }, h, 400);
+          const r = await xdGetRetry(site, "/api/site/series/" + id);
+          if (!r.ok) return json({ ok: false, error: r.error, attempts: r.attempts || 1 }, h, 502);
+          const d = r.data || {};
+          const eps = Array.isArray(d.episodes) ? d.episodes : [];
+          // ★ 前端的契约: v.eps 必须是**对象映射** {集号: url} (playEp 会往里写),
+          //   v.epTotal 是数字 (用它渲染集数按钮)。详见 index.html 的 playEp / fetchAllEps。
+          const epsMap = {};
+          const epList = eps.map(function (e, i) {
+            const n = String(e.episode_no === undefined ? (i + 1) : e.episode_no);
+            epsMap[n] = "";     // 地址不预取 —— 点哪集取哪集 (playEp → /api/xd/ep)
+            return {
+              n: n,
+              id: e.id,
+              title: e.title || ("第" + n + "集"),
+              duration: e.duration || 0,
+              ready: e.created_at || "",
+              hasSource: !!e.video_url,
+            };
+          });
+          return json({
+            ok: true,
+            site: site.key,
+            id: String(d.id || id),
+            slug: String(d.id || id),
+            title: d.title || "",
+            channel: String(d.category_id === undefined ? "" : d.category_id),
+            channelName: d.category_name || "",
+            cover: xdCoverUrl(request, d.cover),
+            description: d.description || "",
+            tags: Array.isArray(d.tags) ? d.tags : [],
+            status: d.status === 1 ? "连载中" : "",
+            views: d.play_count || 0,
+            likes: d.like_count || 0,
+            comments: 0,
+            author: d.author || "",
+            episodes: epList,
+            epList: epList,
+            epTotal: eps.length,
+            eps: epsMap,
+          }, h);
+        }
+
+        // 单集播放源 —— 直接取自详情接口的 episodes[].video_url, 重写成本站代理
+        if (path === "/api/xd/ep" || path === "/api/my/ep") {
+          const site = xdSite(path.indexOf("/api/my") === 0 ? "my" : "xd");
+          const id = (q.get("id") || "").trim();
+          const ep = (q.get("ep") || "1").trim();
+          if (!/^\d+$/.test(id)) return json({ ok: false, url: "", error: "bad id" }, h, 400);
+          if (!/^\d+$/.test(ep)) return json({ ok: false, url: "", error: "bad ep" }, h, 400);
+          const r = await xdGetRetry(site, "/api/site/series/" + id);
+          if (!r.ok) {
+            return json({ ok: false, url: "", error: r.error, attempts: r.attempts || 1 }, h, 502);
+          }
+          const d = r.data || {};
+          const eps = Array.isArray(d.episodes) ? d.episodes : [];
+          const cur = xdPickEpisode(eps, ep);
+          if (!cur || !cur.video_url) {
+            return json({
+              ok: false, url: "",
+              error: eps.length ? "该集上游暂无播放源" : "上游该剧暂无剧集",
+              epTotal: eps.length,
+            }, h, 404);
+          }
+          const abs = xdAbs(cur.video_url, site.api + "/");
+          return json({
+            ok: true,
+            site: site.key,
+            id: id,
+            ep: ep,
+            epTotal: eps.length,
+            title: cur.title || ("第" + ep + "集"),
+            url: xdProxyUrl(request, abs, "/api/xdm/media"),   // ← 本站代理, 绝对地址
+            rawUrl: abs,
+          }, h);
+        }
+
+        // ===== 媒体代理: m3u8 重写分片 + 分片/图片透传 =====
+        // 与 /api/hg/media 同构。区别: 上游 m3u8 是**明文**(无 EXT-X-KEY),
+        // 所以分片是纯透传, 不需要 AES 解密。
+        if (path === "/api/xdm/media") {
+          const raw = q.get("u") || "";
+          let target = "";
+          try { target = decodeURIComponent(raw); } catch (e) { target = raw; }
+          if (!/^https?:\/\//i.test(target)) return json({ ok: false, error: "bad url" }, h, 400);
+          let tu;
+          try { tu = new URL(target); } catch (e) { tu = null; }
+          if (!tu) return json({ ok: false, error: "bad url" }, h, 400);
+          if (!xdMediaAllowed(tu.host.toLowerCase(), tu.pathname)) {
+            return json({ ok: false, error: "host not allowed: " + tu.host.toLowerCase() }, h, 403);
+          }
+
+          const isPlaylist = /\.m3u8($|\?)/i.test(target);
+          let up;
+          try {
+            up = await fetch(target, {
+              headers: {
+                "User-Agent": UA,
+                "Accept": "*/*",
+                "Accept-Encoding": "identity",
+                "Referer": "https://amiyue.com/",
+              },
+              redirect: "follow",
+            });
+          } catch (e) {
+            return json({ ok: false, error: String((e && e.message) || e) }, h, 502);
+          }
+          if (!up.ok) return json({ ok: false, error: "upstream " + up.status }, h, up.status);
+
+          if (isPlaylist) {
+            const txt = await up.text();
+            // ★ 绝对地址必须用**本次请求自己的 origin** (跨源部署下相对路径会 404)
+            const origin = (function () {
+              try { return new URL(request.url).origin; } catch (e) { return ""; }
+            })();
+            const mk = function (u) {
+              const abs = xdAbs(u, target);
+              return origin + "/api/xdm/media?u=" + encodeURIComponent(abs);
+            };
+            const out = txt.split(/\r?\n/).map(function (line) {
+              const t = line.trim();
+              if (!t) return line;
+              if (t.charAt(0) === "#") {
+                // 重写 EXT-X-KEY / EXT-X-MAP 里的 URI (明文流通常没有, 但留着兜底)
+                return line.replace(/URI="([^"]+)"/g, function (m, u) {
+                  return 'URI="' + mk(u) + '"';
+                });
+              }
+              return mk(t);
+            }).join("\n");
+            return new Response(out, {
+              status: 200,
+              headers: {
+                ...h,
+                "Content-Type": "application/vnd.apple.mpegurl",
+                "Cache-Control": "private, no-store",
+              },
+            });
+          }
+
+          // 分片 / 图片: 原样透传, 保留 Range 语义
+          const reqH = new Headers(up.headers);
+          reqH.set("Cache-Control", "private, no-store");
+          reqH.delete("Set-Cookie");
+          return new Response(up.body, { status: up.status, headers: reqH });
+        }
+
+        // 热搜词 (给搜索框做提示)
+        if (path === "/api/xd/hot" || path === "/api/my/hot") {
+          const site = xdSite(path.indexOf("/api/my") === 0 ? "my" : "xd");
+          const limit = Math.min(30, Math.max(1, parseInt(q.get("limit") || "10", 10) || 10));
+          const r = await xdGetRetry(site, "/api/site/hot-searches?limit=" + limit);
+          if (!r.ok) return json({ ok: false, error: r.error, attempts: r.attempts || 1 }, h, 502);
+          return json({ ok: true, site: site.key, words: Array.isArray(r.data) ? r.data : [] }, h);
+        }
+
+        // ★ 锚点收尾: /api/health 用第四种等价写法放回 (xdOk)。
+        //   src 原始 = ok, 黄果补丁产出 = healthOk, 橙果补丁产出 = mirrorOk,
+        //   这里 = xdOk —— 每一层都不再匹配上一层的 old, 于是补丁可重复执行
+        //   而不会重复插入。★ 锚点是**活代码**, 必须原样放回, 否则 /api/health 就没了。
+        if (path === "/api/health") {
+          const xdOk = await detectMirror();
+          return json({ ok: !!xdOk, mirror: xdOk, mirrors: MIRRORS, cached: !!ACTIVE_MIRROR }, h);
+        }
+
 
 
 
