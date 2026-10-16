@@ -1472,7 +1472,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-16-v13-cg-encrypted-api";
+const BUILD_ID = "hg-worker-2026-10-17-v14-relative-media";
 
 export default {
   async fetch(request, env, ctx) {
@@ -1816,7 +1816,6 @@ export default {
             return json({ ok: false, error: "host not allowed: " + th }, h, 403);
           }
 
-          const origin = new URL(request.url).origin;
           const isPlaylist = /\.m3u8($|\?)/i.test(target);
 
           let r;
@@ -1837,10 +1836,13 @@ export default {
 
           if (isPlaylist) {
             const txt = await r.text();
+            // ★ 相对路径, 不拼绝对地址。拼绝对地址会把分片钉死在 xxx.workers.dev,
+            //   而 workers.dev 在国内被墙: 用户挂自定义域名时清单能取到、分片全连不上,
+            //   表现为"进得了播放页但一直转圈"。相对路径在任何域名下都成立。
             const mk = function (u) {
               let abs;
               try { abs = new URL(u, target).href; } catch (e) { return u; }
-              return origin + "/api/hg/media?u=" + encodeURIComponent(abs);
+              return "/api/hg/media?u=" + encodeURIComponent(abs);
             };
             const out = txt.split("\n").map(function (line) {
               const t = line.trim();
@@ -2080,7 +2082,6 @@ export default {
             return json({ ok: false, error: "host not allowed: " + th }, h, 403);
           }
 
-          const origin = new URL(request.url).origin;
           const isPlaylist = /\.m3u8($|\?)/i.test(target);
 
           let r;
@@ -2101,10 +2102,15 @@ export default {
 
           if (isPlaylist) {
             const txt = await r.text();
+            // ★ 必须改写为**相对路径**, 不能拼绝对地址。
+            //   拼绝对地址 (= request.url 的 origin) 会把分片请求钉死在
+            //   xxx.workers.dev 上, 而 workers.dev 在国内是被墙的 ——
+            //   用户挂着自定义域名点播时, 清单本身能拿到, 分片却全部连不上,
+            //   表现就是"能进播放页但永远转圈"。相对路径在任何域名下都成立。
             const mk = function (u) {
               let abs;
               try { abs = new URL(u, target).href; } catch (e) { return u; }
-              return origin + "/api/cg/media?u=" + encodeURIComponent(abs);
+              return "/api/cg/media?u=" + encodeURIComponent(abs);
             };
             const out = txt.split("\n").map(function (line) {
               const t = line.trim();

@@ -1,0 +1,39 @@
+fix: 黄果板块播放源不再被替换成上游宣传片 + 新增橙果板块
+
+一、黄果板块「播放内容全变成上游官方宣传广告」的根因修复
+  上游已改成「APP 下载落地页 + 加密 API」架构，落地页里那个品牌宣传片
+  会被旧的解析逻辑当成剧集播放源。现在：
+  - 落地页/发布页一律不当数据源（isLandingPage / LANDING_MARK）
+  - XOR 0x5A 解码 + appConfig 提取，从落地页里挖出真实域名
+  - parseVideo 丢弃页内自托管宣传片（epPlaySrcs / data-play-src 双兜底）
+  - 媒体代理转发 Range / 正确回 206，CORS 暴露 Content-Range
+  - 新增 /api/hg/*（list/home/detail/ep/search/media）走站方公开 JSON API
+  - 黄果与橙果一律经 Worker 出网，访客 IP 不落到上游 CDN 日志
+
+二、新增橙果短剧板块（chengguodj.com）
+  站方前端 AES-128-CBC + MD5(SHA256(...)) 签名的密钥是明文写在公开 bundle 里的，
+  已完整还原（key/iv/sign_key），全站目录、详情、逐集播放源全部可取，
+  无需登录也无需 APP。
+  - 新增 /api/cg/*（channels/home/list/detail/ep/search/feed/media）
+  - /api/cg/media 重写 m3u8 内的分片与 AES key 地址，播放器不直连上游
+  - 媒体主机白名单分两层：已知后缀 + 严格路径签名，挡 SSRF 与开放代理
+  - 新增多品牌模块 hg-brands.js（禁果/橙果/蜜桃/2048）
+
+三、修复补丁锚点被消费导致的静默回归
+  - const UA 声明曾被补丁锚点吃掉，导致每次 fetch 都 ReferenceError
+  - /api/health 路由曾被同因删除，返回 404
+  两处已修复，并在 verify.py 里加为永久断言（防止再次静默消失）
+
+四、deploy.yml
+  - 发布目录与 Worker assets 白名单补 hg-brands.js（漏掉会导致新模块 404）
+  - 缓存规则补 /hg-brands.js
+  - 冒烟测试补黄果/橙果新接口与 /hg-brands.js 自检
+
+BUILD_ID: hg-worker-2026-10-16-v13-cg-encrypted-api
+
+验证：
+  - verify.py 全过（含双向断言）
+  - Node 里真跑 worker 本体打 9 条路由：9/0
+  - 橙果媒体代理端到端（含分片解密成真 MPEG-TS）：12/0
+  - 黄果上游 API 断言：47/0
+  - 补丁幂等 + 确定性：6/6 字节一致
