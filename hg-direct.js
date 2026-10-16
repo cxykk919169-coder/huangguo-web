@@ -21,25 +21,35 @@
   // 这里的内置列表只是【首屏兜底】。真正的主站顺序以 site.json 的 origin/mirrors
   // 为准 (GitHub Actions 每 30 分钟刷新一次), loadSiteConfig() 会把它们插到最前。
   var MIRRORS = [
-    // ---- 当前主线路 (来源: huangguo10.com 发布页 2026-10-10 11:28 线路表) ----
-    "https://qazn.wrjmtnebd.cc",
-    "https://ne7d.wrjmtnebd.cc",
-    "https://ie70.wrjmtnebd.cc",
-    // ---- 当前站群其它在线节点 ----
-    "https://flq7.wrjmtnebd.cc",
-    "https://b0eu.wrjmtnebd.cc",
-    "https://cbl8.wrjmtnebd.cc",
-    "https://g9u8.wrjmtnebd.cc",
-    "https://xaq0.wrjmtnebd.cc",
-    "https://b48r0.wrjmtnebd.cc",
-    "https://ij2i7.wrjmtnebd.cc",
-    // ---- 漫剧线 (备用结构, 解析器已兼容 /detail/) ----
-    "https://b7eb5.fyxybiblx.cc",
+    // ---- 2026-10-16 实测: wrjmtnebd.cc / fyxybiblx.cc 整池已死 ----
+    // 当前线路 = 随机段.根域名; 根: bg40t53p.cc / hn18a20s.cc
+    // ⚠ 这些节点现在返回的是【下载落地页】(见 LANDING_MARK), 不是剧集站。
+    "https://997.tc41p53k.cc",
+    "https://w4.hn18a20s.cc",
+    "https://i9t19.bg40t53p.cc",
+    "https://khqk.bg40t53p.cc",
+    "https://rps5z.bg40t53p.cc",
+    "https://u4g5a6.bg40t53p.cc",
+    "https://mtnnbs.bg40t53p.cc",
+    "https://r75t2z.bg40t53p.cc",
+    "https://tdz2.bg40t53p.cc",
+    "https://flf2if.bg40t53p.cc",
+    "https://w1b6k.bg40t53p.cc",
+    "https://w4qg8.bg40t53p.cc",
+    "https://po259.bg40t53p.cc",
+    "https://tn658.bg40t53p.cc",
+    "https://v4il.bg40t53p.cc",
+    "https://9b94a.wy60j19s.cc",
+    "https://huangguoju.com",
+    "https://huangguojob.com",
+    "https://huangguoai.me",
     // ---- 地址发布页 (只用于自动发现新域名, 永不作为数据源) ----
+    "https://huangguoai.pages.dev",
+    "https://huangguoai.com",
+    "https://huangguoai.ai",
+    "https://hgai5.com",
     "https://huangguo10.com",
-    "https://huangguo8.com",
     "https://huangguo9.com",
-    "https://hgai1.com",
   ];
 
   // 死域后缀 (已整池失效) 与推广/宣传域 (播放会落到官方宣传物料)
@@ -53,6 +63,84 @@
     if (PROMO_HOST.test(s)) return true;
     if (/pages\.dev|t\.me|youtube|tiktok/i.test(s)) return true;
     return false;
+  }
+
+  /* ========== 上游架构变更适配 (2026-10-16) ==========
+   * 黄果整站已改成「APP 下载落地页 + 加密 API」:
+   *   落地页里没有 hg-drama-card / videoInitialData —— 一条剧集数据都没有,
+   *   唯一的 <video>/m3u8 就是品牌宣传片。
+   *   旧逻辑把落地页当数据源 → 用户点任何一集都播"官方宣传广告"。
+   * 现在: 落地页一律拒绝, 只从它身上捞最新线路。
+   * ================================================= */
+  var LANDING_MARK = /id="landing-payload"|data-obfuscation=|hgdj-landing-page|window\.appConfig/;
+
+  // landing-payload: 每 2 个 hex = 1 字节明文 XOR 0x5A
+  function decodeLandingPayload(html) {
+    var m = String(html || '').match(/<script id="landing-payload"[^>]*>([\s\S]*?)<\/script>/);
+    if (!m) return '';
+    var arr;
+    try { arr = JSON.parse(m[1]); } catch (e) { return ''; }
+    if (!arr || !arr.length) return '';
+    var out = '';
+    arr.forEach(function (s) {
+      if (typeof s !== 'string') return;
+      for (var i = 0; i + 1 < s.length; i += 2) {
+        var b = parseInt(s.substr(i, 2), 16);
+        if (isNaN(b)) continue;
+        out += String.fromCharCode(b ^ 0x5A);
+      }
+    });
+    return out;
+  }
+
+  function extractLandingConfig(html) {
+    var plain = decodeLandingPayload(html) || String(html || '');
+    var out = { latest: '', official: '', permanent: '', webAppUrl: '', plain: plain };
+    var m = plain.match(/window\.appConfig\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (m) {
+      try {
+        var cfg = JSON.parse(m[1]);
+        var L = cfg.links || {};
+        out.latest = L.latest || '';
+        out.official = L.official || '';
+        out.permanent = L.permanent || '';
+        out.webAppUrl = cfg.webAppUrl || '';
+      } catch (e) { /* ignore */ }
+    }
+    return out;
+  }
+
+  // 落地页上那个宣传片是自托管的; 真剧集的 m3u8 一定在别的 CDN 上
+  function isMirrorHosted(u) {
+    var h;
+    try { h = new URL(u).host.toLowerCase(); } catch (e) { return false; }
+    for (var i = 0; i < MIRRORS.length; i++) {
+      try { if (new URL(MIRRORS[i]).host.toLowerCase() === h) return true; } catch (e2) { /* skip */ }
+    }
+    return false;
+  }
+
+  /* ========== 隐私开关 ==========
+   * hg-direct.js 是【浏览器直连上游】。副作用:
+   *   - 每个访客的真实 IP 都会暴露给上游站点;
+   *   - 你自己打开本站调试时, 你的 IP 也直接暴露。
+   * 上游是境外成人流量站, 已经在给访问者发定向短信。
+   *
+   * 策略: Worker 可用就一律走 Worker (Cloudflare 出口, 不露任何人的 IP);
+   *       Worker 不可用才回退直连 (国内 workers.dev 常被墙, 这条路必须留着)。
+   * 想彻底禁掉直连: localStorage.setItem('hg_direct','0')
+   * =========================================== */
+  var DIRECT_ALLOWED = (function () {
+    try { return (localStorage.getItem('hg_direct') || '1') !== '0'; } catch (e) { return true; }
+  })();
+  var _warned = false;
+  function warnDirect() {
+    if (_warned) return;
+    _warned = true;
+    try {
+      console.warn('[湟果] 正在使用【浏览器直连上游】模式 —— 你的真实 IP 会暴露给上游站点。' +
+        '设置 localStorage.hg_direct="0" 可禁用直连 (需 Worker 可用)。');
+    } catch (e) { /* ignore */ }
   }
 
   // 已知的"地址发布页"主机名 —— 命中这些只用来提取新域名, 不当作数据源
@@ -163,6 +251,10 @@
 
   // 直连抓一个路径, 返回 HTML 文本
   function fetchUpstream(path, timeoutMs) {
+    if (!DIRECT_ALLOWED) {
+      return Promise.reject(new Error('已禁用浏览器直连 (hg_direct=0), 请配置 Worker'));
+    }
+    warnDirect();
     var order = mirrorOrder();
     var i = 0;
     // 原来 12 秒太长, 用户会以为卡死; 现在镜像多(15 个), 单站压到 3 秒
@@ -189,16 +281,22 @@
           // 旧逻辑在 extractRealHosts 抓不到裸域名时会把发布页 HTML 当数据源返回,
           // 于是列表为空 / 详情解析出推广物料。
           var host = base.replace(/^https?:\/\//, '');
-          if (PUBLISH_HOSTS.indexOf(host) >= 0) {
-            var real = extractRealHosts(txt);
-            real.reverse().forEach(function (h) {
-              var u = 'https://' + h;
-              if (MIRRORS.indexOf(u) >= 0) return;
-              if (DEAD_SUFFIX.test(h) || isPromoUrl(u)) return;
-              MIRRORS.unshift(u);
+          // ★ 落地页/发布页一律不是数据源。
+          //   不拦这一步 → 页面里那个品牌宣传片会被当成剧集播放源, 表现就是
+          //   "黄果板块播放内容全变成上游官方宣传广告"。
+          if (LANDING_MARK.test(txt) || PUBLISH_HOSTS.indexOf(host) >= 0) {
+            var cfg = extractLandingConfig(txt);
+            var more = [cfg.webAppUrl, cfg.official, cfg.latest, cfg.permanent];
+            extractRealHosts(cfg.plain || txt).forEach(function (h) { more.push('https://' + h); });
+            more.reverse().forEach(function (u) {
+              if (!u || !/^https?:\/\//i.test(u)) return;
+              var cu = String(u).replace(/\/+$/, '');
+              if (MIRRORS.indexOf(cu) >= 0) return;
+              if (isPromoUrl(cu)) return;
+              MIRRORS.unshift(cu);
             });
-            markBad(base);   // 发布页不是数据源, 拉黑后再走新域名
-            throw new Error('publish-page');
+            markBad(base);   // 落地页/发布页都不是数据源
+            throw new Error('landing-page');
           }
           ACTIVE = base;
           ACTIVE_AT = Date.now();

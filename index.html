@@ -262,6 +262,8 @@ html[data-site="hjw"] .hgtoast{border-color:#5a2a3e}
   <script src="hg-es.js"></script>
   <script src="hg-stego.js"></script>
   <script src="hg-hjw.js"></script>
+  <!-- 多品牌板块: 禁果 / 橙果 / 蜜桃 / 2048 (落地页探测 + 同平台 API 适配) -->
+  <script src="hg-brands.js"></script>
 <script>
 /* ===================== 配置 ===================== */
 // 后端地址：部署 Cloudflare Worker 后把它填在这里
@@ -290,8 +292,13 @@ const SITES = {
     name: '黄豆短剧',
     short: '黄豆',
     color: '#5ad1a0',
-    desc: '官方接口 · 分类/排行/求剧榜齐全',
-    hasEps: false,   // 播放源需登录, 详情页提供 H5 跳转
+    desc: '官方接口 · 分类/排行/求剧榜齐全 · 可直接播放',
+    // 2026-10-16 实测更正: 上一版注释写"播放源需登录"是错的。
+    //   /playback?videoId&seq → lockKind=none, fullPlayable=true (逐集验过 1/2/3/5 集)
+    //   /play?episodeId       → 6 条 playbackLines, managed-media 直接 206 + video/mp4
+    //   整条链不需要登录、不需要金币。
+    //   唯一的前提是 Worker 必须转发 Range —— 见 /api/hd/stream 的修复。
+    hasEps: true,
   },
   es: {
     key: 'es',
@@ -308,6 +315,47 @@ const SITES = {
     color: '#e35d8a',
     desc: 'UGC 社区 · 视频帖正文与播放源全明文, 免登录免金币',
     hasEps: false,   // 单帖单视频, 不做选集
+  },
+
+  /* ===== 多品牌板块 (2026-10-16 新增) =====
+   * 与黄果同一个运营方、同一套架构: 下载落地页 + APP 内加密接口。
+   * 网页侧没有剧集数据 (实测: 落地页零条剧集, 接口 POST /api/v1/* 返回 AES 密文)。
+   * 所以这些板块做的是:
+   *   1. 服务端探测落地页 → 显示【当前官方地址 + APP 下载入口】(访客不直连上游, 不露 IP)
+   *   2. 顺手探同平台公开 API → 哪天开了接口就自动升级成完整内容板块
+   *   3. 绝不把落地页上的品牌宣传片当成剧集播 (这正是黄果那个 bug 的成因)
+   * ====================================== */
+  jg: {
+    key: 'jg',
+    name: '禁果短剧',
+    short: '禁果',
+    color: '#ff4d6d',
+    desc: '官方入口 · 剧集在其 APP 内',
+    hasEps: false,
+  },
+  cg: {
+    key: 'cg',
+    name: '橙果短剧',
+    short: '橙果',
+    color: '#ff9f1c',
+    desc: '官方入口 · 剧集在其 APP 内',
+    hasEps: false,
+  },
+  mt: {
+    key: 'mt',
+    name: '蜜桃短剧',
+    short: '蜜桃',
+    color: '#f472b6',
+    desc: '官方入口 · 剧集在其 APP 内',
+    hasEps: false,
+  },
+  b2048: {
+    key: 'b2048',
+    name: '2048成人短剧',
+    short: '2048',
+    color: '#38bdf8',
+    desc: '待补官方入口 · 剧集在其 APP 内',
+    hasEps: false,
   },
 };
 let SITE = localStorage.getItem('hg_site') || 'hg';
@@ -337,8 +385,78 @@ function setSite(k) {
  *
  * 黄豆短剧 (hd) 走它自己的 API + /api/hd 代理, 不参与上面的降级。
  */
+/* ===================== 多品牌板块 (禁果/橙果/蜜桃/2048) =====================
+ * 数据来源分两层:
+ *   1) Worker /api/brand/probe  —— 服务端去取落地页并解码
+ *      → 当前官方地址 / 官方站 / 永久地址 / WebApp 入口
+ *      ★ 访客和你自己都不直连上游, 不暴露任何人的真实 IP
+ *   2) 同平台公开 API (<品牌码>dj.zen-vip.com/api/app)
+ *      → 通了就是完整内容板块 (复用黄豆那套适配器)
+ *
+ * 没内容时返回 { items: [], notice } —— 空列表会走空状态提示, 不假装有数据。
+ * ========================================================================= */
+function brandApi(key, path, params) {
+  if (typeof HGBrands === 'undefined') return Promise.reject(new Error('品牌模块 hg-brands.js 未加载'));
+  const b = HGBrands.get(key);
+  if (!b) return Promise.reject(new Error('未知品牌: ' + key));
+  const p = params || {};
+
+  return HGBrands.probe(key).then(function (j) {
+    const L = j.links || {};
+    const lines = [];
+    lines.push('【' + (b.name || key) + '】');
+    if (j.title) lines.push(j.title);
+    if (L.official) lines.push('官方站: ' + L.official);
+    if (L.latest) lines.push('最新地址: ' + L.latest);
+    if (L.permanent) lines.push('永久发布页: ' + L.permanent);
+    if (j.webAppUrl) lines.push('APP / 网页入口: ' + j.webAppUrl);
+    if (!L.official && !L.latest && !L.permanent && j.landingUrl) lines.push('入口: ' + j.landingUrl);
+    if (j.landing) lines.push('该站目前是下载落地页, 网页侧不提供剧集列表。');
+    if (j.notice) lines.push(j.notice);
+    const note = lines.join('\n');
+
+    if (path === '/api/health') return { ok: !!j.ok, items: [], notice: note };
+
+    if (path === '/api/list' || path === '/api/search') {
+      const hasApi = j.hasContentApi || (j.api && j.api.ok);
+      if (!hasApi) return { items: [], total: 0, notice: note };
+      const A = HGBrands.Api(key);
+      return A.list(p.page || 1, p.cat || '').then(function (res) {
+        return {
+          items: (res.items || []).map(function (x) {
+            return { id: x.id, title: x.title, cover: x.cover || '', desc: x.desc || '', site: key };
+          }),
+          total: res.total || 0,
+          notice: '',
+        };
+      });
+    }
+
+    if (path === '/api/video') {
+      // 没有内容接口时, 详情页直接把"去哪儿看"讲清楚
+      return Promise.reject(new Error(note));
+    }
+
+    return { ok: !!j.ok, items: [], notice: note };
+  });
+}
+
 function api(path, params) {
-  // ---- 黄豆短剧分支 ----
+  // ---- 多品牌分支 (禁果 / 橙果 / 蜜桃 / 2048) ----
+  if (typeof HGBrands !== 'undefined' && HGBrands.BRANDS[SITE]) return brandApi(SITE, path, params);
+
+  // ---- 黄果短剧分支 ----
+  // 上游把剧集放在站方自己的公开 JSON API 里 (huangguoai.com + *.rxzfszht.cc)。
+  // 全部经 Worker 出网: 访客和你自己都不直连上游, m3u8 分片也由 /api/hg/media 重写回源。
+  if (SITE === 'hg') return hgApi(path, params);
+
+  // ---- 橙果短剧分支 ----
+  // 橙果的加密信封密钥就明文写在站点公开的 bundle 里, 已完整还原;
+  // 全站目录 + 逐集播放源都可取, 不需要登录、不需要 APP。
+  // 同样只走 Worker: /api/cg/media 会把分片和 AES key 重写回本站, 不暴露访客 IP。
+  if (SITE === 'cg') return cgApi(path, params);
+
+  // ---- 黄豆短剧分支 (经本站 Worker 代理) ----
   if (SITE === 'hd') return hdApi(path, params);
 
   // ---- 海角网分支 ----
@@ -1299,7 +1417,74 @@ function apiOf(src, path, params) {
  * 优先走 Worker 的 /api/hd/* 代理 (绕过可能的 CORS / 网络问题),
  * Worker 不可用则直接调官方 API (它带 CORS 头)。
  */
-function hdApi(path, params) {
+/**
+ * 黄果短剧取数 —— 走 Worker 的 /api/hg/*
+ *
+ * 【为什么不降级到前端直连】
+ *   黄果的媒体分片在 tp3.drleao.cn, AES key 也在同一台。
+ *   如果让浏览器直连, 访客的真实 IP 就进了上游 CDN 的日志 ——
+ *   这正是要防的事。所以黄果这一路只走 Worker, 不设直连降级。
+ */
+function hgApi(path, params) {
+  const p = params || {};
+  const map = {
+    '/api/list':   '/api/hg/list',
+    '/api/search': '/api/hg/search',
+    '/api/video':  '/api/hg/detail',
+    '/api/ep':     '/api/hg/ep',
+    '/api/home':   '/api/hg/home',
+  };
+  const hp = map[path];
+  if (!hp) return Promise.reject(new Error('未知接口: ' + path));
+  if (!API) return Promise.reject(new Error('Worker 未配置 —— 黄果必须走 Worker 出网'));
+  return fetch(API + hp + '?' + new URLSearchParams(p).toString(), { method: 'GET' })
+    .then(function (r) {
+      return r.json().then(function (j) {
+        if (j && j.ok === false) throw new Error(j.error || '上游失败');
+        if (!r.ok && !(j && j.items)) throw new Error(j && j.error ? j.error : ('HTTP ' + r.status));
+        return j;
+      });
+    });
+}
+
+/**
+ * 橙果短剧取数 —— 走 Worker 的 /api/cg/*
+ *
+ * 【为什么橙果也能直接播】
+ *   站方前端的加密只是"看着吓人": key / iv / sign_key 全部明文写在站点公开的
+ *   bundle (/_nuxt/BIb7tDp8.js) 里。AES-128-CBC + MD5(SHA256(...)) 签名,
+ *   逆出来之后全站目录、详情、逐集播放源全部可取 —— 不需要登录, 也不需要 APP。
+ *
+ * 【为什么坚持服务端出网 —— IP 保护】
+ *   橙果的 m3u8 在 hls.tpbbwcc.cn, 分片和 AES key 在上游轮换的媒体域名上
+ *   (实测一路见过 mts.hhjd.mobi / tx.doudou520.online / ts.zhixunkeji.xyz)。
+ *   浏览器直连的话, 访客的真实 IP 就进了上游 CDN 的日志。
+ *   所以橙果这一路也只走 Worker, 由 /api/cg/media 重写分片与 key 的 URL,
+ *   播放器一次都不会直连上游。
+ */
+function cgApi(path, params) {
+  const p = params || {};
+  const map = {
+    '/api/list':   '/api/cg/list',
+    '/api/search': '/api/cg/search',
+    '/api/video':  '/api/cg/detail',
+    '/api/ep':     '/api/cg/ep',
+    '/api/home':   '/api/cg/home',
+  };
+  const cp = map[path];
+  if (!cp) return Promise.reject(new Error('未知接口: ' + path));
+  if (!API) return Promise.reject(new Error('Worker 未配置 —— 橙果必须走 Worker 出网'));
+  return fetch(API + cp + '?' + new URLSearchParams(p).toString(), { method: 'GET' })
+    .then(function (r) {
+      return r.json().then(function (j) {
+        if (j && j.ok === false) throw new Error(j.error || '上游失败');
+        if (!r.ok && !(j && j.items)) throw new Error(j && j.error ? j.error : ('HTTP ' + r.status));
+        return j;
+      });
+    });
+}
+
+function  hdApi(path, params) {
   if (typeof HDHd === 'undefined') return Promise.reject(new Error('黄豆短剧模块未加载'));
   const p = params || {};
 
@@ -1554,7 +1739,12 @@ async function goHome() {
     if (SITE === 'hjw' && WORKER_OK === null) await hjwProbe();
     const j = await api('/api/list', { cat: curCat, page: 1 });
     if (stale(T)) return;                     // 期间用户已经切走/点进详情
-    if (!j.items || !j.items.length) { app().innerHTML = '<div class="err">没有内容，稍后再试</div>'; return; }
+    if (!j.items || !j.items.length) {
+      // 品牌板块没内容时 j.notice 里写清了原因和官方入口 —— 别用一句"稍后再试"糊弄
+      const msg = j.notice ? esc(j.notice).replace(/\n/g, '<br>') : '没有内容，稍后再试';
+      app().innerHTML = '<div class="err">' + msg + '</div>';
+      return;
+    }
     if (SITE === 'hg') applyCoverCache(j.items);
     SEEN_IDS = new Set(j.items.map(x => String(x.id)));
 

@@ -29,8 +29,9 @@
   var BAD = {}, BAD_TTL = 90 * 1000;
 
   // 视频流镜像 (managed-media 也能走这些域)
+  // 2026-10-16 实测: /play 的 playbackLines 已到 7 条, 多出 hdv6。
   var MEDIA_HOSTS = ['', 'https://hdv1.zen-vip.com', 'https://hdv2.zen-vip.com',
-    'https://hdv4.zen-vip.com', 'https://hdv5.zen-vip.com'];
+    'https://hdv4.zen-vip.com', 'https://hdv5.zen-vip.com', 'https://hdv6.zen-vip.com'];
   var API_HOST = 'https://hddj.zen-vip.com';
 
   // H5 入口线路

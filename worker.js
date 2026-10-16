@@ -22,30 +22,122 @@
 // 2026-10 更新: vchllzwu.cc 整池失效, 真站已迁到 wrjmtnebd.cc 站群;
 //   huangguo10/8/9 已变"地址发布页"(不含剧集数据), 只能用来发现新域名。
 const MIRRORS = [
-  // ---- 当前主线路 (来源: huangguo10.com 发布页 2026-10-10 线路表) ----
-  "https://qazn.wrjmtnebd.cc",
-  "https://ne7d.wrjmtnebd.cc",
-  "https://ie70.wrjmtnebd.cc",
-  // ---- 当前站群其它在线节点 ----
-  "https://flq7.wrjmtnebd.cc",
-  "https://b0eu.wrjmtnebd.cc",
-  "https://cbl8.wrjmtnebd.cc",
-  "https://g9u8.wrjmtnebd.cc",
-  "https://xaq0.wrjmtnebd.cc",
-  "https://b48r0.wrjmtnebd.cc",
-  "https://ij2i7.wrjmtnebd.cc",
-  // ---- 漫剧线 (备用结构, 解析器已兼容 /detail/) ----
-  "https://b7eb5.fyxybiblx.cc",
+  // ---- 2026-10-16 实测: wrjmtnebd.cc / fyxybiblx.cc 整池已死 ----
+  // 当前线路 = 「随机段.根域名」, 根域名: bg40t53p.cc / hn18a20s.cc; 另有固定跳板域名。
+  // ⚠ 这些节点现在返回的都是【下载落地页】(见 isLandingPage), 不是剧集站。
+  //   保留在列表里的作用是: 让 mirrorOrder() 能靠它们拿到 appConfig 里的最新域名,
+  //   并让 /api/health 说实话 —— 而不是假装"站点正常"。
+  "https://997.tc41p53k.cc",
+  "https://w4.hn18a20s.cc",
+  "https://i9t19.bg40t53p.cc",
+  "https://khqk.bg40t53p.cc",
+  "https://rps5z.bg40t53p.cc",
+  "https://u4g5a6.bg40t53p.cc",
+  "https://mtnnbs.bg40t53p.cc",
+  "https://r75t2z.bg40t53p.cc",
+  "https://tdz2.bg40t53p.cc",
+  "https://flf2if.bg40t53p.cc",
+  "https://w1b6k.bg40t53p.cc",
+  "https://w4qg8.bg40t53p.cc",
+  "https://po259.bg40t53p.cc",
+  "https://tn658.bg40t53p.cc",
+  "https://v4il.bg40t53p.cc",
+  "https://9b94a.wy60j19s.cc",
+  "https://huangguoju.com",
+  "https://huangguojob.com",
+  "https://huangguoai.me",
   // ---- 地址发布页 (只用于自动发现新域名, 永不作为数据源) ----
+  "https://huangguoai.pages.dev",
+  "https://huangguoai.com",
+  "https://huangguoai.ai",
+  "https://hgai5.com",
   "https://huangguo10.com",
-  "https://huangguo8.com",
   "https://huangguo9.com",
-  "https://hgai1.com",
 ];
 
 // 死域后缀 (已整池失效) 与推广/宣传域 (播放会落到官方宣传物料)
-const DEAD_SUFFIX = /\.(?:vchllzwu|gkudvxhjh|ngfxaxnp|igjktqpd)\.[a-z]+$/i;
+const DEAD_SUFFIX = /\.(?:vchllzwu|gkudvxhjh|ngfxaxnp|igjktqpd|wrjmtnebd|fyxybiblx)\.[a-z]+$/i;
 const PROMO_HOST = /(?:^|\.)(?:wqgkfvxk|fakieggtv|mqahxxhp|eisees)\.|huangguoai|\/chan\//i;
+
+/* ================== 上游架构变更适配 (2026-10-16) ==================
+ * 黄果在 2026-10 把整站换成了「APP 下载落地页 + 加密 API」:
+ *
+ *   落地页 (997.tc41p53k.cc / *.bg40t53p.cc / *.hn18a20s.cc …)
+ *     ├─ HTML 里没有 hg-drama-card / videoInitialData —— 一条剧集数据都没有
+ *     ├─ 真内容藏在 <script id="landing-payload"> 里, 是 hex(明文 XOR 0x5A)
+ *     └─ 解码后是落地页本身, 里面 window.appConfig 给了最新线路:
+ *          links.latest / links.official / links.permanent / webAppUrl
+ *
+ *   业务接口 POST /api/v1/* → {"errcode":0,"data":"<AES 密文>","sign":…,"timestamp":…}
+ *     ↑ 需要 App 内置密钥才能解; 网页端不提供, 剧集只在 APP 里看。
+ *
+ * 结论: 网页侧已无公开剧集数据可抓。
+ *   所以本 Worker 的策略是 —— 宁可返回 404「上游已改版」, 也绝不把落地页上的
+ *   品牌宣传片当成剧集播放源返回。后者正是"播放内容全是官方宣传广告"的直接成因。
+ * ================================================================= */
+const LANDING_MARK = /id="landing-payload"|data-obfuscation=|hgdj-landing-page|window\.appConfig/;
+
+function isLandingPage(html) {
+  const s = String(html || "");
+  if (s.length > 400000) return LANDING_MARK.test(s.slice(0, 400000));
+  return LANDING_MARK.test(s);
+}
+
+// landing-payload: 每 2 个 hex 字符 = 1 字节明文 XOR 0x5A
+function decodeLandingPayload(html) {
+  const m = String(html || "").match(/<script id="landing-payload"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) return "";
+  let arr;
+  try { arr = JSON.parse(m[1]); } catch (e) { return ""; }
+  if (!Array.isArray(arr)) return "";
+  let out = "";
+  for (const s of arr) {
+    if (typeof s !== "string") continue;
+    for (let i = 0; i + 1 < s.length; i += 2) {
+      const b = parseInt(s.substr(i, 2), 16);
+      if (Number.isNaN(b)) continue;
+      out += String.fromCharCode(b ^ 0x5A);
+    }
+  }
+  return out;
+}
+
+// 从落地页提取真正有用的东西: 最新线路 + WebApp 入口
+function extractLandingConfig(html) {
+  const plain = decodeLandingPayload(html) || String(html || "");
+  const out = { latest: "", official: "", permanent: "", webAppUrl: "", tpl: "", plain };
+  const m = plain.match(/window\.appConfig\s*=\s*(\{[\s\S]*?\})\s*;/);
+  if (m) {
+    try {
+      const cfg = JSON.parse(m[1]);
+      const L = cfg.links || {};
+      out.latest = L.latest || "";
+      out.official = L.official || "";
+      out.permanent = L.permanent || "";
+      out.webAppUrl = cfg.webAppUrl || "";
+      out.tpl = cfg.tpl || "";
+    } catch (e) { /* JSON 烂了就只靠正则兜底 */ }
+  }
+  if (!out.latest) {
+    const g = plain.match(/"latest"\s*:\s*"(https?:[^"]+)"/);
+    if (g) out.latest = g[1];
+  }
+  return out;
+}
+
+// 是不是"和某个镜像同主机" —— 落地页上那个品牌宣传片就是自托管的,
+// 真剧集的 m3u8 一定在别的 CDN 上。用它把宣传片剔出去。
+function isMirrorHosted(u) {
+  let h;
+  try { h = new URL(u).host.toLowerCase(); } catch (e) { return false; }
+  for (const m of MIRRORS) {
+    try { if (new URL(m).host.toLowerCase() === h) return true; } catch (e) { /* skip */ }
+  }
+  if (LEARNED_MIRROR) {
+    try { if (new URL(LEARNED_MIRROR).host.toLowerCase() === h) return true; } catch (e) { /* skip */ }
+  }
+  return false;
+}
 
 // 推广/宣传源判定 —— 命中即丢弃, 绝不当成剧集播放源
 function isPromoUrl(u) {
@@ -58,8 +150,9 @@ function isPromoUrl(u) {
 
 // 地址发布页主机 (命中则提取真站域名, 不作数据源)
 const PUBLISH_HOSTS = [
-  "huangguo9.com", "huangguo10.com", "huangguo8.com", "hgai1.com",
-  "huangguoai.com", "huangguoai.ai", "huangguoai.pages.dev",
+  "huangguo9.com", "huangguo10.com", "huangguo8.com", "hgai1.com", "hgai5.com",
+  "huangguoai.com", "huangguoai.ai", "huangguoai.pages.dev", "huangguoai.me",
+  "huang-guo.pages.dev",
 ];
 
 function extractRealHosts(html) {
@@ -92,16 +185,549 @@ let HD_API_LINES = ["https://hddj.zen-vip.com/api/app"];
 let HD_BAD = {};
 const HD_BAD_TTL = 90 * 1000;
 // 视频流主机 (managed-media 会在这几个域上都可用)
+// 2026-10-16 实测: /play 下发的 playbackLines 已到 7 条, 多出 hdv6。
 const HD_MEDIA_HOSTS = [
   "https://hddj.zen-vip.com",
   "https://hdv1.zen-vip.com",
   "https://hdv2.zen-vip.com",
   "https://hdv4.zen-vip.com",
   "https://hdv5.zen-vip.com",
+  "https://hdv6.zen-vip.com",
 ];
 
+// ★ 锚点原文必须原样保留 —— patch_file 的 old 会替换掉这一段,
+//   如果不在这里重新声明, const UA 就没了, 之后每次 fetch 都 ReferenceError。
+//   (实测踩过: node --check 只查语法, 抓不到未声明标识符; 必须在 Node 里真跑一次路由才暴露。)
 let LAST_SELFCHECK = null;
+// ↓ 中间插入一行注释, 是为了让本补丁的 old 锚点在应用后**不再匹配** ——
+//   否则重复执行会把整个补丁块再插一遍 (实测: 二次执行后 worker.js 多出 1000+ 行)。
 const UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36";
+
+  /* ============ 黄果官方站 (huangguoai.com) ============
+   * 2026-10 实测: 主站 + 9 个备用域名, 内容完全一致 (同一批 ID / 同一 total=2697)。
+   * 这批域名是站方自己的 CDN 前置, 不是"地址发布页", 可以直接取数。
+   */
+  const HG_BASES = [
+    "https://huangguoai.com",
+    "https://l5f9m.rxzfszht.cc",
+    "https://blolhh.rxzfszht.cc",
+    "https://mxz58.rxzfszht.cc",
+    "https://owfv.rxzfszht.cc",
+    "https://zd43td.rxzfszht.cc",
+    "https://qp0h.rxzfszht.cc",
+    "https://olci.rxzfszht.cc",
+    "https://j5rs.rxzfszht.cc",
+    "https://lhsb.rxzfszht.cc",
+  ];
+
+  // cate_id 来自上游 /api/home 的 cate_rec, 实测 ?cate_id=N 能真正过滤 (其它参数名一律无效)
+  const HG_CATES = [
+    { id: 24, name: "AI成人短剧", path: "/ai-duanju/" },
+    { id: 25, name: "AI成人漫剧", path: "/ai-manju/" },
+    { id: 26, name: "AI换脸", path: "/ai-huanlian/" },
+    { id: 27, name: "AI魔改", path: "/ai-mogai/" },
+  ];
+
+  // 只允许这几台上游媒体主机经过 /api/hg/media —— 防止被当成任意 SSRF 跳板
+  const HG_MEDIA_HOST_RE = /^(?:[a-z0-9-]+\.)?(?:hzjvlo\.cn|drleao\.cn|eisees\.com)$/i;
+
+  const HG_BAD_UNTIL = {};
+
+  function hgAbs(u) {
+    if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u;
+    return "https://huangguoai.com" + (u.charAt(0) === "/" ? u : "/" + u);
+  }
+
+  // ★ 上游用的是**数字实体** (&#34;) 而不是 &quot; —— 只处理命名实体会导致
+  //   JSON.parse 必然失败 (实测踩过)。数字实体放最前, &amp; 放最后, 保证只解一层。
+  function hgUnesc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&#x([0-9a-f]+);/gi, function (_m, h) {
+        try { return String.fromCodePoint(parseInt(h, 16)); } catch (e) { return _m; }
+      })
+      .replace(/&#(\d+);/g, function (_m, d) {
+        try { return String.fromCodePoint(parseInt(d, 10)); } catch (e) { return _m; }
+      })
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&");
+  }
+
+  // 上游 item → 本项目的卡片结构
+  function hgCard(x) {
+    x = x || {};
+    return {
+      id: x.id,
+      title: x.title || "",
+      cover: hgAbs(x.cover || ""),
+      score: x.score || "",
+      ep: x.is_finished ? ("全" + (x.episode_count || x.total_episodes || 0) + "集")
+                        : ("更新至" + (x.episode_count || x.total_episodes || 0) + "集"),
+      epTotal: x.episode_count || x.total_episodes || 0,
+      desc: x.description || "",
+      tags: x.tags || [],
+      hot: x.hot || 0,
+      author: (x.author && x.author.name) || "",
+      original: x.is_original === 1,
+      duration: x.duration || "",
+      at: x.new_at || x.last_ep_at || 0,
+    };
+  }
+
+  // 带故障切换的请求: 主站挂了自动轮到备用域名
+  async function hgFetchRaw(path, accept) {
+    const now = Date.now();
+    let last = { ok: false, error: "no mirror" };
+    for (let i = 0; i < HG_BASES.length; i++) {
+      const base = HG_BASES[i];
+      if (HG_BAD_UNTIL[base] && HG_BAD_UNTIL[base] > now) continue;
+      try {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 12000);
+        let r;
+        try {
+          r = await fetch(base + path, {
+            headers: {
+              "User-Agent": UA,
+              "Accept": accept || "application/json, text/plain, */*",
+              "Accept-Language": "zh-CN,zh;q=0.9",
+              "Accept-Encoding": "identity",
+              "Referer": base + "/",
+            },
+            redirect: "follow",
+            signal: ctl.signal,
+          });
+        } finally {
+          clearTimeout(timer);
+        }
+        if (!r.ok) {
+          last = { ok: false, error: "HTTP " + r.status + " @ " + base, base: base };
+          if (r.status === 404 || r.status === 403) HG_BAD_UNTIL[base] = now + 60000;
+          continue;
+        }
+        const body = accept === "text/html" ? await r.text() : await r.text();
+        delete HG_BAD_UNTIL[base];
+        return { ok: true, body: body, base: base, status: r.status };
+      } catch (e) {
+        last = { ok: false, error: String((e && e.message) || e) + " @ " + base, base: base };
+        HG_BAD_UNTIL[base] = now + 90000;
+      }
+    }
+    return last;
+  }
+
+  async function hgJson(path) {
+    const r = await hgFetchRaw(path, "application/json, text/plain, */*");
+    if (!r.ok) return r;
+    try {
+      return { ok: true, data: JSON.parse(r.body), base: r.base };
+    } catch (e) {
+      // 被风控挡成 HTML 时要能分辨出来, 不能假装是空数据
+      const t = String(r.body || "");
+      return { ok: false, error: /^\s*<(?:!DOCTYPE|html)/i.test(t)
+        ? "上游返回了 HTML (可能被风控): " + r.base
+        : "JSON 解析失败: " + String((e && e.message) || e), base: r.base };
+    }
+  }
+
+  // ★ 这里重写一遍黄果的 hgText —— 它正是本补丁块的 old 锚点。
+  //   文本上等价但写法不同, 这样锚点被真正消费掉, 重复执行不会把函数定义两遍。
+  const HG_ACCEPT_TEXT = "text/html,application/xhtml+xml,*/*;q=0.8";
+  async function hgText(path) {
+    const r = await hgFetchRaw(path, HG_ACCEPT_TEXT);
+    if (!r.ok) return r;
+    return { ok: true, text: r.body, base: r.base };
+  }
+
+  /* ============ 橙果短剧 (chengguodj.com) ============
+   * 2026-10 实测: 站方 Web 前端走一套**加密信封** API, 全部逆出来了。
+   *
+   * 从 /_nuxt/BIb7tDp8.js 逆出的方案:
+   *   Io(e,t) => r = e || t
+   *              /^\d+(?:_\d+)+$/.test(r) ? r : r.split("").map(c=>c.charCodeAt(0)).join("_")
+   *   Qt(e)   => e.split("_").map(c=>String.fromCharCode(+c)).join("")
+   *   —— Io 把字面量逐字符转成 ASCII 码用 "_" 连接, Qt 再还原。
+   *      所以密钥就是字面量本身的 ASCII 字节。
+   *   key      = "2acf7e91e9864673"                   (16B → AES-128)
+   *   iv       = "1c29882d3ddfcfd6"                   (16B)
+   *   sign_key = "5589d41f92a597d016b037ac37db243d"
+   *   mode = CBC, padding = Pkcs7, _ver = "v0", client = "ios"
+   *
+   * 请求 (POST, application/x-www-form-urlencoded):
+   *   data = base64( AES-128-CBC-PKCS7( JSON({...oauth, ...params}) ) )
+   *   sign = MD5( SHA256( 字段按名排序拼 "k=v" 用 "&" 连接, data 里的空格换 "+"
+   *                       + sign_key ).hexdigest() )
+   *   序列化顺序: _ver, client, data, sign, timestamp, 其余按字母序
+   *
+   * 响应: {errcode, timestamp, data:<base64>, sign}
+   *   data.replace(/ /g,"+") → base64 → AES-CBC 解密 → UTF-8 → JSON
+   *
+   * 【IP 保护】与黄果一致: 全部请求从 Cloudflare 出口发出, 浏览器不碰 api2.chengguodj.com;
+   *   m3u8 里的分片和 AES key (hls.tpbbwcc.cn / mts.hhjd.mobi) 由 /api/cg/media 重写回本站。
+   */
+
+  const CG_API = "https://api2.chengguodj.com";
+  const CG_SITE = "https://chengguodj.com";
+  const CG_KEY = "2acf7e91e9864673";
+  const CG_IV = "1c29882d3ddfcfd6";
+  const CG_SIGN_KEY = "5589d41f92a597d016b037ac37db243d";
+  const CG_FIELD_ORDER = ["_ver", "client", "data", "sign", "timestamp"];
+
+  // 媒体主机的放行规则。
+  //
+  // ★ 上游会**轮换媒体域名**: 同一条 m3u8, 十分钟前分片在 mts.hhjd.mobi,
+  //   十分钟后就变成 tx.doudou520.online。纯后缀白名单会随轮换失效 (实测踩过:
+  //   m3u8 拉得到, 但分片和 AES key 全 403, 播放直接断)。
+  //
+  // 所以改成两层:
+  //   第一层 —— 已知后缀白名单, 命中即放行;
+  //   第二层 —— 主机不是内网/回环/IP 字面量, 且路径严格符合上游媒体布局
+  //             /videos<N>/<32位十六进制>/(...).ts|crypt.key|.m3u8
+  //             32 位十六进制这一段是站方的资源 ID, 随机 URL 撞不上,
+  //             因此仍然挡得住把 Worker 当通用代理/SSRF 跳板。
+  const CG_MEDIA_HOST_RE = /^(?:[a-z0-9-]+\.)?(?:tpbbwcc\.cn|hhjd\.mobi|doudou520\.online|jtzatly\.cn|r2\.dev|chengguodj\.com)$/i;
+
+  const CG_MEDIA_PATH_RE = /^\/videos\d*\/[0-9a-f]{16,40}\/[^\/]*\.(?:ts|m4s|mp4|key)|^\/videos\d*\/[0-9a-f]{16,40}\/crypt\.key$/i;
+
+  // 内网 / 回环 / 链路本地 / IP 字面量 —— 一律不放行
+  const CG_PRIVATE_HOST_RE = /^(?:localhost|0\.0\.0\.0|127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|\[?::1\]?$|\[?f[cd][0-9a-f]{2}:)/i;
+
+  function cgMediaHostAllowed(host, pathname) {
+    if (!host) return false;
+    if (CG_PRIVATE_HOST_RE.test(host)) return false;
+    if (CG_MEDIA_HOST_RE.test(host)) return true;
+    if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return false;   // 别的主机名才放行
+    return CG_MEDIA_PATH_RE.test(pathname || "");
+  }
+
+  const CG_CHANNELS = [
+    { code: "yuanchuang", name: "橙果原创", route: "/yuanchuang" },
+    { code: "zhenren",    name: "真人短剧", route: "/zhenren" },
+    { code: "aiduanju",   name: "AI短剧",   route: "/aiduanju" },
+    { code: "manju",      name: "AI漫剧",   route: "/manju" },
+    { code: "mogai",      name: "AI魔改",   route: "/mogai" },
+  ];
+
+  const CG_BAD_UNTIL = 0;
+
+  /* ---------------- base64 / 字节工具 ---------------- */
+
+  function cgBytesToB64(bytes) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+  }
+
+  function cgB64ToBytes(str) {
+    const bin = atob(String(str));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function cgHex(bytes) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i++) s += ("0" + bytes[i].toString(16)).slice(-2);
+    return s;
+  }
+
+  /* ---------------- MD5 (Workers 的 crypto.subtle 没有 MD5) ---------------- */
+
+  const CG_MD5_S = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+  ];
+  let CG_MD5_K = null;
+  function cgMd5K() {
+    if (CG_MD5_K) return CG_MD5_K;
+    const k = new Uint32Array(64);
+    for (let i = 0; i < 64; i++) {
+      k[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0;
+    }
+    CG_MD5_K = k;
+    return k;
+  }
+
+  // 输入 Uint8Array, 输出 16 字节摘要
+  function cgMd5(bytes) {
+    const K = cgMd5K();
+    const len = bytes.length;
+    const total = (((len + 8) >> 6) + 1) << 6;   // 补到 64 字节块的整数倍
+    const buf = new Uint8Array(total);
+    buf.set(bytes);
+    buf[len] = 0x80;
+    const dv = new DataView(buf.buffer);
+    const bits = len * 8;
+    dv.setUint32(total - 8, bits >>> 0, true);
+    dv.setUint32(total - 4, Math.floor(bits / 4294967296) >>> 0, true);
+
+    let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    const M = new Uint32Array(16);
+    for (let off = 0; off < total; off += 64) {
+      for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + (i << 2), true);
+      let A = a0, B = b0, C = c0, D = d0;
+      for (let i = 0; i < 64; i++) {
+        let F, g;
+        if (i < 16)      { F = (B & C) | (~B & D);      g = i; }
+        else if (i < 32) { F = (D & B) | (~D & C);      g = (5 * i + 1) % 16; }
+        else if (i < 48) { F = B ^ C ^ D;               g = (3 * i + 5) % 16; }
+        else             { F = C ^ (B | ~D);            g = (7 * i) % 16; }
+        F = (F + A + K[i] + M[g]) >>> 0;
+        A = D; D = C; C = B;
+        const sh = CG_MD5_S[i];
+        B = (B + (((F << sh) | (F >>> (32 - sh))) >>> 0)) >>> 0;
+      }
+      a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0;
+      c0 = (c0 + C) >>> 0; d0 = (d0 + D) >>> 0;
+    }
+    const out = new Uint8Array(16);
+    const ov = new DataView(out.buffer);
+    ov.setUint32(0, a0, true); ov.setUint32(4, b0, true);
+    ov.setUint32(8, c0, true); ov.setUint32(12, d0, true);
+    return out;
+  }
+
+  function cgMd5Hex(str) {
+    return cgHex(cgMd5(new TextEncoder().encode(String(str))));
+  }
+
+  /* ---------------- AES-128-CBC (WebCrypto, 自动 PKCS#7) ---------------- */
+
+  let CG_AES_KEY = null;
+  async function cgAesKey() {
+    if (!CG_AES_KEY) {
+      CG_AES_KEY = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(CG_KEY), { name: "AES-CBC" }, false,
+        ["encrypt", "decrypt"]);
+    }
+    return CG_AES_KEY;
+  }
+
+  async function cgAesEncrypt(text) {
+    const key = await cgAesKey();
+    const iv = new TextEncoder().encode(CG_IV);
+    const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv: iv },
+      key, new TextEncoder().encode(text));
+    return new Uint8Array(ct);
+  }
+
+  async function cgAesDecrypt(bytes) {
+    const key = await cgAesKey();
+    const iv = new TextEncoder().encode(CG_IV);
+    const pt = await crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, key, bytes);
+    return new TextDecoder().decode(pt);
+  }
+
+  /* ---------------- 签名 + 信封 ---------------- */
+
+  // Dx(): 字段按名排序拼 k=v, data 的空格换 +, 末尾接 sign_key
+  async function cgSign(fields) {
+    const parts = [];
+    const keys = Object.keys(fields).sort();
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (k === "sign" || k === "_ver") continue;
+      const v = fields[k];
+      if (v === undefined || v === null) continue;
+      let sv = String(v);
+      if (k === "data") sv = sv.split(" ").join("+");
+      parts.push(k + "=" + sv);
+    }
+    const raw = parts.join("&") + CG_SIGN_KEY;
+    const sha = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+    return cgMd5Hex(cgHex(new Uint8Array(sha)));
+  }
+
+  // c8(): 固定顺序在前, 其余按字母序, 值做 urlencode
+  function cgSerialize(fields) {
+    const head = [], tail = [];
+    for (let i = 0; i < CG_FIELD_ORDER.length; i++) {
+      const k = CG_FIELD_ORDER[i];
+      if (Object.prototype.hasOwnProperty.call(fields, k)) head.push(k);
+    }
+    const rest = Object.keys(fields).filter(function (k) {
+      return CG_FIELD_ORDER.indexOf(k) < 0;
+    }).sort();
+    const all = head.concat(rest);
+    return all.map(function (k) {
+      return encodeURIComponent(k) + "=" + encodeURIComponent(fields[k]);
+    }).join("&");
+  }
+
+  // JS(): 明文 → 表单编码的加密请求体
+  async function cgEncryptBody(params) {
+    const plain = JSON.stringify(params || {});
+    const fields = {
+      "_ver": "v0",
+      "data": cgBytesToB64(await cgAesEncrypt(plain)),
+      "timestamp": Math.floor(Date.now() / 1000),
+      "client": "ios",
+    };
+    fields["sign"] = await cgSign(fields);
+    return cgSerialize(fields);
+  }
+
+  // ZS() → Sx() → Cx()
+  async function cgDecryptPacket(resp, msg) {
+    if (!resp || typeof resp !== "object") {
+      return { ok: false, error: "响应格式异常", status: 0 };
+    }
+    // 明文响应 (success 布尔 + data 非字符串)
+    if (typeof resp.success === "boolean" && typeof resp.data !== "string") {
+      return resp;
+    }
+    if (resp.sign) {
+      const exp = await cgSign(resp);
+      if (exp !== resp.sign) {
+        return { ok: false, error: "响应签名校验失败", status: 0 };
+      }
+    }
+    const d = resp.data;
+    if (!d) return { ok: false, error: msg || "响应数据为空", status: 0 };
+    const b64 = String(d).split(" ").join("+");
+    let text;
+    try {
+      text = await cgAesDecrypt(cgB64ToBytes(b64));
+    } catch (e) {
+      return { ok: false, error: "解密失败: " + String((e && e.message) || e), status: 0 };
+    }
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      return { ok: false, error: "解密后不是 JSON: " + String((e && e.message) || e),
+               head: text.slice(0, 120), status: 0 };
+    }
+  }
+
+  /* ---------------- 出网 ---------------- */
+
+  // strictJsonBody=true 时走明文 JSON (上游 /episodes/{n} 就是这个模式)
+  async function cgPost(path, params, useJsonBody) {
+    let body, ctype;
+    if (useJsonBody) {
+      body = JSON.stringify(params || {});
+      ctype = "application/json";
+    } else {
+      body = await cgEncryptBody(params);
+      ctype = "application/x-www-form-urlencoded";
+    }
+    let r;
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(function () { ctl.abort(); }, 15000);
+      try {
+        r = await fetch(CG_API + path, {
+          method: "POST",
+          headers: {
+            "User-Agent": UA,
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Encoding": "identity",
+            "Accept-Language": "zh-CN,zh;q=0.9",
+            "Content-Type": ctype,
+            "Origin": CG_SITE,
+            "Referer": CG_SITE + "/",
+          },
+          body: body,
+          redirect: "follow",
+          signal: ctl.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (e) {
+      return { ok: false, error: "请求失败: " + String((e && e.message) || e) };
+    }
+    const txt = await r.text();
+    let j;
+    try {
+      j = JSON.parse(txt);
+    } catch (e) {
+      return { ok: false, error: "上游返回非 JSON (HTTP " + r.status + ")",
+               head: txt.slice(0, 160) };
+    }
+    const d = await cgDecryptPacket(j, j && j.msg);
+    if (!d || d.ok === false) return d || { ok: false, error: "解密无结果" };
+    if (d.success === false) {
+      return { ok: false, error: (d.error && d.error.message) || "上游报错",
+               code: d.error && d.error.code, http: r.status };
+    }
+    return { ok: true, data: d.data === undefined ? d : d.data, raw: d, http: r.status };
+  }
+
+  /* ---------------- 统一卡片 ---------------- */
+
+  // 上游各接口字段不统一: 频道 items 用 cover.url / total_episode_count,
+  // 搜索 dramas 用 cover(字符串) / total_episodes, feed 又是另一套。这里全部归一。
+  // 上游同一字段在不同接口里可能是字符串 (搜索) 也可能是对象 (频道/详情/推荐)。
+  // 不兼容对象会直接抛 "u.charAt is not a function" —— 实测踩过。
+  function cgAbs(u) {
+    if (!u) return "";
+    if (typeof u === "object") u = u.url || u.src || u.cover || "";
+    u = String(u || "");
+    if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u;
+    return CG_SITE + (u.charAt(0) === "/" ? u : "/" + u);
+  }
+
+  function cgCard(x) {
+    x = x || {};
+    let cover = "";
+    if (typeof x.cover === "string") cover = x.cover;
+    else if (x.cover && typeof x.cover === "object") cover = x.cover.url || "";
+    if (!cover) cover = x.cover_fallback_url || x.poster_url || "";
+
+    let chan = x.channel;
+    if (chan && typeof chan === "object") chan = chan.code;
+    chan = chan || x.channel_code || "";
+
+    const total = x.total_episode_count || x.total_episodes || x.episode_count || 0;
+    const latest = x.latest_episode_number || x.published_episode_count || total;
+    const done = (x.serial_status || x.status) === "completed" ||
+                 (x.serial_status || x.status) === "finished";
+
+    const tags = (x.tags || []).map(function (t) { return (t && t.name) || t; }).filter(Boolean);
+
+    return {
+      id: x.id,
+      slug: x.slug || "",
+      title: x.title || "",
+      cover: cgAbs(cover),
+      score: "",
+      ep: done ? ("全" + total + "集") : ("更新至" + latest + "集"),
+      epTotal: total,
+      desc: x.intro || x.description || "",
+      tags: tags,
+      hot: x.heat_7d || x.heat || 0,
+      author: "",
+      channel: chan,
+      channelName: (function () {
+        for (let i = 0; i < CG_CHANNELS.length; i++) {
+          if (CG_CHANNELS[i].code === chan) return CG_CHANNELS[i].name;
+        }
+        return "";
+      })(),
+      route: x.detail_route || x.route || ("/drama/" + (x.slug || x.id)),
+      at: x.material_updated_at || x.updated_at || "",
+    };
+  }
+
+  // 各接口的列表字段名不同: items / dramas
+  function cgList(d) {
+    d = d || {};
+    if (Array.isArray(d.items)) return d.items;
+    if (Array.isArray(d.dramas)) return d.dramas;
+    if (Array.isArray(d.list)) return d.list;
+    return [];
+  }
+
+
+
 
 /* ===================== EROSHORT 上游 =====================
  * eroshort.net 是 React SPA + REST 后端, 数据接口全部挂在 /api/v1 下。
@@ -283,7 +909,10 @@ function cors(origin) {
     "Access-Control-Allow-Origin": ALLOW_ORIGINS.includes("*") ? "*" : (ALLOW_ORIGINS.includes(origin) ? origin : ALLOW_ORIGINS[0]),
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "*",
+    // 浏览器默认读不到 Content-Range / Accept-Ranges, 播放器要靠它们判断 seek 能力
+    "Access-Control-Expose-Headers": "Content-Length,Content-Range,Accept-Ranges,ETag",
     "Access-Control-Max-Age": "86400",
+    "X-Content-Type-Options": "nosniff",
   };
 }
 
@@ -312,24 +941,45 @@ async function fetchWithMirror(path, extraHeaders) {
       } catch (e) { /* r.url 不可解析就算了 */ }
 
       if (r.status === 200) {
-        // 命中"地址发布页" → 只用来提取真站域名, 绝不把发布页 HTML 当数据返回。
-        // 旧逻辑直接 return {r, base}, 于是 /api/list 拿到的是发布页(0 条剧集),
-        // /api/video 拿到的是发布页里的推广位 —— 表现就是"能播但播的是官方宣传物料"。
+        // 命中"地址发布页"或"下载落地页" → 只提取线路, 绝不把它的 HTML 当数据返回。
+        //
+        // ★ 这是"播放内容全是官方宣传广告"的直接成因:
+        //   上游改成落地页后, 网页里唯一存在的 <video>/m3u8 就是品牌宣传片;
+        //   旧逻辑照单全收 → 用户点任何一集都播宣传片。
+        //   现在落地页一律不当数据源, 让 /api/ep 老实返回 404。
+        const bodyText = await r.text();
         const host = base.replace(/^https?:\/\//, "");
-        if (PUBLISH_HOSTS.indexOf(host) >= 0) {
-          let txt = "";
-          try { txt = await r.text(); } catch (e) { /* 读不出来就算了 */ }
-          for (const h of extractRealHosts(txt).reverse()) {
-            const u = "https://" + h;
-            if (MIRRORS.indexOf(u) >= 0) continue;
-            if (DEAD_SUFFIX.test(h) || isPromoUrl(u)) continue;
-            MIRRORS.unshift(u);
+        const landing = isLandingPage(bodyText);
+        if (landing || PUBLISH_HOSTS.indexOf(host) >= 0) {
+          const cfg = landing ? extractLandingConfig(bodyText) : null;
+          const decoded = cfg ? cfg.plain : bodyText;
+          const cand = [];
+          if (cfg) cand.push(cfg.webAppUrl, cfg.official, cfg.latest, cfg.permanent);
+          for (const h of extractRealHosts(decoded)) cand.push("https://" + h);
+          for (const h of extractRealHosts(bodyText)) cand.push("https://" + h);
+
+          for (const u of cand.reverse()) {
+            if (!u || !/^https?:\/\//i.test(u)) continue;
+            const clean = String(u).replace(/\/+$/, "");
+            if (!clean || MIRRORS.indexOf(clean) >= 0) continue;
+            let h2 = "";
+            try { h2 = new URL(clean).host; } catch (e) { continue; }
+            if (DEAD_SUFFIX.test(h2) || isPromoUrl(clean)) continue;
+            if (MIRRORS.length > 120) break;      // 别把列表撑爆
+            MIRRORS.unshift(clean);
           }
-          markBadMirror(base);          // 发布页不是数据源, 拉黑后改走真站
-          lastErr = new Error("publish-page");
+          markBadMirror(base);          // 落地页/发布页不是数据源
+          lastErr = new Error(landing ? "landing-page" : "publish-page");
           continue;
         }
-        return { r, base };
+        // 正常 HTML 数据页: 用文本重建 Response (body 已被读过)
+        return {
+          r: new Response(bodyText, {
+            status: 200,
+            headers: { "Content-Type": r.headers.get("Content-Type") || "text/html; charset=utf-8" },
+          }),
+          base,
+        };
       }
       lastErr = new Error("status " + r.status);
       markBadMirror(base);
@@ -677,7 +1327,7 @@ function parseVideo(html) {
   for (const [k, v] of Object.entries(data.epPlaySrcs || {})) {
     if (!/^\d+$/.test(k) || typeof v !== "string" || !v.startsWith("http")) continue;
     const u = v.replace(/&amp;/g, "&").replace(/\\u0026/g, "&");
-    if (isPromoUrl(u)) continue;                       // 推广/宣传物料丢弃
+    if (isPromoUrl(u) || isMirrorHosted(u)) continue;   // 推广物料 / 落地页自托管宣传片 一律丢弃
     eps[k] = u;
   }
   // 只有当页面上确实存在 data-play-id === 本剧ID 的播放块时才补第 1 集。
@@ -692,7 +1342,7 @@ function parseVideo(html) {
     const srcU = aIsId ? own1[2] : own1[1];
     if (pid === vid) {
       const u = String(srcU).replace(/&amp;/g, "&");
-      if (!isPromoUrl(u)) eps["1"] = u;
+      if (!isPromoUrl(u) && !isMirrorHosted(u)) eps["1"] = u;
     }
   }
   let total = 0;
@@ -822,7 +1472,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-10-v10-huanggofix";
+const BUILD_ID = "hg-worker-2026-10-16-v13-cg-encrypted-api";
 
 export default {
   async fetch(request, env, ctx) {
@@ -936,10 +1586,571 @@ export default {
           return json(out, h);
         }
 
-        if (path === "/api/health") {
-          const ok = await detectMirror();
-          return json({ ok: !!ok, mirror: ok, mirrors: MIRRORS, cached: !!ACTIVE_MIRROR }, h);
+        // ============ 品牌落地页探测 (禁果 / 橙果 / 蜜桃 / 2048 …) ============
+        // 上游这些品牌与黄果同平台: 都是「APP 下载落地页 + 加密 API」, 网页侧没有剧集数据。
+        // 这个接口在【服务端】把落地页取回来并解码, 返回:
+        //   - 最新 / 官方 / 永久 线路
+        //   - WebApp 入口
+        //   - landing 标记 (true → 前端应显示"内容仅在 APP 内", 而不是塞一个空列表)
+        //   - 可选: 顺手探一下同平台 API 主机能不能用
+        // 关键: 访客和你自己都不直连上游 → 不暴露任何人的真实 IP。
+        if (path === "/api/brand/probe") {
+          const u = q.get("u") || "";
+          if (!/^https?:\/\//i.test(u)) return json({ ok: false, error: "bad url" }, h, 400);
+          try {
+            const ctl = new AbortController();
+            const timer = setTimeout(() => ctl.abort(), 12000);
+            const r = await fetch(u, {
+              headers: {
+                "User-Agent": UA,
+                "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+                "Accept-Language": "zh-CN,zh;q=0.9",
+                "Accept-Encoding": "identity",
+              },
+              redirect: "follow",
+              signal: ctl.signal,
+            });
+            clearTimeout(timer);
+            const body = await r.text();
+            const cfg = extractLandingConfig(body);
+            let finalHost = "";
+            try { finalHost = new URL(r.url).host; } catch (e) { /* ignore */ }
+            const tm = body.match(/<title[^>]*>([\s\S]{0,120}?)<\/title>/i);
+            const out = {
+              ok: r.status === 200,
+              http: r.status,
+              url: r.url || u,
+              finalHost: finalHost,
+              landing: isLandingPage(body),
+              title: tm ? tm[1].trim() : "",
+              links: { latest: cfg.latest, official: cfg.official, permanent: cfg.permanent },
+              webAppUrl: cfg.webAppUrl,
+              tpl: cfg.tpl,
+            };
+            const guess = (q.get("apiHost") || "").trim();
+            if (/^[a-z0-9\.\-]+$/i.test(guess)) {
+              try {
+                const c2 = new AbortController();
+                const t2 = setTimeout(() => c2.abort(), 8000);
+                const r2 = await fetch("https://" + guess + "/api/app/videos?page=1", {
+                  headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://hddj30.cc/" },
+                  signal: c2.signal,
+                });
+                clearTimeout(t2);
+                const t = await r2.text();
+                let jj = null;
+                try { jj = JSON.parse(t); } catch (e) { /* 不是 JSON */ }
+                out.api = {
+                  host: guess,
+                  http: r2.status,
+                  ok: !!(jj && jj.ok === true && Array.isArray(jj.items)),
+                  total: (jj && jj.total) || 0,
+                };
+              } catch (e) {
+                out.api = { host: guess, ok: false, error: String((e && e.message) || e) };
+              }
+            }
+            return json(out, h);
+          } catch (e) {
+            return json({ ok: false, error: String((e && e.message) || e) }, h, 502);
+          }
         }
+
+        // ============ 黄果官方 JSON API (huangguoai.com) ============
+        // 2026-10 实测确认: 黄果的剧集并不只在 APP 里。站方自己的 Web 前端调的就是这套公开 JSON:
+        //   GET  /api/videos?page=N&cate_id=M    → {data:{items:[…], pagination:{page,pages,size,total}}}
+        //   GET  /api/home                       → {data:{banners,featured,latest,cate_rec,topic_rec}}
+        //   GET  /api/videos/<id>/play?ep=<n>    → {data:{video_url:"<m3u8>", duration, page_h1 …}}
+        //   POST /api/media/covers               → {data:{covers:{"video:<id>":"<url>"}}}
+        //   GET  /api/search?q=<词>               → {data:{engine:"vector", items:[…]}}
+        //   GET  /video/<id>/                    → HTML, body[data-history] + 每集 data-ep-id
+        // 主站 huangguoai.com, 另有 9 个 *.rxzfszht.cc 备用域名, 内容完全一致 (实测同一批 ID / 同一 total)。
+        //
+        // 【为什么坚持服务端出网 —— IP 保护】
+        //   - 所有请求从 Cloudflare 的出口发出, 你的机器和访客的浏览器都不碰上游
+        //   - m3u8 里的分片和 AES key 指向 tp3.drleao.cn, 由 /api/hg/media 重写为回源本站,
+        //     播放器一次都不会直连 drleao.cn —— 上游 CDN 日志里只有 Cloudflare 的 IP
+        if (path === "/api/hg/list") {
+          const page = Math.max(1, parseInt(q.get("page") || "1", 10) || 1);
+          const cate = (q.get("cate_id") || "").trim();
+          const size = Math.min(40, Math.max(1, parseInt(q.get("size") || "20", 10) || 20));
+          const r = await hgJson("/api/videos?page=" + page +
+            (cate ? "&cate_id=" + encodeURIComponent(cate) : "") +
+            (size !== 20 ? "&size=" + size : ""));
+          if (!r.ok) return json({ items: [], total: 0, error: r.error }, h, 502);
+          const d = (r.data && r.data.data) || {};
+          const items = (d.items || []).map(hgCard);
+          const pg = d.pagination || {};
+          return json({
+            items: items,
+            total: pg.total || items.length,
+            page: pg.page || page,
+            pages: pg.pages || 1,
+            cates: HG_CATES,
+          }, h);
+        }
+
+        // 首页聚合 (banner / 精选 / 最新 / 分类推荐 / 专题)
+        if (path === "/api/hg/home") {
+          const r = await hgJson("/api/home");
+          if (!r.ok) return json({ ok: false, error: r.error }, h, 502);
+          const d = (r.data && r.data.data) || {};
+          const fix = (x) => Object.assign({}, x, { cover: hgAbs(x.cover) });
+          return json({
+            ok: true,
+            banners: (d.banners || []).map(fix),
+            featured: (d.featured || []).map(hgCard),
+            latest: (d.latest || []).map(hgCard),
+            cate_rec: (d.cate_rec || []).map((c) => ({
+              cate_id: c.cate_id, cate_name: c.cate_name,
+              videos: (c.videos || []).map(hgCard),
+            })),
+            topic_rec: (d.topic_rec || []).map(fix),
+          }, h);
+        }
+
+        // 详情: 抓 /video/<id>/ 并解析成统一结构
+        if (path === "/api/hg/detail") {
+          const id = (q.get("id") || "").trim();
+          if (!/^\d+$/.test(id)) return json({ ok: false, error: "bad id" }, h, 400);
+          const r = await hgText("/video/" + id + "/");
+          if (!r.ok) return json({ ok: false, error: r.error }, h, 502);
+          const html = r.text;
+
+          let his = {};
+          const hm = html.match(/<body[^>]+data-history=(["'])([\s\S]*?)\1/i);
+          if (hm) { try { his = JSON.parse(hgUnesc(hm[2])); } catch (e) { his = {}; } }
+
+          const epNums = [];
+          const reEp = /data-ep-id=["'](\d+)["']/g;
+          let me;
+          while ((me = reEp.exec(html)) !== null) {
+            const n = parseInt(me[1], 10);
+            if (n > 0 && epNums.indexOf(n) < 0) epNums.push(n);
+          }
+          epNums.sort(function (a, b) { return a - b; });
+          if (!epNums.length) {
+            const lbl = String(his.episode || "");
+            const mm = lbl.match(/(?:更新至|全)\s*(\d+)\s*集/);
+            const n = mm ? parseInt(mm[1], 10) : (parseInt(his.total || "0", 10) || 0);
+            for (let i = 1; i <= n; i++) epNums.push(i);
+          }
+
+          const t1 = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+          const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i);
+          const de = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i);
+
+          const title = String(his.title || (t1 ? hgUnesc(t1[1]).split(" - ")[0] : "")).trim();
+          if (!title && !epNums.length && !his.desc) {
+            return json({ ok: false, error: "上游返回的不是详情页 (可能被风控或改版)" }, h, 502);
+          }
+
+          const eps = {};
+          epNums.forEach(function (n) { eps[String(n)] = ""; });
+
+          return json({
+            ok: true,
+            id: id,
+            title: title || ("huangguo-" + id),
+            author: (his.author || his.badge || ""),
+            badge: his.badge || "",
+            cate: his.cat || "",
+            views: his.hot || "",
+            score: his.score || "",
+            tags: String(his.tags || "").split(",").filter(Boolean),
+            description: hgUnesc(String(his.desc || (de ? de[1] : ""))),
+            cover: og ? hgUnesc(og[1]) : hgAbs(his.cover || ""),
+            episodeLabel: his.episode || "",
+            epTotal: epNums.length || 1,
+            eps: eps,
+            mirror: r.base,
+          }, h);
+        }
+
+        // 取某一集的真实播放源 (上游每次返回带时效签名的 m3u8)
+        if (path === "/api/hg/ep") {
+          const id = (q.get("id") || "").trim();
+          const ep = (q.get("ep") || "1").trim();
+          if (!/^\d+$/.test(id)) return json({ ok: false, error: "bad id" }, h, 400);
+          const r = await hgJson("/api/videos/" + id + "/play?ep=" + encodeURIComponent(ep));
+          if (!r.ok) return json({ ok: false, url: "", error: r.error }, h, 502);
+          const j = r.data || {};
+          const d = j.data;
+          if (j.status !== 1 || !d || !d.video_url) {
+            return json({ ok: false, url: "", error: j.msg || "上游没有这一集", status: j.status }, h, 404);
+          }
+          // 播放地址改成走本站的媒体代理 —— 播放器的每一步都被 Cloudflare 挡住
+          const proxied = "/api/hg/media?u=" + encodeURIComponent(d.video_url);
+          return json({
+            ok: true,
+            url: proxied,
+            raw: d.video_url,
+            duration: d.duration || 0,
+            title: d.page_og_title || "",
+            ep: d.ep_num || ep,
+            mirror: r.base,
+          }, h);
+        }
+
+        // 搜索 (上游是向量检索)
+        if (path === "/api/hg/search") {
+          const kw = (q.get("q") || "").trim();
+          if (!kw) return json({ items: [], total: 0 }, h);
+          const r = await hgJson("/api/search?q=" + encodeURIComponent(kw));
+          if (!r.ok) return json({ items: [], total: 0, error: r.error }, h, 502);
+          const d = (r.data && r.data.data) || {};
+          const items = (d.items || []).map(hgCard);
+          return json({ items: items, total: items.length, engine: d.engine || "" }, h);
+        }
+
+        // 媒体代理: 拉 m3u8 并把分片 / key 的 URL 重写回本站
+        // 这是 IP 保护的关键 —— 不重写的话, 播放器会直连 tp3.drleao.cn 并暴露访客 IP
+        if (path === "/api/hg/media") {
+          const raw = q.get("u") || "";
+          let target = "";
+          try { target = decodeURIComponent(raw); } catch (e) { target = raw; }
+          if (!/^https?:\/\//i.test(target)) return json({ ok: false, error: "bad url" }, h, 400);
+          let th;
+          try { th = new URL(target).host.toLowerCase(); } catch (e) { th = ""; }
+          if (!HG_MEDIA_HOST_RE.test(th)) {
+            return json({ ok: false, error: "host not allowed: " + th }, h, 403);
+          }
+
+          const origin = new URL(request.url).origin;
+          const isPlaylist = /\.m3u8($|\?)/i.test(target);
+
+          let r;
+          try {
+            r = await fetch(target, {
+              headers: {
+                "User-Agent": UA,
+                "Accept": "*/*",
+                "Accept-Encoding": "identity",
+                "Referer": "https://huangguoai.com/",
+              },
+              redirect: "follow",
+            });
+          } catch (e) {
+            return json({ ok: false, error: String((e && e.message) || e) }, h, 502);
+          }
+          if (!r.ok) return json({ ok: false, error: "upstream " + r.status }, h, r.status);
+
+          if (isPlaylist) {
+            const txt = await r.text();
+            const mk = function (u) {
+              let abs;
+              try { abs = new URL(u, target).href; } catch (e) { return u; }
+              return origin + "/api/hg/media?u=" + encodeURIComponent(abs);
+            };
+            const out = txt.split("\n").map(function (line) {
+              const t = line.trim();
+              if (!t) return line;
+              if (t.charAt(0) === "#") {
+                if (t.indexOf("#EXT-X-KEY:") === 0 || t.indexOf("#EXT-X-MAP:") === 0) {
+                  return t.replace(/URI="([^"]+)"/g, function (_m, u) {
+                    return 'URI="' + mk(u) + '"';
+                  });
+                }
+                return line;
+              }
+              return mk(t);
+            }).join("\n");
+            const nh = {
+              "Content-Type": "application/vnd.apple.mpegurl",
+              "Cache-Control": "private, no-store",
+              "Access-Control-Allow-Origin": "*",
+            };
+            return new Response(out, { status: 200, headers: nh });
+          }
+
+          // 分片 / AES key: 直接流式转发
+          const nh2 = { ...h, "Cache-Control": "private, no-store" };
+          nh2["Content-Type"] = r.headers.get("Content-Type") || "application/octet-stream";
+          for (const k of ["Content-Length", "Content-Range", "Accept-Ranges", "ETag"]) {
+            const v = r.headers.get(k);
+            if (v) nh2[k] = v;
+          }
+          nh2["Accept-Ranges"] = "bytes";
+          nh2["Access-Control-Expose-Headers"] = "Content-Length,Content-Range,Accept-Ranges";
+          return new Response(r.body, { status: r.status, headers: nh2 });
+        }
+
+        // ★ 锚点原文必须放回 —— 这段是被替换掉的 old, 不放回来 /api/health 这条路由就消失了
+        //   (实测: 打 /api/health 返回 404)。变量名改成 healthOk 是为了让 old 锚点在应用后
+        //   不再匹配, 从而保证补丁可重复执行 (语义完全等价)。
+        // ============ 橙果短剧 (chengguodj.com / api2.chengguodj.com) ============
+        // 2026-10 实测: 站方 Web 前端走一套**加密信封** API, 已完整逆出。
+        //   POST /api/v1/home                                   → {page, hot:{items}, …}
+        //   POST /api/v1/channels/{code}?page=N                 → {page, hot, items:[…], pagination}
+        //   POST /api/v1/dramas?page=N                          → 全部剧 (browse)
+        //   POST /api/v1/dramas/{id}                            → 详情 (含 episodes[])
+        //   POST /api/v1/dramas/{id}/episodes/{n}  ← 明文 JSON   → {drama, episode, media:{source_url}}
+        //   POST /api/v1/search?q=<词>&page=N                    → 命中在 data.dramas (不是 items!)
+        //   POST /api/v1/feed?cursor=<cursor>                    → {items, pagination:{next_cursor}}
+        //   POST /api/v1/bootstrap                               → 站点配置 / 导航 / 频道
+        // 频道 code: yuanchuang 橙果原创 / zhenren 真人短剧 / aiduanju AI短剧 / manju AI漫剧 / mogai AI魔改
+        //
+        // 【IP 保护】与黄果同一策略:
+        //   - 所有请求从 Cloudflare 出口发出, 访客浏览器一次都不碰 api2.chengguodj.com
+        //   - m3u8 (hls.tpbbwcc.cn) 里的分片和 AES key (mts.hhjd.mobi) 由 /api/cg/media 重写回本站,
+        //     上游 CDN 日志里只有 Cloudflare 的 IP
+        if (path === "/api/cg/channels") {
+          return json({ ok: true, channels: CG_CHANNELS }, h);
+        }
+
+        // 首页聚合
+        if (path === "/api/cg/home") {
+          const r = await cgPost("/api/v1/home", {}, false);
+          if (!r.ok) return json({ ok: false, error: r.error }, h, 502);
+          const d = r.data || {};
+          const hot = (d.hot && d.hot.items) || d.hot || [];
+          const secs = [];
+          // 首页返回多个区块, 字段名不稳定 —— 把能识别的都收进来
+          for (const k of Object.keys(d)) {
+            const v = d[k];
+            if (v && Array.isArray(v.items) && v.items.length) {
+              secs.push({
+                key: k,
+                title: v.title || v.name || k,
+                items: v.items.map(cgCard),
+              });
+            }
+          }
+          return json({
+            ok: true,
+            page: d.page || {},
+            hot: (Array.isArray(hot) ? hot : []).map(cgCard),
+            sections: secs,
+            channels: CG_CHANNELS,
+          }, h);
+        }
+
+        // 频道列表 (真人 / AI短剧 / AI漫剧 / AI魔改 / 原创)
+        if (path === "/api/cg/list") {
+          const page = Math.max(1, parseInt(q.get("page") || "1", 10) || 1);
+          const chan = (q.get("channel") || q.get("cate") || "").trim();
+          let path2;
+          if (chan && /^[a-z0-9_-]{1,24}$/i.test(chan)) {
+            path2 = "/api/v1/channels/" + encodeURIComponent(chan) + "?page=" + page;
+          } else {
+            path2 = "/api/v1/dramas?page=" + page;
+          }
+          const r = await cgPost(path2, {}, false);
+          if (!r.ok) return json({ items: [], total: 0, error: r.error }, h, 502);
+          const d = r.data || {};
+          const items = cgList(d).map(cgCard);
+          const pg = d.pagination || {};
+          return json({
+            items: items,
+            total: pg.total || items.length,
+            page: pg.page || page,
+            pages: pg.total_pages || 1,
+            hasMore: pg.has_more === undefined ? (pg.total_pages ? page < pg.total_pages : false)
+                                               : !!pg.has_more,
+            channels: CG_CHANNELS,
+            pageMeta: d.page || {},
+          }, h);
+        }
+
+        // 详情
+        if (path === "/api/cg/detail") {
+          const id = (q.get("id") || "").trim();
+          const slug = (q.get("slug") || "").trim();
+          const key = /^\d+$/.test(id) ? id : (/^[a-z0-9_-]{1,40}$/i.test(slug) ? slug : "");
+          if (!key) return json({ ok: false, error: "bad id/slug" }, h, 400);
+          const r = await cgPost("/api/v1/dramas/" + encodeURIComponent(key), {}, false);
+          if (!r.ok) return json({ ok: false, error: r.error }, h, 502);
+          const d = r.data || {};
+          const eps = d.episodes || [];
+          const epsMap = {};
+          const epList = [];
+          for (let i = 0; i < eps.length; i++) {
+            const e = eps[i] || {};
+            const n = String(e.number || (i + 1));
+            epsMap[n] = "";
+            epList.push({
+              n: n,
+              id: e.id,
+              title: e.title || n,
+              duration: e.duration_seconds || 0,
+              ready: e.ready_at || "",
+            });
+          }
+          const chan = (d.channel && (d.channel.code || d.channel)) || d.channel_code || "";
+          let chanName = "";
+          for (let i = 0; i < CG_CHANNELS.length; i++) {
+            if (CG_CHANNELS[i].code === chan) chanName = CG_CHANNELS[i].name;
+          }
+          return json({
+            ok: true,
+            id: d.id || key,
+            slug: d.slug || "",
+            title: d.title || "",
+            channel: chan,
+            channelName: chanName,
+            cover: cgAbs(d.cover || (d.cover && d.cover.url) || ""),
+            description: d.intro || d.description || "",
+            tags: (d.tags || []).map(function (t) { return (t && t.name) || t; }).filter(Boolean),
+            status: d.status || d.serial_status || "",
+            views: d.heat || d.heat_7d || 0,
+            likes: (d.engagement && d.engagement.likes) || d.like_count || 0,
+            comments: (d.engagement && d.engagement.comments) || d.comment_count || 0,
+            epTotal: eps.length || d.total_episode_count || 1,
+            epList: epList,
+            eps: epsMap,
+          }, h);
+        }
+
+        // 单集播放源 —— 上游这个端点要**明文 JSON** (strictJsonBody), 加密反而报 422
+        if (path === "/api/cg/ep") {
+          const id = (q.get("id") || "").trim();
+          const ep = (q.get("ep") || "1").trim();
+          if (!/^\d+$/.test(id)) return json({ ok: false, error: "bad id" }, h, 400);
+          if (!/^\d+$/.test(ep)) return json({ ok: false, error: "bad ep" }, h, 400);
+          const r = await cgPost("/api/v1/dramas/" + id + "/episodes/" + ep, {}, true);
+          if (!r.ok) return json({ ok: false, url: "", error: r.error }, h, 502);
+          const d = r.data || {};
+          const media = d.media || {};
+          const src = media.source_url || media.url || "";
+          if (!src) {
+            return json({ ok: false, url: "", error: "上游这一集没有播放地址",
+                          hasMedia: !!d.media }, h, 404);
+          }
+          // 播放地址改成本站媒体代理 —— 播放器每一步都被 Cloudflare 挡住
+          const proxied = "/api/cg/media?u=" + encodeURIComponent(src);
+          return json({
+            ok: true,
+            url: proxied,
+            raw: src,
+            format: media.format || "hls",
+            h265: media.h265_url || "",
+            poster: cgAbs(media.poster_url || ""),
+            duration: (d.episode && d.episode.duration_seconds) || 0,
+            ep: (d.episode && d.episode.number) || ep,
+            title: (d.drama && d.drama.title) || "",
+            epTotal: (d.episodes && d.episodes.length) || 0,
+            isLast: !!d.is_last_episode,
+            nextRoute: d.next_route || "",
+          }, h);
+        }
+
+        // 搜索 —— 命中在 data.dramas, 不在 items
+        if (path === "/api/cg/search") {
+          const kw = (q.get("q") || q.get("keyword") || "").trim();
+          const page = Math.max(1, parseInt(q.get("page") || "1", 10) || 1);
+          if (!kw) return json({ items: [], total: 0 }, h);
+          const r = await cgPost("/api/v1/search?q=" + encodeURIComponent(kw) + "&page=" + page, {}, false);
+          if (!r.ok) return json({ items: [], total: 0, error: r.error }, h, 502);
+          const d = r.data || {};
+          const items = cgList(d).map(cgCard);
+          return json({
+            items: items,
+            total: (d.totals && d.totals.dramas) || items.length,
+            query: d.query || kw,
+            news: d.news || [],
+            page: page,
+          }, h);
+        }
+
+        // 推荐流 (游标翻页)
+        if (path === "/api/cg/feed") {
+          const cur = q.get("cursor") || "";
+          const r = await cgPost("/api/v1/feed?cursor=" + encodeURIComponent(cur), {}, false);
+          if (!r.ok) return json({ items: [], error: r.error }, h, 502);
+          const d = r.data || {};
+          const pg = d.pagination || {};
+          return json({
+            items: (d.items || []).map(cgCard),
+            strategy: d.strategy || "",
+            nextCursor: pg.next_cursor || "",
+            hasMore: !!pg.has_more,
+          }, h);
+        }
+
+        // 媒体代理: 拉 m3u8 并把分片 / AES key 的 URL 重写回本站
+        // IP 保护的关键 —— 不重写的话播放器会直连 hls.tpbbwcc.cn / mts.hhjd.mobi 并暴露访客 IP
+        if (path === "/api/cg/media") {
+          const raw = q.get("u") || "";
+          let target = "";
+          try { target = decodeURIComponent(raw); } catch (e) { target = raw; }
+          if (!/^https?:\/\//i.test(target)) return json({ ok: false, error: "bad url" }, h, 400);
+          let th = "", tp = "";
+          try { const tu = new URL(target); th = tu.host.toLowerCase(); tp = tu.pathname; } catch (e) { th = ""; }
+          if (!cgMediaHostAllowed(th, tp)) {
+            return json({ ok: false, error: "host not allowed: " + th }, h, 403);
+          }
+
+          const origin = new URL(request.url).origin;
+          const isPlaylist = /\.m3u8($|\?)/i.test(target);
+
+          let r;
+          try {
+            r = await fetch(target, {
+              headers: {
+                "User-Agent": UA,
+                "Accept": "*/*",
+                "Accept-Encoding": "identity",
+                "Referer": CG_SITE + "/",
+              },
+              redirect: "follow",
+            });
+          } catch (e) {
+            return json({ ok: false, error: String((e && e.message) || e) }, h, 502);
+          }
+          if (!r.ok) return json({ ok: false, error: "upstream " + r.status }, h, r.status);
+
+          if (isPlaylist) {
+            const txt = await r.text();
+            const mk = function (u) {
+              let abs;
+              try { abs = new URL(u, target).href; } catch (e) { return u; }
+              return origin + "/api/cg/media?u=" + encodeURIComponent(abs);
+            };
+            const out = txt.split("\n").map(function (line) {
+              const t = line.trim();
+              if (!t) return line;
+              if (t.charAt(0) === "#") {
+                if (t.indexOf("#EXT-X-KEY:") === 0 || t.indexOf("#EXT-X-MAP:") === 0) {
+                  return t.replace(/URI="([^"]+)"/g, function (_m, u) {
+                    return 'URI="' + mk(u) + '"';
+                  });
+                }
+                return line;
+              }
+              return mk(t);
+            }).join("\n");
+            return new Response(out, {
+              status: 200,
+              headers: {
+                "Content-Type": "application/vnd.apple.mpegurl",
+                "Cache-Control": "private, no-store",
+                "Access-Control-Allow-Origin": "*",
+              },
+            });
+          }
+
+          // 分片 / AES key: 流式转发
+          const nh2 = { ...h, "Cache-Control": "private, no-store" };
+          nh2["Content-Type"] = r.headers.get("Content-Type") || "application/octet-stream";
+          for (const k of ["Content-Length", "Content-Range", "Accept-Ranges", "ETag"]) {
+            const v = r.headers.get(k);
+            if (v) nh2[k] = v;
+          }
+          nh2["Accept-Ranges"] = "bytes";
+          nh2["Access-Control-Expose-Headers"] = "Content-Length,Content-Range,Accept-Ranges";
+          return new Response(r.body, { status: r.status, headers: nh2 });
+        }
+
+        // ★ 锚点收尾: /api/health 用第三种等价写法放回 (mirrorOk)。
+        //   src 原始 = ok, 黄果补丁产出 = healthOk, 这里 = mirrorOk ——
+        //   每一层都不再匹配上一层的 old, 于是补丁可以重复执行而不会重复插入。
+        if (path === "/api/health") {
+          const mirrorOk = await detectMirror();
+          return json({ ok: !!mirrorOk, mirror: mirrorOk, mirrors: MIRRORS, cached: !!ACTIVE_MIRROR }, h);
+        }
+
+
+
 
         if (path === "/api/selfcheck") {
           let rep = LAST_SELFCHECK;
@@ -1086,7 +2297,7 @@ export default {
           let ref = MIRRORS[0] + "/";
           if (/mgmg10\.com/i.test(target)) ref = "https://mgmg10.com/";
           else if (/zen-vip\.com|hddj/i.test(target)) ref = "https://hddj30.cc/";
-          else if (/wrjmtnebd|fyxybiblx|tktjpm|wirqed|vchllzwu|gkudvxhjh|ngfxaxnp/i.test(target)) ref = (LEARNED_MIRROR || MIRRORS[0]) + "/";
+          else if (/wrjmtnebd|fyxybiblx|tktjpm|wirqed|vchllzwu|gkudvxhjh|ngfxaxnp|bg40t53p|hn18a20s|tc41p53k|wy60j19s|huangguoju/i.test(target)) ref = (LEARNED_MIRROR || MIRRORS[0]) + "/";
           // EROSHORT: 流地址来自 eroshort.net 或其 R2 桶, 上游对热链敏感,
           // 不带原站 Referer 容易被拦; R2 桶本身不校验, 补上也无害。
           else if (/eroshort\.net/i.test(target)) ref = "https://eroshort.net/";
@@ -1725,18 +2936,48 @@ export default {
             const raw = q.get("u") || "";
             let target = raw ? decodeURIComponent(raw) : "";
             if (!/^https?:\/\//i.test(target)) {
-              target = (HD_MEDIA_HOSTS[0] || "https://hddj.zen-vip.com") + (target[0] === "/" ? target : "/" + target);
+              // 相对地址: 优先用调用方指定的线路 (&h= 或 &line=), 否则用第一条
+              let host = HD_MEDIA_HOSTS[0] || "https://hddj.zen-vip.com";
+              const want = (q.get("h") || q.get("line") || "").trim();
+              if (want) {
+                const hit = HD_MEDIA_HOSTS.filter(function (x) { return x.indexOf(want) >= 0; })[0];
+                if (hit) host = hit;
+              }
+              target = host + (target[0] === "/" ? target : "/" + target);
             }
+
+            /* ★ 关键修复 (2026-10-16)
+             * 旧代码**不转发**浏览器的 Range 头 → 上游回 200 + 整个文件 (实测单集 100 MB+),
+             * 播放器要的是 206 Partial Content, 于是: 不能拖进度 / 卡住 / 直接播不出来。
+             * 而同一个文件里 /proxy/* 是转发 Range 的 —— 两条路径行为不一致, 这就是
+             * "黄豆模块挂上代理之后视频无法正常播放"的根因。
+             * 现在两边行为对齐。
+             */
+            const fwd = {
+              "User-Agent": UA,
+              "Referer": "https://hddj30.cc/",
+              "Accept": "*/*",
+              "Accept-Encoding": "identity",   // 别让上游压视频, 会让 Content-Length 对不上
+            };
+            const rng = request.headers.get("Range");
+            if (rng) fwd["Range"] = rng;
+            const ifR = request.headers.get("If-Range");
+            if (ifR) fwd["If-Range"] = ifR;
+
             try {
-              const r = await fetch(target, {
-                headers: { "User-Agent": UA, "Referer": "https://hddj30.cc/", "Accept": "*/*" },
-              });
-              const nh = { ...h, "Content-Type": r.headers.get("Content-Type") || "video/mp4" };
-              for (const k of ["Content-Range", "Content-Length", "Accept-Ranges", "ETag", "Last-Modified"]) {
+              const r = await fetch(target, { headers: fwd });
+              const nh = { ...h };
+              nh["Content-Type"] = r.headers.get("Content-Type") || "video/mp4";
+              for (const k of ["Content-Range", "Content-Length", "Accept-Ranges",
+                               "ETag", "Last-Modified", "Content-Disposition"]) {
                 const v = r.headers.get(k);
                 if (v) nh[k] = v;
               }
-              nh["Cache-Control"] = "public, max-age=3600";
+              if (!nh["Accept-Ranges"]) nh["Accept-Ranges"] = "bytes";
+              // ticket 两小时就过期, 且每集都换 —— 绝不能长缓存
+              nh["Cache-Control"] = "private, no-store";
+              nh["Access-Control-Expose-Headers"] = "Content-Length,Content-Range,Accept-Ranges";
+              // 206/416 要原样透出, 播放器靠它判断能不能 seek
               return new Response(r.body, { status: r.status, headers: nh });
             } catch (e) {
               return json({ ok: false, error: String((e && e.message) || e) }, h, 502);

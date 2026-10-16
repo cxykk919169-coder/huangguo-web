@@ -49,7 +49,8 @@ jobs:
           set -e
           mkdir -p _site
           # 前端文件 (白名单, 避免源码泄露)
-          for f in index.html hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
+          # ★ hg-brands.js 是新增的多品牌模块, 漏掉它就 404
+          for f in index.html hg-brands.js hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
             if [ -f "$f" ]; then
               cp "$f" _site/
               echo "  + $f"
@@ -141,7 +142,7 @@ jobs:
           BUILD=$(grep -o 'hg-worker-[0-9a-z.-]*' worker.js | head -1)
           echo "本次构建标记: $BUILD"
           mkdir -p _assets
-          for f in index.html hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
+          for f in index.html hg-brands.js hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
             [ -f "$f" ] && cp "$f" _assets/
           done
           if [ -d "data" ]; then
@@ -204,6 +205,9 @@ jobs:
             printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
             printf '%s\n' ''
             printf '%s\n' '/index.html'
+            printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
+            printf '%s\n' ''
+            printf '%s\n' '/hg-brands.js'
             printf '%s\n' '  Cache-Control: no-store, no-cache, must-revalidate, max-age=0'
             printf '%s\n' ''
             printf '%s\n' '/hg-direct.js'
@@ -362,6 +366,20 @@ jobs:
           check 200 /api/list
           check 404 /worker.js
 
+          echo ""
+          echo "--- 黄果官方 API ---"
+          check 200 "/api/hg/list?page=1"
+          check 200 "/api/hg/search?q=%E7%9B%91%E7%8B%B1"
+          check 200 "/api/hg/detail?id=8726"
+          check 200 "/api/hg/ep?id=8726&ep=1"
+
+          echo ""
+          echo "--- 橙果短剧 (加密信封接口) ---"
+          check 200 "/api/cg/channels"
+          check 200 "/api/cg/list?page=1"
+          check 200 "/api/cg/detail?id=214"
+          check 200 "/api/cg/ep?id=214&ep=1"
+
           #
           # 封面链路自检 (外部 python 脚本, 避免 YAML 缩进地狱)
           #
@@ -426,6 +444,7 @@ jobs:
           fi
 
           echo "--- 前端资源 ---"
+          check 200 /hg-brands.js
           check 200 /hg-hd.js
           check 200 /hg-es.js
           check 200 /hg-stego.js
