@@ -608,7 +608,8 @@ const UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Geck
   /* ---------------- 出网 ---------------- */
 
   // strictJsonBody=true 时走明文 JSON (上游 /episodes/{n} 就是这个模式)
-  async function cgPost(path, params, useJsonBody) {
+  // ★ 这是"单次尝试"版本; 对外的入口是下面的 cgPost 重试包装。
+  async function cgPostOnce(path, params, useJsonBody) {
     let body, ctype;
     if (useJsonBody) {
       body = JSON.stringify(params || {});
@@ -658,6 +659,61 @@ const UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Geck
                code: d.error && d.error.code, http: r.status };
     }
     return { ok: true, data: d.data === undefined ? d : d.data, raw: d, http: r.status };
+  }
+
+  /* ---------------- 出网重试包装 (有界) ----------------
+   * ★ 为什么必须加:
+   *   2026-10-17 实测 —— 3 路并发打 /api/cg/detail 与 /api/cg/ep, 上游会直接回
+   *     {"ok":false,"error":"依赖服务暂时不可用"}
+   *   而且**响应极快**: 383ms / 387ms / 400ms / 454ms / 740ms, 远没到 15s 超时。
+   *   这是上游的限流/降级, 不是网络故障; 并发一升失败率就从 1/3 涨到 3/3。
+   *
+   *   原来的 cgPost 一次都不重试 —— 上游一次瞬时拒绝就原样变成用户的 502,
+   *   表现就是"列表能打开、点开播不了"。用户看到的是坏掉, 不是"稍后重试"。
+   *
+   * 纪律 (三条, 缺一不可):
+   *   ① 有界    —— 最多 3 次尝试, 绝不用 while(true) 顶。
+   *   ② 有间隔  —— 200ms / 500ms 基准 + 0~200ms 抖动。抖动是为了避免多路并发
+   *                在同一个时刻一起重试, 变成同步冲击, 把上游打得更死。
+   *   ③ 只对瞬时错误 —— 参数错/字段错/风控这类重试也不会变对, 直接返回。
+   *                无节制重试只会把上游的"临时降级"喂成"持续降级"。
+   */
+  const CG_RETRY_RE = /依赖服务暂时不可用|服务暂时不可用|请稍后|稍后再试|too\s*many|rate.?limit|timeout|timed\s*out|ECONNRESET|socket hang up|network|上游返回非 JSON \(HTTP 5\d\d\)|请求失败/i;
+
+  function cgSleep(ms) {
+    return new Promise(function (res) { setTimeout(res, ms); });
+  }
+
+  async function cgPost(path, params, useJsonBody) {
+    const CG_MAX_TRIES = 3;
+    const CG_BUDGET_MS = 25000;     // 总预算: 单次超时已达 15s, 不允许无限叠加
+    const t0 = Date.now();
+    let last = null;
+    let used = 0;
+
+    for (let attempt = 1; attempt <= CG_MAX_TRIES; attempt++) {
+      used = attempt;
+      const r = await cgPostOnce(path, params, useJsonBody);
+      if (r && r.ok) {
+        if (attempt > 1) r.retried = attempt - 1;   // 供观测: 这次是重试救回来的
+        return r;
+      }
+      last = r;
+
+      const transient = CG_RETRY_RE.test(String((r && r.error) || ""));
+      if (!transient) break;                        // 非瞬时 → 重试无意义
+      if (attempt >= CG_MAX_TRIES) break;           // 有界
+      if (Date.now() - t0 > CG_BUDGET_MS) break;    // 预算保护
+
+      const base = attempt === 1 ? 200 : 500;
+      await cgSleep(base + Math.floor(Math.random() * 200));
+    }
+
+    if (last && last.ok !== true) {
+      last.attempts = used;                         // 供观测: 究竟试了几次
+      last.elapsedMs = Date.now() - t0;
+    }
+    return last;
   }
 
   /* ---------------- 统一卡片 ---------------- */
@@ -1472,7 +1528,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-17-v15-abs-media-worker-hd";
+const BUILD_ID = "hg-worker-2026-10-17-v16-cg-retry";
 
 export default {
   async fetch(request, env, ctx) {
@@ -1920,7 +1976,7 @@ export default {
         // 首页聚合
         if (path === "/api/cg/home") {
           const r = await cgPost("/api/v1/home", {}, false);
-          if (!r.ok) return json({ ok: false, error: r.error }, h, 502);
+          if (!r.ok) return json({ ok: false, error: r.error, attempts: r.attempts || 1 }, h, 502);
           const d = r.data || {};
           const hot = (d.hot && d.hot.items) || d.hot || [];
           const secs = [];
@@ -1955,7 +2011,7 @@ export default {
             path2 = "/api/v1/dramas?page=" + page;
           }
           const r = await cgPost(path2, {}, false);
-          if (!r.ok) return json({ items: [], total: 0, error: r.error }, h, 502);
+          if (!r.ok) return json({ items: [], total: 0, error: r.error, attempts: r.attempts || 1 }, h, 502);
           const d = r.data || {};
           const items = cgList(d).map(cgCard);
           const pg = d.pagination || {};
@@ -1978,7 +2034,7 @@ export default {
           const key = /^\d+$/.test(id) ? id : (/^[a-z0-9_-]{1,40}$/i.test(slug) ? slug : "");
           if (!key) return json({ ok: false, error: "bad id/slug" }, h, 400);
           const r = await cgPost("/api/v1/dramas/" + encodeURIComponent(key), {}, false);
-          if (!r.ok) return json({ ok: false, error: r.error }, h, 502);
+          if (!r.ok) return json({ ok: false, error: r.error, attempts: r.attempts || 1 }, h, 502);
           const d = r.data || {};
           const eps = d.episodes || [];
           const epsMap = {};
@@ -2027,7 +2083,7 @@ export default {
           if (!/^\d+$/.test(id)) return json({ ok: false, error: "bad id" }, h, 400);
           if (!/^\d+$/.test(ep)) return json({ ok: false, error: "bad ep" }, h, 400);
           const r = await cgPost("/api/v1/dramas/" + id + "/episodes/" + ep, {}, true);
-          if (!r.ok) return json({ ok: false, url: "", error: r.error }, h, 502);
+          if (!r.ok) return json({ ok: false, url: "", error: r.error, attempts: r.attempts || 1 }, h, 502);
           const d = r.data || {};
           const media = d.media || {};
           const src = media.source_url || media.url || "";
@@ -2066,7 +2122,7 @@ export default {
           const page = Math.max(1, parseInt(q.get("page") || "1", 10) || 1);
           if (!kw) return json({ items: [], total: 0 }, h);
           const r = await cgPost("/api/v1/search?q=" + encodeURIComponent(kw) + "&page=" + page, {}, false);
-          if (!r.ok) return json({ items: [], total: 0, error: r.error }, h, 502);
+          if (!r.ok) return json({ items: [], total: 0, error: r.error, attempts: r.attempts || 1 }, h, 502);
           const d = r.data || {};
           const items = cgList(d).map(cgCard);
           return json({
@@ -2082,7 +2138,7 @@ export default {
         if (path === "/api/cg/feed") {
           const cur = q.get("cursor") || "";
           const r = await cgPost("/api/v1/feed?cursor=" + encodeURIComponent(cur), {}, false);
-          if (!r.ok) return json({ items: [], error: r.error }, h, 502);
+          if (!r.ok) return json({ items: [], error: r.error, attempts: r.attempts || 1 }, h, 502);
           const d = r.data || {};
           const pg = d.pagination || {};
           return json({
