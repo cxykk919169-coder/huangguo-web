@@ -113,20 +113,20 @@
    "slug": "少妇"
   },
   {
-   "code": "completed",
-   "color": "#6366f1",
-   "count": 2,
-   "group": "display_status",
-   "name": "已完结",
-   "slug": "completed"
-  },
-  {
    "code": "ongoing",
    "color": "#6366f1",
-   "count": 5,
+   "count": 4,
    "group": "display_status",
    "name": "更新中",
    "slug": "ongoing"
+  },
+  {
+   "code": "completed",
+   "color": "#6366f1",
+   "count": 3,
+   "group": "display_status",
+   "name": "已完结",
+   "slug": "completed"
   }
  ],
  "items": [
@@ -346,7 +346,7 @@
    "createdAt": "2026-09-18T07:14:22.361662Z",
    "desc": "",
    "ep": "15",
-   "epCount": 18,
+   "epCount": 19,
    "epLabel": "更新至15集 / 共30集",
    "epTotal": "30",
    "id": "01a0b35d-c619-7281-8c66-9404cf90a97c",
@@ -389,7 +389,7 @@
   {
    "cover": "https://pub-ee9ae600699a4a2da06d78a810b73f4d.r2.dev/short_video/2026-09/20/75ae4d45-93cf-4ba5-8d62-7704f1b96400.png",
    "desc": "",
-   "epCount": 20,
+   "epCount": 21,
    "id": "01a0be0b-2fa8-7951-acec-c832d06e23be",
    "status": "published",
    "tags": [
@@ -425,7 +425,7 @@
   {
    "cover": "https://pub-ee9ae600699a4a2da06d78a810b73f4d.r2.dev/short_video/2026-09/20/555e504d-12d2-4d5e-9237-a19f074b3826.png",
    "desc": "",
-   "epCount": 14,
+   "epCount": 15,
    "id": "01a0b9dd-1f11-7bd1-9f09-128e7da2a718",
    "status": "published",
    "tags": [
@@ -459,7 +459,7 @@
   {
    "cover": "https://pub-ee9ae600699a4a2da06d78a810b73f4d.r2.dev/short_video/2026-09/11/96b3a09c-faf9-4838-a0c4-aad089a38361.jpg",
    "desc": "",
-   "epCount": 34,
+   "epCount": 35,
    "id": "01a09053-10dd-72e2-89e7-7764507dcc8b",
    "status": "published",
    "tags": [
