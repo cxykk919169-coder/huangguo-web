@@ -1702,7 +1702,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-18-v17-xd-my-brands";
+const BUILD_ID = "hg-worker-2026-10-18-v18-probe-ssrf-guard";
 
 export default {
   async fetch(request, env, ctx) {
@@ -1827,6 +1827,22 @@ export default {
         if (path === "/api/brand/probe") {
           const u = q.get("u") || "";
           if (!/^https?:\/\//i.test(u)) return json({ ok: false, error: "bad url" }, h, 400);
+          // ★ SSRF 防线 (2026-10-18 补): 这个端点会替调用者出网抓任意 URL,
+          //   必须挡住内网 / 回环 / 云元数据 / 保留段。Cloudflare 出口本身对这些
+          //   会回 403/530 (已实测 127.0.0.1 / 169.254.169.254 / 10.x / [::1] /
+          //   metadata.google.internal 全部拿不到数据), 但那是**边缘的副作用**,
+          //   不是本端点的保证 —— 不依赖它, 这里做第二道闸。
+          //   注意: 只查**入参主机**, 不改 redirect: follow —— 品牌落地页本来就会
+          //   跳到 CloudFront 之类, 跳转目标由 Cloudflare 自己管。
+          let pu = null;
+          try { pu = new URL(u); } catch (e) { return json({ ok: false, error: "bad url" }, h, 400); }
+          if (pu.protocol !== "http:" && pu.protocol !== "https:") {
+            return json({ ok: false, error: "bad scheme" }, h, 400);
+          }
+          const phost = String(pu.hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+          if (/^(?:localhost$|.*\.local$|.*\.internal$|metadata\.google\.internal$|0\.0\.0\.0$|127\.|10\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.|100\.(?:6[4-9]|[7-9]\d|1[0-2]\d)\.|::1$|f[cd][0-9a-f]{2}:|fe80:)/.test(phost)) {
+            return json({ ok: false, error: "host not allowed: " + phost }, h, 403);
+          }
           try {
             const ctl = new AbortController();
             const timer = setTimeout(() => ctl.abort(), 12000);
@@ -1841,7 +1857,8 @@ export default {
               signal: ctl.signal,
             });
             clearTimeout(timer);
-            const body = await r.text();
+            // 只取头部 1MB —— 落地页配置与标题都在前面, 防止大响应打爆 Worker 内存
+            const body = (await r.text()).slice(0, 1000000);
             const cfg = extractLandingConfig(body);
             let finalHost = "";
             try { finalHost = new URL(r.url).host; } catch (e) { /* ignore */ }
@@ -1867,7 +1884,7 @@ export default {
                   signal: c2.signal,
                 });
                 clearTimeout(t2);
-                const t = await r2.text();
+                const t = (await r2.text()).slice(0, 200000);
                 let jj = null;
                 try { jj = JSON.parse(t); } catch (e) { /* 不是 JSON */ }
                 out.api = {

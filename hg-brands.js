@@ -80,8 +80,10 @@
       key: 'b2048', name: '2048成人短剧', short: '2048', color: '#38bdf8',
       kind: 'landing',
       desc: '官方入口 · 内容在 APP 内',
-      // 2026-10-18: 用户情报补上。2048ai.vip 只是个 SEO 跳板页 (3222B,
-      // canonical / og:url 都指向自己的 madouai.xyz), 真官方源是 madouai.xyz。
+      // 2026-10-18: 用户情报补上。实测 madouai.xyz 与 2048ai.vip 返回**逐字节相同**
+      // 的落地页 (2472 字符, 同一 sha256), canonical / og:url 都指向
+      // https://madouai.xyz/media/ —— 所以 2048ai.vip 是 madouai.xyz 的镜像,
+      // 真正的主入口是 madouai.xyz。真实品牌名是「麻豆传媒AI」。
       // 两个都登记, madouai.xyz 放前面优先。
       landings: ['https://madouai.xyz', 'https://2048ai.vip'],
       apiHosts: ['2048dj.zen-vip.com', 'dj2048.zen-vip.com'],
