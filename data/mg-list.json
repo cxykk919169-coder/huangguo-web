@@ -144,6 +144,17 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8def/cover.jpg",
+   "ep": "9",
+   "epLabel": "更新至9集",
+   "id": "6a9ffae47c68f1b88c2a8def",
+   "title": "从一根烟到七个人挤在大床上",
+   "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8df5/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
@@ -203,17 +214,6 @@
    "epLabel": "更新至8集",
    "id": "6aa0029b7c68f1b88c2a8e49",
    "title": "拼逼逼",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909101007/6aa0bfff7c68f1b88c2a8eac/cover.jpg",
-   "ep": "34",
-   "epLabel": "更新至34集",
-   "id": "6aa0bfff7c68f1b88c2a8eac",
-   "title": "弱点",
    "updating": true
   },
   {
@@ -2463,8 +2463,8 @@
   },
   {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261016153746/6ad1d44aca57c75f779cb9d4/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
+   "ep": "3",
+   "epLabel": "更新至3集",
    "id": "6ad1d44aca57c75f779cb9d4",
    "title": "选修课",
    "updating": true
