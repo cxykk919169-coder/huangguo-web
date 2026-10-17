@@ -79,27 +79,52 @@
     return '';
   }
 
-  /** 带线路切换的 GET —— Worker 优先, 失败回落直连 */
-  function apiGet(path, timeoutMs) {
-    var wb = workerBase(), wp = wb ? workerPath(path) : '';
-    if (wb && wp) {
-      var wctl = ('AbortController' in root) ? new root.AbortController() : null;
-      var wtimer = setTimeout(function () { if (wctl) wctl.abort(); }, timeoutMs || 9000);
-      var wopts = { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'omit' };
-      if (wctl) wopts.signal = wctl.signal;
-      return fetch(wb + '/api/hd' + wp, wopts).then(function (r) {
-        clearTimeout(wtimer);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      }).then(function (j) {
-        if (!j || j.ok !== true) throw new Error((j && j.message) || '返回异常');
-        return j;
-      }).catch(function () {
-        clearTimeout(wtimer);
-        return apiDirect(path, timeoutMs);      // Worker 不可用 → 回落直连
+  /** 带线路切换的 GET —— Worker 优先, 失败回落直连
+   *  ★ v20: 增加 retry 参数。黄豆上游 /playback 与 /play 有约 1/10 的
+   *     瞬时 502 抖动, 单次失败就直接报错会让用户看到"上游链接错误"。
+   *     retry=2 时同一路径最多尝试 3 次 (0/300/800ms)。
+   *     只对网络/HTTP 层重试; 业务应答 (ok:false) 不重试。 */
+  function apiGet(path, timeoutMs, retry) {
+    var tries = (retry === undefined ? 0 : retry) + 1;
+
+    function once() {
+      var wb = workerBase(), wp = wb ? workerPath(path) : '';
+      if (wb && wp) {
+        var wctl = ('AbortController' in root) ? new root.AbortController() : null;
+        var wtimer = setTimeout(function () { if (wctl) wctl.abort(); }, timeoutMs || 9000);
+        var wopts = { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'omit' };
+        if (wctl) wopts.signal = wctl.signal;
+        return fetch(wb + '/api/hd' + wp, wopts).then(function (r) {
+          clearTimeout(wtimer);
+          if (!r.ok) {
+            var err = new Error('HTTP ' + r.status);
+            err.transient = (r.status >= 500 || r.status === 429 || r.status === 408);
+            throw err;
+          }
+          return r.json();
+        }).then(function (j) {
+          if (!j || j.ok !== true) throw new Error((j && j.message) || '返回异常');
+          return j;
+        }).catch(function (e) {
+          clearTimeout(wtimer);
+          // 瞬时错误先重试, 重试用尽再回落直连 (原有逻辑完全保留在 apiDirect 里)
+          if (e && e.transient && tries > 1) throw e;
+          return apiDirect(path, timeoutMs);
+        });
+      }
+      return apiDirect(path, timeoutMs);
+    }
+
+    function loop(n, lastErr) {
+      return once().catch(function (e) {
+        if (n > 1 && e && e.transient) {
+          return new Promise(function (res) { setTimeout(res, 300 * (tries - n + 1)); })
+            .then(function () { return loop(n - 1, e); });
+        }
+        throw e;
       });
     }
-    return apiDirect(path, timeoutMs);
+    return loop(tries, null);
   }
 
   /** 直连上游 (原有逻辑, 一字未改) */
@@ -258,7 +283,8 @@
    * @returns {Promise<{episodeId,lockKind,coinCost,fullPlayable,title,cover}>}
    */
   function episode(videoId, seq) {
-    return apiGet('/playback?videoId=' + encodeURIComponent(videoId) + '&seq=' + encodeURIComponent(seq))
+    // v20: 带 2 次重试 —— 上游 /playback 有瞬时 502 抖动
+    return apiGet('/playback?videoId=' + encodeURIComponent(videoId) + '&seq=' + encodeURIComponent(seq), 9000, 2)
       .then(function (j) {
         var it = j.item;
         if (!it || !it.episodeId) throw new Error('该集未找到');
@@ -271,7 +297,8 @@
    * @returns {Promise<{playUrl,lines:[{id,label,url}]}>}
    */
   function play(episodeId) {
-    return apiGet('/play?episodeId=' + encodeURIComponent(episodeId)).then(function (j) {
+    // v20: 同样带 2 次重试
+    return apiGet('/play?episodeId=' + encodeURIComponent(episodeId), 12000, 2).then(function (j) {
       var raw = j.playbackLines || [];
       var lines = raw.filter(function (L) { return L && L.playUrl; }).map(function (L) {
         return { id: L.id || 'default', label: L.label || '线路', url: abs(L.playUrl) };

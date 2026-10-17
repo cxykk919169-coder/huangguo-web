@@ -1455,9 +1455,64 @@ function hgApi(path, params) {
 
 
 
+/* ---------------- 黄豆魔改 目录快照 (前端缓存) ----------------
+ * Worker 的 /api/hd2/catalog 是整份真实目录 (10 频道 / 2 楼层 / 117 部),
+ * 一次取回, 之后按频道在前端本地过滤 —— 省请求, 也不会因为上游抖动闪空。
+ * 缓存 10 分钟; 取失败返回 null, 由调用方决定降级。
+ */
+let HD_CAT = null, HD_CAT_P = null, HD_CAT_AT = 0;
+function hdCatalog(base) {
+  if (HD_CAT && (Date.now() - HD_CAT_AT) < 600000) return Promise.resolve(HD_CAT);
+  if (HD_CAT_P) return HD_CAT_P;
+  HD_CAT_P = fetch(base + '/api/hd2/catalog')
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j || !j.ok || !Array.isArray(j.items)) throw new Error('catalog 不可用');
+      HD_CAT = j; HD_CAT_AT = Date.now();
+      return j;
+    })
+    .catch(function () { return null; })
+    .then(function (v) { HD_CAT_P = null; return v; });
+  return HD_CAT_P;
+}
+
+/* 按频道把目录切成列表。cat 空 / 'all' / '全部' 时返回全集。
+ * 目录里的 c 字段是**分类名**(如「黄豆原创」), 频道表里叫 name —— 按名字对齐。 */
+function hdCatalogMap(cat, catCode) {
+  if (!cat) return [];
+  const items = cat.items || [];
+  const key = String(catCode || '').trim();
+  if (!key || key === 'all' || key === '全部') return items;
+  const ch = (cat.channels || []).filter(function (c) {
+    return c.code === key || c.name === key;
+  })[0];
+  const name = ch ? ch.name : key;
+  const hit = items.filter(function (it) { return it.c === name; });
+  return hit.length ? hit : items;      // 该分类暂无数据时退回全集, 不给空白页
+}
+
 function  hdApi(path, params) {
   if (typeof HDHd === 'undefined') return Promise.reject(new Error('黄豆短剧模块未加载'));
   const p = params || {};
+
+  // ---- 黄豆魔改 (hdmgdj) 目录快照 ----
+  //   上游 hddj32/hddj36 那套 /api/app 已死; 现行上游是 Flutter 应用 hdmgdj,
+  //   走签名 + AES-CBC 的私有协议, 且服务端对第三方来源返回 2001。
+  //   这里改用已解密的真实目录快照 (10 频道 / 117 部, 来自 /api/hd2/catalog),
+  //   保证列表与分类始终有真实内容可看。
+  //   注意: 播放地址不在这份数据里 —— 那需要上游 /drama/play 下发。
+  if (WORKER_OK !== false && API && (path === '/api/list' || path === '/api/categories'
+      || path === '/api/hd2/catalog' || path === '/api/hd2/nav' || path === '/api/hd2/list')) {
+    const t = p && p.cat;
+    return hdCatalog(API).then(cat => {
+      if (!cat) throw new Error('目录快照不可用');
+      const items = hdCatalogMap(cat, t);
+      if (path === '/api/categories') {
+        return cat.channels.map(c => ({ slug: c.code, name: c.name }));
+      }
+      return { items: items, total: items.length, from: 'hdmgdj-catalog' };
+    });
+  }
 
   // Worker 代理优先 (已验证 WORKER_OK===false 时跳过)
   if (WORKER_OK !== false && API) {
@@ -3253,7 +3308,35 @@ async function hdLoadEp(vid, ep, first, T) {
   if (box) { box.style.display = 'block'; box.innerHTML = '<span class="spin"></span>正在解析第 ' + ep + ' 集播放地址…'; }
 
   try {
-    const r = await HDHd.playEp(vid, ep);
+    /* ★ v20: 播放链取数带重试。
+     *   实测 (2026-10-17): /api/hd/ep 约每 10 次有 1 次 502,
+     *   同一刻再请求就 200 —— 是上游边缘抖动, 不是剧集不存在。
+     *   旧代码一次失败就把 "⚠ 上游返回 502" 摆到用户脸上,
+     *   于是表现成"黄豆一直显示上游链接错误, 无法获取播放源"。
+     *   现在: 最多 3 次 (间隔 0/400/900ms), 只有全失败才报错,
+     *   而且报的是**真实原因**, 不再统一含糊成"解析失败"。 */
+    let r = null, lastErr = null;
+    const waits = [0, 400, 900];
+    for (let i = 0; i < waits.length; i++) {
+      if (waits[i]) {
+        if (box) box.innerHTML = '<span class="spin"></span>第 ' + ep + ' 集线路抖动，重试中（' + (i + 1) + '/' + waits.length + '）…';
+        await new Promise(res => setTimeout(res, waits[i]));
+        if (stale(tok)) return;
+      }
+      try {
+        // ★ 走 Worker 的真实协议取源; 只有 Worker 整条不可达才退回本地旧模块
+        //   (旧模块打的是已死的 /api/app, 退它只是"别白屏", 不是等价方案)
+        try { r = await hdPlay2(vid, ep); }
+        catch (e2) { if (!e2 || !e2.fallback) throw e2; r = await HDHd.playEp(vid, ep); }
+        lastErr = null; break;
+      }
+      catch (e) {
+        lastErr = e;
+        // 付费墙/缺集这类业务结果重试无意义, 立刻退出并把原因交给界面
+        if (e && (e.locked || /未找到|需要解锁|金币|VIP|专享|单独解锁/.test(String(e.message || '')))) break;
+      }
+    }
+    if (!r) throw lastErr || new Error('播放地址获取失败');
     if (stale(tok)) return;                    // 期间已切走
     HD_LINES = r.lines || [];
     HD_LINE_I = 0;
@@ -3274,7 +3357,13 @@ async function hdLoadEp(vid, ep, first, T) {
           '" target="_blank" rel="noopener noreferrer">去官方解锁</a>';
       }
     } else {
-      if (box) { box.style.display = 'block'; box.innerHTML = '⚠ ' + esc(e.message || '解析失败') + '<br><span style="opacity:.7">换个线路试试，或点下方官方线路</span>'; }
+      if (box) {
+        box.style.display = 'block';
+        box.innerHTML = '⚠ ' + esc(e.message || '解析失败') +
+          '<br><span style="opacity:.7">已自动重试 3 次；可换个线路，或稍后点本集再试</span>' +
+          '<br><a class="hdplaybtn" style="margin-top:10px" href="' + esc(HDHd.h5Url(vid)) +
+          '" target="_blank" rel="noopener noreferrer">打开官方线路</a>';
+      }
       // 兜底: 给官方入口
       renderHdLines();
     }
@@ -3303,15 +3392,58 @@ function hdProbeProxy(raw) {
   }
   const u = API + '/api/hd/stream?u=' + encodeURIComponent(raw);
   const ctl = ('AbortController' in window) ? new AbortController() : null;
-  const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 800);
+  // ★ 2026-10-18 实测: 800ms 太短。Worker 要回源、上游还可能慢, 冷启动经常 1.5~4s。
+  //   800ms 会把「能用的代理」判死, 然后退回直连 —— 而直连恰恰是 400 的来源。
+  const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 6000);
   const opts = { method: 'GET', headers: { Range: 'bytes=0-1' } };
   if (ctl) opts.signal = ctl.signal;
   return fetch(u, opts).then(r => {
     clearTimeout(timer);
     // 206/200 才算代理可用; 400/403/5xx 一律判死
     HD_PROXY_OK = (r.status === 200 || r.status === 206);
+    // 用完立刻丢弃 body, 否则会白占一条连接
+    try { if (r.body && r.body.cancel) r.body.cancel(); } catch (e) {}
     return HD_PROXY_OK;
   }).catch(() => { clearTimeout(timer); HD_PROXY_OK = false; return false; });
+}
+
+/* ===================== 黄豆魔改 真实播放源 =====================
+ * Worker /api/hd2/play 走上游真实协议 (匿名设备登录 → 签名 → AES-CBC),
+ * 返回上游签好名的 HLS 清单地址 (约 15 分钟有效, 每次现取)。
+ *
+ * 媒体侧实测 (2026-10-18): 清单放行跨域 (acao 回显来源), 分片 acao:* 且支持 Range,
+ * AES-128 密钥在 CDN 上可直取 —— 所以播放器直连即可, 不必再经 Worker 转发。
+ *
+ * 上游付费墙 (金币 / VIP / 创作者独立解锁) 以业务码返回, 属于对方的商业模式:
+ * 这里如实透出到界面, 不当成"故障"。
+ */
+async function hdPlay2(vid, ep) {
+  if (WORKER_OK === false || !API) {
+    const e = new Error('Worker 不可用');
+    e.fallback = true;
+    throw e;
+  }
+  const url = API + '/api/hd2/play?id=' + encodeURIComponent(vid) + '&seq=' + encodeURIComponent(ep);
+  let j = null;
+  try {
+    const r = await fetch(url, { method: 'GET' });
+    j = await r.json();
+  } catch (e) {
+    const err = new Error('播放接口不可达：' + String((e && e.message) || e));
+    err.fallback = true;
+    throw err;
+  }
+  if (!j || !j.ok) {
+    const err = new Error((j && j.error) || '播放地址获取失败');
+    err.code = j && j.code;
+    if (j && (j.code === 813005 || j.code === 813004 || j.code === 813103)) err.locked = true;
+    throw err;
+  }
+  const d = j.data || {};
+  const lines = (d.lines || []).filter(L => L && L.url)
+    .map(L => ({ name: L.name, label: L.name, url: L.url }));
+  if (!lines.length) throw new Error('上游未返回可用线路');
+  return { lines: lines, playUrl: lines[0].url, duration: d.duration, hlsKey: d.hls_key };
 }
 
 function hdSetSrc(url) {
@@ -3319,16 +3451,42 @@ function hdSetSrc(url) {
   if (!video || !url) return;
   const raw = String(url);
 
-  // 切集时重置探测缓存 (ticket 每集都换, 不能用上一集的结论)
+  // 切集时重置探测缓存 (签名每集都换, 不能用上一集的结论)
   HD_PROXY_OK = null;
-
   video.dataset.hdRaw = raw;
   video.dataset.hdFallback = '';
+  video.onerror = null;
 
+  /* ★ 2026-10-18 起, 黄豆的播放源走的是上游签名的 HLS 清单。
+   *   旧代码把它塞给 /api/hd/stream 代理 (那条上游已死), 而且 Chrome 桌面端
+   *   不会自己解 HLS —— 结果就是「一直转圈」。现在按媒体类型分流:
+   *     · .m3u8 → hls.js 直连 (跨域已放行, 不需要代理)
+   *     · 其它  → 直连 + 一次代理兜底 (保留旧通路, 万一将来又下发 mp4) */
+  if (/\.m3u8(\?|$)/i.test(raw)) {
+    if (!HLS_READY()) {              // Safari / iOS 原生 HLS, 直接给 src 最稳
+      video.src = raw;
+      video.load();
+      try { video.play().catch(() => {}); } catch (e) {}
+      return;
+    }
+    destroyHls();
+    hlsLoad(video, raw, {}).then(res => {
+      const v2 = document.getElementById('pl');
+      if (v2 !== video) return;                    // 用户已切走
+      if (res === 'ok') {
+        try { video.play().catch(() => {}); } catch (e) {}
+      } else {
+        // hls.js 没起来 (少数内核/清单异常) → 退回原生 src, 至少不是死等
+        try { video.src = raw; video.load(); video.play().catch(() => {}); } catch (e) {}
+      }
+    });
+    return;
+  }
+
+  // ---- 非 HLS (mp4 直链) 通路 ----
   const viaW = (API && WORKER_OK !== false)
     ? (API + '/api/hd/stream?u=' + encodeURIComponent(raw)) : '';
 
-  // 双向兜底: 当前是代理就回直连, 当前是直连就回代理。只切一次, 防死循环。
   video.onerror = function () {
     if (video.dataset.hdFallback === '1') return;
     video.dataset.hdFallback = '1';
@@ -3347,24 +3505,24 @@ function hdSetSrc(url) {
     }
   };
 
-  // ★ 起播顺序改成「Worker 代理优先, 直连兜底」。
-  //   旧代码直连优先、要等 8 秒超时才切代理 —— 而上游 hddj.zen-vip.com 在国内
-  //   网络经常根本不可达, 用户看到的就是一直转圈, 甚至直接失败。
-  //   现在先用 800ms 探一下代理通不通: 通就直接代理起播
-  //     · 出网在 Cloudflare 边缘, 不受本地线路影响
-  //     · 访客真实 IP 不会进上游 CDN 日志 (与 README 的 IP 保护声明一致)
-  //   不通才直连, 行为不比旧版差。
   if (!viaW) {
     video.src = raw;
     video.load();
     try { video.play().catch(() => {}); } catch (e) {}
   } else {
+    video.src = viaW;
+    video.load();
+    try { video.play().catch(() => {}); } catch (e) {}
     hdProbeProxy(raw).then(ok => {
       const v2 = document.getElementById('pl');
-      if (v2 !== video) return;                     // 用户已切走
-      video.src = ok ? viaW : raw;
+      if (v2 !== video) return;
+      if (ok) return;
+      if (video.dataset.hdFallback === '1') return;
+      video.dataset.hdFallback = '1';
+      video.src = raw;
       video.load();
       try { video.play().catch(() => {}); } catch (e) {}
+      toast('代理受限，已切直连');
     });
   }
 }
@@ -3413,6 +3571,7 @@ function hdUseLine(i) {
  *   3) 黄豆走 mp4 直链优先, Worker 流代理仅作备选, 400 自动回落。
  */
 let HLS_OBJ = null;                 // 当前 hls.js 实例
+let HLS_LAST_CHANNEL = '';          // 上次成功的通道 ('proxy' | 'direct')
 const HLS_READY = () => (typeof Hls !== 'undefined' && Hls.isSupported());
 
 /**
@@ -3449,20 +3608,27 @@ function playSrc(url, viaWorker) {
 
 /**
  * 用 hls.js 加载一个 m3u8 地址 (单次尝试)。
- * @returns {Promise<'ok'|'fail'>}
+ * @returns {Promise<'ok'|'fail'|'http403'>}
+ *   ★ v20: 把 httpError 的 status 带出来。上游 CDN 对 Worker 回源做
+ *     Origin 防盗链 → 播放列表 403; 而浏览器直连时上游认这个来源,
+ *     所以我们能区分"这次是 403"并跳过无谓的重试, 直接换通道。
  */
 function hlsLoad(video, src, attemptOpts) {
   return new Promise(resolve => {
     const h = new Hls({
       enableWorker: true,
       lowLatencyMode: false,
-      // 分片/清单错误重试, 提高弱网抖动下的成功率
-      manifestLoadingMaxRetry: 3,
-      levelLoadingMaxRetry: 3,
-      fragLoadingMaxRetry: 4,
-      manifestLoadingRetryDelay: 400,
-      fragLoadingRetryDelay: 400,
-      fragLoadingMaxRetryTimeout: 12000,
+      // ★ 2026-10-18 v21: 重试预算收紧。
+      //   旧值 (manifest 3 次 × 400ms, frag 4 次 × 最长 12s) + 8s 兜底超时,
+      //   在「上游 522 / 连不上」时会让用户盯着转圈快 60 秒。
+      //   上游真挂了, 多试几次不会变好; 快速失败换通道才是对的。
+      manifestLoadingMaxRetry: 1,
+      levelLoadingMaxRetry: 1,
+      fragLoadingMaxRetry: 2,
+      manifestLoadingRetryDelay: 300,
+      fragLoadingRetryDelay: 300,
+      manifestLoadingMaxRetryTimeout: 4000,
+      fragLoadingMaxRetryTimeout: 6000,
     });
 
     let settled = false;
@@ -3474,7 +3640,8 @@ function hlsLoad(video, src, attemptOpts) {
       if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
         try { h.recoverMediaError(); return; } catch (e) {}
       }
-      // 网络类致命错误 → 本次尝试判失败, 交给外层决定是否换 Worker 代理重试
+      // 网络类致命错误 → 本次尝试判失败, 交给外层决定是否换通道重试
+      if (data.response && data.response.code === 403) { done('http403'); return; }
       done('fail');
     });
 
@@ -3485,8 +3652,9 @@ function hlsLoad(video, src, attemptOpts) {
     } catch (e) {
       done('fail');
     }
-    // 超时兜底: 8 秒还没 parsed 视为失败, 不阻塞 UI
-    setTimeout(() => done('fail'), 8000);
+    // 超时兜底: 5 秒还没 parsed 视为失败, 不阻塞 UI
+    // (v21: 8s → 5s。清单只是几百字节的文本, 5 秒还没到就是真的到不了。)
+    setTimeout(() => done('fail'), 5000);
   });
 }
 
@@ -3564,15 +3732,50 @@ async function setVideoSrc(video, url, opts) {
     return;
   }
 
-  // ---- 有 hls.js: 先直连, 失败再走 Worker 代理 ----
-  let r = await hlsLoad(video, alreadyProxied ? raw : direct);
-  if (r === 'ok') return;
+  /* ---- 通道回退顺序 (v20) ----
+   *
+   * 【为什么改成「直连优先」】
+   *   2026-10-17 实测: 上游 CDN (yd-hls.hzjvlo.cn, 网宿/EO) 对播放列表做
+   *   **Origin 防盗链**。逐个变量隔离后：
+   *
+   *     同一份 m3u8, 只改 Origin 头 →
+   *       Origin: huangguoai.com       → 200   (自家域放行)
+   *       Origin: 本站 pages 域名       → 403   ← 浏览器直连会带这个!
+   *       Origin: workers.dev          → 403
+   *       Origin: 任意域                → 403
+   *       不带 Origin / Origin: null    → 200   ← 服务器端(CORS 关闭)才能过
+   *
+   *   Worker 现在已经在回源时把 Origin 摘掉了 (见 worker.js 的 hgFetchNoOrigin),
+   *   所以 **Worker 通道是通的**; 而浏览器直连一定带 Origin, 反而会被 403。
+   *
+   *   所以正确顺序是: **Worker 代理优先 → 直连兜底**。
+   *   (v14 那版写的是"直连优先、失败再走 Worker", 在防盗链开启后必然先撞 403。)
+   *   同时保留双向: Worker 万一整段不可用 (workers.dev 被墙), 直连还有机会。
+   */
+  const viaW = playSrc(raw, true);
+  const tryOrder = [];
+  if (alreadyProxied) {
+    tryOrder.push({ url: raw, tag: 'proxy' });
+    if (direct && direct !== raw) tryOrder.push({ url: direct, tag: 'direct' });
+  } else {
+    if (viaW && viaW !== direct) tryOrder.push({ url: viaW, tag: 'proxy' });
+    tryOrder.push({ url: direct, tag: 'direct' });
+  }
 
-  const viaW = playSrc(raw, true);       // Worker 代理地址
-  if (viaW && viaW !== direct) {
-    destroyHls();
-    r = await hlsLoad(video, viaW);
-    if (r === 'ok') { toast('已切换代理线路'); return; }
+  let lastTag = '';
+  for (const ch of tryOrder) {
+    if (!ch.url) continue;
+    if (lastTag) { destroyHls(); await new Promise(r => setTimeout(r, 120)); }
+    const rr = await hlsLoad(video, ch.url);
+    if (rr === 'ok') {
+      // 记住这次成功的通道, 下次切集时优先复用它 (省掉一次失败往返)
+      try { HLS_LAST_CHANNEL = ch.tag; } catch (e) {}
+      if (ch.tag === 'direct' && tryOrder[0] && tryOrder[0].tag === 'proxy') {
+        toast('代理线路受限，已切换直连');
+      }
+      return;
+    }
+    lastTag = ch.tag;
   }
 
   if (typeof opts.onFatal === 'function') opts.onFatal();
