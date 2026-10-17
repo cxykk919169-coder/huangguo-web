@@ -181,9 +181,16 @@ const BAD_MIRROR_TTL = 90 * 1000;
 let LEARNED_MIRROR = null;
 
 // 黄豆短剧 (hddj) API 线路 — 可从 /distribution 动态刷新
-let HD_API_LINES = ["https://hddj.zen-vip.com/api/app"];
+// ★ v20: 上游会下发多条 apiLines, 这里预置主域 + 高可用镜像,
+//   任何一条晃的时候还有得换 (原来只有一条, 抖一下就整段 502)。
+let HD_API_LINES = [
+  "https://hddj.zen-vip.com/api/app",
+  "https://hddj2222.com/api/app",
+];
 let HD_BAD = {};
-const HD_BAD_TTL = 90 * 1000;
+// ★ v20: 90s → 20s。原来 90 秒的冷却把一个 200ms 的抖动放大成
+//   一分半钟的"上游链接错误"。短冷却 + 软跳过(仍会试一次)更稳。
+const HD_BAD_TTL = 20 * 1000;
 // 视频流主机 (managed-media 会在这几个域上都可用)
 // 2026-10-16 实测: /play 下发的 playbackLines 已到 7 条, 多出 hdv6。
 const HD_MEDIA_HOSTS = [
@@ -194,6 +201,310 @@ const HD_MEDIA_HOSTS = [
   "https://hdv5.zen-vip.com",
   "https://hdv6.zen-vip.com",
 ];
+
+/* ============ 黄豆魔改 (hdmgdj) v22 新协议 ============
+ *
+ * 【为什么整个换掉】2026-10-18 实测: 老上游 hddj.zen-vip.com 的 /api/app/*
+ *   只剩 /api/app/videos 还能回数据, /api/app/play 下发的 playUrl 指向的
+ *   managed-media 已经 404。也就是说**播放源彻底断了**, 光换线路治不好。
+ *
+ * 【新体系怎么发现的】
+ *   1) hddj32.com / hddj36.com 是"地址发布页"壳: AES-256-GCM 解 d.txt,
+ *      得到 8 个域名 → 但那批是"黄豆魔改短剧"(hdmgdj), 不是老黄豆。
+ *   2) 真站点是 Flutter Web (main.<hash>.js, 8.3 MB), 接口全在 bundle 里。
+ *   3) 用无头 Edge + CDP 挂 JSON.parse 钩子, 直接从运行中的页面
+ *      抓到**解密后**的明文信封 —— 这是唯一可靠办法, 静态猜了 20 多种组合全错。
+ *
+ * 【协议 (从真实流量逐字节确认)】
+ *   请求: POST {origin}/api/<path>
+ *         headers: content-type: application/x-www-form-urlencoded
+ *                  version:1.0.0  deviceType:web  time:<秒>
+ *                  requestId:<uuid>  sessionId:<uuid去掉横线>
+ *                  sign: md5("Dart|sessionId|requestId|time|host+path") + "-" + time
+ *                  deviceBrand/deviceModel/systemName/systemVersion: ""
+ *                  X-Lang: zh-CN
+ *         body: AES 密文 (见下)
+ *   响应: status:"y" | "n"  + data + time
+ *         失败时 errorCode: 2001 = 请求数据错误(签名/解密不过)
+ *                           2002 = 需要登录
+ *
+ * 【签名】已用线上真实请求逐字节复核通过:
+ *   md5("Dart|<sessionId>|<requestId>|<time>|<host>/<path>") + "-" + <time>
+ *   参与签名的是 **host+path** (不含 scheme)。
+ *
+ * 【加密】AES/CBC/PKCS7, 密钥由平台 key 派生
+ *   密文布局: 前 16 字节 IV + 密文体 (长度恒为 16 的倍数)
+ * ============================================================ */
+
+// 官方 system/info 下发的接口线 (2026-10-18 抓取, 12 条全部 ping 通)
+const HD2_LINES = [
+  "https://myeuzprt.cc",
+  "https://wfzrznei.cc",
+  "https://tjfccdvt.cc",
+  "https://sybhrfgk.cc",
+  "https://fjietofb.cc",
+  "https://wvznwxid.cc",
+  "https://pmihlvee.cc",
+  "https://unbmagme.cc",
+  "https://ekkaioqz.cc",
+  "https://umycelaw.cc",
+  "https://sxqirtho.top",
+];
+const HD2_KEY_WEB = "7961beb44246e3012ce228d6b5ced05a";
+const HD2_VERSION = "1.0.0";
+
+// ============ 黄豆魔改 目录快照 ============
+//   来源: /api/drama/navBlock + /api/drama/navList 的真实响应, 已用 HD2 协议解密验证。
+//   用途: 当协议请求失败(2001)时, 让前端仍能展示真实目录; 播放仍需上游下发地址。
+//   刷新: 重新抓取 navBlock/navList 后用 tools/ 下的生成脚本重建本常量。
+//   字段: d=drama_id n=剧名 i=封面 c=分类 e=集数 u=更新 u=hot h=热度 f=收藏 k=角标
+//         s=source p=pay_type b=板块 t=简介
+const HD2_CATALOG = {"gen":"2026-10-17","channels":[{"code":"yuandou","name":"黄豆原创","id":"1"},{"code":"mod","name":"魔改短剧","id":"5"},{"code":"jinbi","name":"金币专区","id":"29"},{"code":"huiyuan","name":"会员专区","id":"28"},{"code":"caibian","name":"擦边短剧","id":"4"},{"code":"zhenren","name":"真人短剧","id":"22"},{"code":"erciyuan","name":"动漫","id":"3"},{"code":"aiman","name":"影院","id":"2"},{"code":"zongyi","name":"贤者","id":"26"},{"code":"heiliao","name":"黑料","id":"25"}],"blocks":[{"name":"精选原创","filter":{"cat_id":"246506","order":"new:top"},"count":63},{"name":"热门推荐","filter":{"cat_id":"246502","order":"new:top"},"count":54}],"total":117,"items":[{"d":"self_9c41198b9d0e214a","n":"热逼高校好好操","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/0b098a03e150bff0.jpg","c":"黄豆原创","e":"1","u":"更新至1集","h":"474393","f":"3295","k":"新剧","s":"self","p":"free","b":"精选原创","t":"你们知道林浩这4年是怎么过的吗？日本的房东太太，日本的樱花妹，他一直想从妈妈的坠楼事件中走出来……"},{"d":"up_ef78e53fd1ba5b1d","n":"琼明神女录","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/013659017d8a49d3.jpg","c":"黄豆原创","e":"8","u":"更新至8集","h":"1378722","f":"13406","k":"","s":"up","p":"money","b":"精选原创","t":"琼明原班人马倾力制作"},{"d":"rp_6a9add01e53e713f3c6fea1e","n":"兄弟妈妈好好操","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/aa7e92b62cf27797.jpg","c":"黄豆原创","e":"9","u":"更新至9集","h":"3140939","f":"27646","k":"新剧","s":"rp","p":"vip","b":"精选原创","t":""},{"d":"rp_6a8c618e817f7dacc5972d84","n":"女友帮我操闺蜜","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/042e2f0715be49c9.jpg","c":"黄豆原创","e":"8","u":"更新至8集","h":"3812799","f":"44953","k":"会员","s":"rp","p":"vip","b":"精选原创","t":""},{"d":"self_979618ce324a1f17","n":"我把兄弟变母狗","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/85d1226e5be2bf5d.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"1391627","f":"8190","k":"会员","s":"self","p":"vip","b":"精选原创","t":""},{"d":"self_463d11794a355955","n":"欢迎来口爆馆","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/dfaee6aa26ec7c3c.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"619222","f":"4420","k":"新剧","s":"self","p":"vip","b":"精选原创","t":"城市里的口爆馆，是各个阶层男人获取快乐的最便捷的途径。欢迎大家，来口爆馆。"},{"d":"self_641ec2b85df04f02","n":"在仙侠世界开妓院","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/0813f42eb2f7d6b4.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"653728","f":"6329","k":"金币","s":"self","p":"money","b":"精选原创","t":"男主重生在仙侠世界，意外获得技能能够查看被操的次数，然后被多少根肉棒插入的次数。然后还有还原丹，处女"},{"d":"self_1b7533f4ebcfe867","n":"恋爱辅助器","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/82f00b31df68828b.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"723121","f":"5901","k":"新剧","s":"self","p":"vip","b":"精选原创","t":"恋爱从来没超过5天的屌丝男，在一款超级辅助器的帮助下，开始猎艳不断……"},{"d":"self_9493848b8d1430fd","n":"催眠眼镜","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/8d6487970a0e9e84.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"1393721","f":"13584","k":"金币","s":"self","p":"money","b":"精选原创","t":""},{"d":"self_211fc3aaa0d919a0","n":"乱伦：梦境入侵","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/d8eb7b3366bf2118.jpg","c":"黄豆原创","e":"1","u":"更新至1集","h":"490604","f":"2318","k":"新剧","s":"self","p":"free","b":"精选原创","t":"特效拉满！可爱美女巨人裸踏城市，高冷御姐做露出母狗……梦境与现实，反差拉满，看我入侵她们的梦境，让可"},{"d":"up_f9693b8abd034434","n":"母子同欢","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/85f5db3109cfa445.jpg","c":"黄豆原创","e":"15","u":"更新至15集","h":"1396435","f":"16076","k":"更新","s":"up","p":"","b":"精选原创","t":"我的母亲是绝美的舞蹈老师，我一直暗藏对她的情愫"},{"d":"self_f7a470b2488cd354","n":"囚操","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/def99153fc74bb12.png","c":"黄豆原创","e":"3","u":"更新至3集","h":"500342","f":"5429","k":"会员","s":"self","p":"vip","b":"精选原创","t":"五千万买得了婚姻，买不走求操的骚穴，废物老公不到一分钟就射了，欲求不满的人妻来找我深入治疗，自己把湿"},{"d":"self_f45fb776735bbc7a","n":"完蛋我包养的女大是大佬","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/0e0bc4ef607b30f7.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"548709","f":"3633","k":"新剧","s":"self","p":"vip","b":"精选原创","t":""},{"d":"up_cd37b1499b3b475a","n":"母上攻略","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/2a2818e95c5194ed.jpg","c":"黄豆原创","e":"11","u":"更新至11集","h":"1490010","f":"14261","k":"新剧","s":"up","p":"","b":"精选原创","t":"少年攻略目标竟是自己的母上。从日常相处到禁忌沉沦，母子界限渐渐模糊，一场背德之恋悄然展开。"},{"d":"up_e61a41552ed2f75c","n":"爱情公寓","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/2867cb0917d394dd.png","c":"黄豆原创","e":"2","u":"更新至2集","h":"518357","f":"2290","k":"","s":"up","p":"money","b":"精选原创","t":"一睁眼，我穿越成为爱情公寓里的吕子乔。这栋楼的女人，一个个都要被我操到腿软……"},{"d":"up_892720c85fe42f23","n":"我的岳母苏沛真-黄豆自制","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/9ba37a24aa818553.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"604456","f":"6602","k":"","s":"up","p":"","b":"精选原创","t":"我的岳母苏沛真"},{"d":"up_6b6623fe05f293f9","n":"兰若夜宴-聂小倩","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/9ab69957ab13bbb7.jpg","c":"黄豆原创","e":"6","u":"更新至6集","h":"632709","f":"6088","k":"新剧","s":"up","p":"","b":"精选原创","t":"兰若寺的树心里，住着一只嗜精如命的老妖。艳丽的女鬼们是她伸向过路人的舌头。一夜又一夜，旅人被吸干阳气"},{"d":"up_cf2a0a1de73a9cec","n":"催眠校园","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/5f76ce5ffebe1d76.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"201348","f":"1879","k":"","s":"up","p":"","b":"精选原创","t":"陈浩在一次偶然下获得了能催眠别人的怀表，从此心中的欲望得以实现"},{"d":"up_17311c4d6c483eac","n":"从地狱归来：深渊调教","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/68fd6db3108a6a9a.jpg","c":"黄豆原创","e":"11","u":"更新至11集","h":"1181696","f":"11615","k":"","s":"up","p":"","b":"精选原创","t":"一场阴谋让谢家覆灭，母亲被残忍轮奸杀害，5年逃亡，从地狱归来的谢家独子将亲手将仇人拉下调教炼狱"},{"d":"up_b3e4017fa943f69a","n":"奴隶驯化系统：从丈母娘开始","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/cdf2ffdfb319d58e.png","c":"黄豆原创","e":"4","u":"更新至4集","h":"595666","f":"3520","k":"","s":"up","p":"money","b":"精选原创","t":"被周婷婷骗了彩礼和房子的李天，觉醒了《奴隶驯化系统》，恰逢丈母娘上门驱赶，李天决定利用系统，调教丈母"},{"d":"up_b913676ef6830251","n":"双人骑行（我们四个人骑到同一张床上）","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/230768444e6a1c6a.jpg","c":"黄豆原创","e":"3","u":"全3集","h":"118112","f":"622","k":"","s":"up","p":"","b":"精选原创","t":"陈宇发现妻子沈韵总说“骑累了”，却在骑行工作室与教练周拓赤身纠缠。\r\n林蔓找到陈宇，说：“你站在门缝"},{"d":"up_3ff28755ba50d4cc","n":"姐姐的另一面","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/3209579d9f23dfba.png","c":"黄豆原创","e":"1","u":"更新至1集","h":"92788","f":"575","k":"","s":"up","p":"money","b":"精选原创","t":"暗恋姐姐已久的罗天，意外发现一个和姐姐长得很像的福利姬，观看直播的过程中，罗天意外发现，这个福利姬，"},{"d":"up_01a4983664eb4044","n":"致命陷阱之坠入淫窟","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/8342968f919f9600.jpg","c":"黄豆原创","e":"8","u":"更新至8集","h":"336611","f":"3728","k":"","s":"up","p":"money","b":"精选原创","t":"擎天集团破产，15亿债务压顶，沈君怡无路可退。马昊明设下鸿门宴——金辉会所换透明睡袍，入紫金厅，等她"},{"d":"up_139ad3900a81a3f6","n":"妈妈，你逃不出我的手掌心","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/db469a49f06418c9.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"499169","f":"3672","k":"","s":"up","p":"money","b":"精选原创","t":"因为爸妈都比较注重事业，而忽略家庭，所以我自小缺乏母爱，随着年龄的增长，我对母爱的执念愈发偏执，扭曲"},{"d":"up_107cea76c76557a8","n":"红玫瑰诱饵","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/065821ac7a9d9886.jpg","c":"黄豆原创","e":"2","u":"更新至2集","h":"33236","f":"241","k":"","s":"up","p":"","b":"精选原创","t":"苏婉女儿入学碰壁，私立校长张诚借机约见，言语进行骚扰、抛出交换条件。苏婉开始反感，只是顾虑家庭，没有"},{"d":"up_937402edaee6f50a","n":"全世界唯一优质精子","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/7141af2cb55745d8.jpg","c":"黄豆原创","e":"1","u":"更新至1集","h":"174793","f":"1035","k":"","s":"up","p":"money","b":"精选原创","t":"全球男性生育力断崖式崩溃的时代，普通青年白言意外发现自己拥有全世界唯一完美活力的精子。他被精诚集团、"},{"d":"up_fc650690a6c90a76","n":"岳母私密课（我老公成了我妹最想抢的人）","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/ad2c78f28f5bae74.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"277072","f":"1613","k":"","s":"up","p":"","b":"精选原创","t":"林浩结婚两年，床上只会一下一下地捅，从没让妻子高潮过一次。妻子深夜给母亲发消息：“他还是那样。”\r\n"},{"d":"up_f3b747d6ed4e35a3","n":"青春期小阿姨-继母姐妹双飞记","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/b60c9049d7128a21.jpg","c":"黄豆原创","e":"6","u":"更新至6集","h":"161540","f":"1062","k":"","s":"up","p":"","b":"精选原创","t":"名校毕业、币圈爆仓、三十出头还赖在家里——田家伦本以为最糟不过如此。直到父亲再婚：年轻漂亮的继母陈卉"},{"d":"rp_6a7f2e88817f7dacc5971d55","n":"拼逼逼","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/71342baebcec2d36.jpg","c":"黄豆原创","e":"8","u":"全8集","h":"2389900","f":"21462","k":"金币","s":"rp","p":"money","b":"精选原创","t":"拼逼逼简介：一款可以拼团操逼的软件，打着花小钱操好逼的广告，吸引了各个阶层的男人，也遇到了各种主动上"},{"d":"rp_6a583d66b2283e06d44f5f5b","n":"重生之征服郭伯母第二季","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/07e0cb73ebb57e8d.jpg","c":"黄豆原创","e":"13","u":"更新至13集","h":"2007034","f":"18269","k":"更新","s":"rp","p":"free","b":"精选原创","t":""},{"d":"up_9a97b0b2188e7a7f","n":"唐伯虎点秋香","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/a97dda499e8ccdb3.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"139476","f":"694","k":"","s":"up","p":"","b":"精选原创","t":"韩信点兵多多益善 偶遇秋香"},{"d":"self_2f7b56d62f3db995","n":"荒野大嫖客","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/325495b0d085d709.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"522194","f":"5164","k":"更新","s":"self","p":"free","b":"精选原创","t":"大明中叶，西北荒漠。龙门关外唯一歇脚处——龙门客栈。风沙、黑店、过客、东厂眼线，全挤在这一处孤灯里。"},{"d":"self_fe62c85679ae887c","n":"夹着精液回家的女人","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/07665561e2b2e8c7.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"1695197","f":"17751","k":"","s":"self","p":"vip","b":"精选原创","t":"婚礼前夜，新娘发小打来打电话......一小时后，你要乖乖夹着我的精液，回去给你未来老公享用"},{"d":"rp_6a998a3ae53e713f3c6fe980","n":"元元肛肛好","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/27256a2dce8d7b93.jpg","c":"黄豆原创","e":"2","u":"全2集","h":"655914","f":"8324","k":"新剧","s":"rp","p":"vip","b":"精选原创","t":""},{"d":"rp_6a8f0899817f7dacc59730dd","n":"爸爸不在家","i":"https://d12m928oe7qtlf.cloudfront.net/B20260826233905/6a8f0899817f7dacc59730dd/cover.jpg","c":"黄豆原创","e":"8","u":"更新至8集","h":"1426646","f":"16865","k":"会员","s":"rp","p":"vip","b":"精选原创","t":""},{"d":"rp_6a782fa2817f7dacc5971247","n":"滴滴代操","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/ebe1a9410de16f0c.jpg","c":"黄豆原创","e":"10","u":"全10集","h":"3169192","f":"30500","k":"新剧","s":"rp","p":"money","b":"精选原创","t":"滴滴代操简介：现在的人，对性的要求变得很高，有能力的人，会接到弱者的求助，帮他们实现操而不得梦想。"},{"d":"rp_6a75ebe54ee37d9661f99e5b","n":"患性瘾的巨乳女教师","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/97bb72f459e502ed.jpg","c":"黄豆原创","e":"8","u":"全8集","h":"3126943","f":"26485","k":"金币","s":"rp","p":"free","b":"精选原创","t":""},{"d":"rp_6a60c2d6b2283e06d44f6778","n":"大奉打更人","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/ae2d8063855ca1d7.jpg","c":"黄豆原创","e":"8","u":"更新至8集","h":"2600885","f":"17104","k":"金币","s":"rp","p":"free","b":"精选原创","t":""},{"d":"up_2a5f9be8561b100d","n":"白鹿原2之爱在玉米地","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/75ac82cda9dfe84f.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"276417","f":"2738","k":"新剧","s":"up","p":"money","b":"精选原创","t":"白鹿原2之玉米地里的爱情故事"},{"d":"up_54bdc30a86ed219c","n":"买断人妻","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/71585be4894a3419.jpg","c":"黄豆原创","e":"10","u":"更新至10集","h":"339294","f":"4124","k":"","s":"up","p":"money","b":"精选原创","t":"简介：五十元买断阿昊女友陈可与他的人妻一天。顶层客厅里，买断生效，尊严崩塌——林天握着两人的绳，阿昊"},{"d":"self_f8d185a144ec7504","n":"告白母子：妈妈陪读也陪爱","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/9236de5dfe9dcc15.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"587856","f":"7024","k":"新剧","s":"self","p":"money","b":"精选原创","t":""},{"d":"up_1c12b5e17d066fa1","n":"子豪的秘密教学","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/c31ba2a1382ac7d7.jpg","c":"黄豆原创","e":"8","u":"全8集","h":"257898","f":"3380","k":"","s":"up","p":"","b":"精选原创","t":"课一旦开场，便从指导滑向真做：手、口、插入，教学话术渐渐盖不住欲望。"},{"d":"up_1692219669a06197","n":"苏老师的裸贷人生","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/448c3119e3b55cfc.jpg","c":"黄豆原创","e":"7","u":"更新至7集","h":"508579","f":"6348","k":"","s":"up","p":"","b":"精选原创","t":"苏老师因为好赌的父亲，不得已借了裸贷。没想到的是债权人竟然是自己学生！这段人生从羞辱开始，却逐渐演变"},{"d":"up_1efb1a2e448b29a5","n":"《一个乖乖女》","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/6a33b04a74317a6e.jpg","c":"黄豆原创","e":"8","u":"更新至8集","h":"251645","f":"2924","k":"","s":"up","p":"","b":"精选原创","t":"“她披着最乖巧温顺的皮，在京圈活阎王的心尖上点了一场滔天烈火。”\r\n白切黑钓系小白兔 × 禁欲疯批掌"},{"d":"self_1e9c70fc4a85ebc4","n":"田野花香","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/3b86e65ee137d0e4.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"64968","f":"473","k":"新剧","s":"self","p":"money","b":"精选原创","t":"青年买套，美女老板亲自量尺寸，事后黑帮砸门......"},{"d":"self_edee2c0e923512dc","n":"健身美母","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/e0dec64dd382707a.jpg","c":"黄豆原创","e":"2","u":"更新至2集","h":"112784","f":"774","k":"新剧","s":"self","p":"money","b":"精选原创","t":"我的健身美母王雅凝清晨穿着紧身性感瑜伽服扯开我的被子被我的巨物吸引 情不自禁…………"},{"d":"self_1828cf73b8fd8b05","n":"韵母攻略","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/6c2080f032ce1f4e.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"385564","f":"2565","k":"","s":"self","p":"vip","b":"精选原创","t":""},{"d":"up_0f605ccafb55034d","n":"《上门瑜伽老师，当着我面骑了我老公》","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/3bda079de5aadda4.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"202732","f":"1912","k":"","s":"up","p":"money","b":"精选原创","t":"瑜伽老师苏蔓上门授课，第一节课就盯上了学生的老公阿辉。妻子小柔“不舒服”回房休息时，苏蔓用嘴让阿辉第"},{"d":"up_2b6b60b9e7256ee5","n":"我的淫荡岳母","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/b69a1df669971079.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"261495","f":"2326","k":"","s":"up","p":"money","b":"精选原创","t":"男主与女主结婚，但必须满足岳母的条件：让岳母住进来，并且同睡一张床。女主出差期间，岳母和男主睡一张床"},{"d":"up_e5469ddaa0803ae6","n":"陈皮皮的斗争","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/eda828c4af633139.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"178375","f":"1538","k":"","s":"up","p":"","b":"精选原创","t":"一个不爱学习的中学足球队长陈皮皮，单亲家庭，漂亮妈妈又刚又美。天天跟她斗智斗勇，却在一次次“斗争”里"},{"d":"up_be489decd4914435","n":"绿帽男友","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/8662a454ee0d5246.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"87979","f":"761","k":"","s":"up","p":"","b":"精选原创","t":"把我拱手让给他们会放你开心吗？"},{"d":"up_bdd2ab57864b7ba9","n":"韦小宝的退休生活","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/c422994481213481.jpg","c":"黄豆原创","e":"7","u":"更新至7集","h":"93276","f":"824","k":"","s":"up","p":"money","b":"精选原创","t":"韦小宝后续跟7个老婆的快乐退休生活"},{"d":"up_c497f8be3ea142d8","n":"母子禁忌","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/ef067d39319d99b8.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"168747","f":"1718","k":"","s":"up","p":"","b":"精选原创","t":"妈妈，这样可以吗？"},{"d":"up_3a20c5281a8a719e","n":"花魁试玉录","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/d5f878d47588a36c.jpg","c":"黄豆原创","e":"5","u":"更新至5集","h":"110742","f":"1130","k":"","s":"up","p":"money","b":"精选原创","t":"落魄书生沈轻舟因债入红鸾阁，凭天生精关天锁、动情不泄的石髓之躯，连破六位绝色花魁的风月绝技，反客为主"},{"d":"self_6abc39dceb0f192e","n":"堕落血契","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/d5d0ae3c61aba55e.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"70530","f":"661","k":"金币","s":"self","p":"money","b":"精选原创","t":""},{"d":"up_285c86de6c908ad8","n":"俏黄蓉之--<襄阳九阴真茎>","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/f46afd34f2b3a0de.jpg","c":"黄豆原创","e":"6","u":"全6集","h":"101842","f":"966","k":"","s":"up","p":"","b":"精选原创","t":"预计一天上三集，一周上完20集"},{"d":"up_3728769776abd901","n":"笼中雀","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/db3cdea97ba04d2c.jpg","c":"黄豆原创","e":"4","u":"更新至4集","h":"154486","f":"1564","k":"","s":"up","p":"money","b":"精选原创","t":"高中生的欲望，被老师纳入笼中"},{"d":"up_b2a4741d88e509c2","n":"高冷妈妈","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/06dd9da0462cf7bc.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"313498","f":"3883","k":"","s":"up","p":"","b":"精选原创","t":"林婉清四十二岁，盘发、眼镜、白衬衫，公司里没人敢靠近。儿子李泽放暑假回家，才发现母亲关上门之后完全是"},{"d":"up_33df40dee6687219","n":"末日追猎者：荡妇试炼","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/f16241e229e79bbf.jpg","c":"黄豆原创","e":"1","u":"更新至1集","h":"107245","f":"1190","k":"","s":"up","p":"money","b":"精选原创","t":"改编SLG《沙漠追猎者》世界观和剧情重建。末日废土，追猎者一次任务中找到了旧时代的一样东西而卷入多方"},{"d":"up_86f10cd4702b3b0e","n":"台球少女","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/7f634033f2b158aa.jpg","c":"黄豆原创","e":"10","u":"更新至10集","h":"529322","f":"4375","k":"","s":"up","p":"","b":"精选原创","t":"台球助教的故事"},{"d":"up_beceba9dda2bb90c","n":"我和闺蜜齐被操","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/4e7d32710b523ca6.jpg","c":"黄豆原创","e":"6","u":"更新至6集","h":"414279","f":"4082","k":"","s":"up","p":"","b":"精选原创","t":"故事简介\r\n闺蜜林疏影与关茵茵在同一天嫁进裴家为妯娌,疏影是白月光黎茜的替身,在\"八年婚姻\"里守着不"},{"d":"up_5e96180f179be8ca","n":"电影院最后一排","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/6e537b9cc68dee23.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"182295","f":"1488","k":"","s":"up","p":"","b":"精选原创","t":"她买了最后一排靠墙，想把世界关在银幕外面。值班经理坐了过来。票根进胸口，过道摄像头成了把柄。同一条黑"},{"d":"up_3344e4a8f98bcb52","n":"人无再少年","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202609/d05da8f0ac22d305.jpg","c":"黄豆原创","e":"3","u":"更新至3集","h":"379129","f":"3774","k":"","s":"up","p":"","b":"精选原创","t":"花无重开日，人无再少年，也许，另一个世界，并非如此"},{"d":"rp_6a7d55e2817f7dacc5971928","n":"高三爱情故事(合并版)","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/0dcab1ae0636d8bf.jpg","c":"大神精选","e":"41","u":"全41集","h":"2536363","f":"26525","k":"金币","s":"rp","p":"money","b":"热门推荐","t":""},{"d":"rp_6ace0308ca57c75f779c7d78","n":"调教上海熟女肖玉芬","i":"https://d12m928oe7qtlf.cloudfront.net/B20261013180808/6ace0308ca57c75f779c7d78/cover.jpg","c":"大神精选","e":"5","u":"全5集","h":"310667","f":"4367","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"self_d94049569bc3e2e8","n":"别有用心的姐夫","i":"https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/d55d84530a1f6ab5.png","c":"大神精选","e":"2","u":"更新至2集","h":"123916","f":"581","k":"金币","s":"self","p":"money","b":"热门推荐","t":""},{"d":"rp_6ad301d8ca57c75f779cbb20","n":"重生之我为催眠先生","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017130424/6ad301d8ca57c75f779cbb20/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"6304","f":"3086","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad301d8ca57c75f779cbb1d","n":"我知女人心","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017130424/6ad301d8ca57c75f779cbb1d/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"3432","f":"3796","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad301d8ca57c75f779cbb1e","n":"睡进我心底的名字","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017130424/6ad301d8ca57c75f779cbb1e/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"2904","f":"4292","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad301d8ca57c75f779cbb1f","n":"那个夏天，我和表姐不得不说的秘密","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017130424/6ad301d8ca57c75f779cbb1f/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"4068","f":"4943","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad301d8ca57c75f779cbb1c","n":"与纯阴圣体大小姐双修","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017130424/6ad301d8ca57c75f779cbb1c/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"3952","f":"3761","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad2fe2fca57c75f779cbb1a","n":"舞蹈系学妹的零距离接触","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017124847/6ad2fe2fca57c75f779cbb1a/cover.jpg","c":"大神精选","e":"6","u":"全6集","h":"12048","f":"3286","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad2f6b5ca57c75f779cbacd","n":"保镖老婆虽厉害，纨绔老公更无敌","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017121653/6ad2f6b5ca57c75f779cbacd/cover.jpg.jpg","c":"大神精选","e":"10","u":"全10集","h":"14200","f":"3538","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad2f6b5ca57c75f779cbacf","n":"我与发小母亲的虐缘","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017121653/6ad2f6b5ca57c75f779cbacf/cover.jpg.jpg","c":"大神精选","e":"5","u":"全5集","h":"17360","f":"3116","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad2f6b5ca57c75f779cbace","n":"力工拳王重生归来","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017121653/6ad2f6b5ca57c75f779cbace/cover.jpg.jpg","c":"大神精选","e":"3","u":"全3集","h":"6308","f":"3063","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad2f6b5ca57c75f779cbad0","n":"爸爸出差的那几天","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017121653/6ad2f6b5ca57c75f779cbad0/cover.jpg.jpg","c":"大神精选","e":"3","u":"全3集","h":"13424","f":"4579","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad2f6b5ca57c75f779cbad1","n":"重生后我操了半个县城","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017121653/6ad2f6b5ca57c75f779cbad1/cover.jpg.jpg","c":"大神精选","e":"3","u":"全3集","h":"20996","f":"3343","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad263d6ca57c75f779cbab2","n":"现代都市丽人第三季","i":"https://d12m928oe7qtlf.cloudfront.net/B20261017015014/6ad263d6ca57c75f779cbab2/cover.jpg","c":"大神精选","e":"8","u":"全8集","h":"127436","f":"5027","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad234f4ca57c75f779cbaa6","n":"红妆之好色公公的末路","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016223012/6ad234f4ca57c75f779cbaa6/cover.jpg","c":"大神精选","e":"2","u":"全2集","h":"39247","f":"3850","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad2333aca57c75f779cba9f","n":"灯熄灭之后","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016222250/6ad2333aca57c75f779cba9f/cover.jpg","c":"大神精选","e":"2","u":"全2集","h":"56256","f":"4319","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad230adca57c75f779cba98","n":"温柔的妈妈被我弄哭了","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016221157/6ad230adca57c75f779cba98/cover.jpg","c":"大神精选","e":"8","u":"全8集","h":"127268","f":"4155","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad22db9ca57c75f779cba85","n":"我的相亲女友","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016215921/6ad22db9ca57c75f779cba85/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"13708","f":"3655","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad22c69ca57c75f779cba80","n":"她手机里的C","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016215345/6ad22c69ca57c75f779cba80/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"16204","f":"4939","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad21e12ca57c75f779cba76","n":"无能老公骚情妻","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba76/cover.jpg.jpg","c":"大神精选","e":"10","u":"全10集","h":"166400","f":"4577","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad21e12ca57c75f779cba77","n":"末日后每天被法出汁","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba77/cover.jpg.jpg","c":"大神精选","e":"3","u":"全3集","h":"93060","f":"4333","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad21e12ca57c75f779cba79","n":"深夜潜入女大学生宿舍","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba79/cover.jpg.jpg","c":"大神精选","e":"5","u":"全5集","h":"83780","f":"4134","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad21e12ca57c75f779cba74","n":"妻善","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba74/cover.jpg.jpg","c":"大神精选","e":"3","u":"全3集","h":"78832","f":"5152","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad21e12ca57c75f779cba75","n":"姐姐的馈赠","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba75/cover.jpg.jpg","c":"大神精选","e":"1","u":"全1集","h":"22432","f":"4457","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad21e12ca57c75f779cba78","n":"榻下长安","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba78/cover.jpg.jpg","c":"大神精选","e":"1","u":"全1集","h":"27112","f":"4791","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad21e12ca57c75f779cba7a","n":"被学姐强制操成玩物","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba7a/cover.jpg.jpg","c":"大神精选","e":"1","u":"全1集","h":"34680","f":"4454","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad1ecdfca57c75f779cba03","n":"巴黎世家的乱伦晚宴","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016172239/6ad1ecdfca57c75f779cba03/cover.jpg","c":"大神精选","e":"7","u":"全7集","h":"91604","f":"4924","k":"","s":"rp","p":"free","b":"热门推荐","t":""},{"d":"rp_6ad1ece4ca57c75f779cba07","n":"赎罪营","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016172244/6ad1ece4ca57c75f779cba07/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"7356","f":"4834","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad1ecdfca57c75f779cba04","n":"流氓房东和他的COS女房客","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016172239/6ad1ecdfca57c75f779cba04/cover.jpg","c":"大神精选","e":"7","u":"全7集","h":"66920","f":"4727","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad1d642ca57c75f779cb9ea","n":"优质肉棒攻略系统","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016154610/6ad1d642ca57c75f779cb9ea/cover.jpg","c":"大神精选","e":"9","u":"全9集","h":"88516","f":"4163","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":"剧情简介：海城大学大三女生沈美从未恋爱，每晚靠看片自慰解馋。某夜系统突然出现，匹配度96%，绑定【优"},{"d":"rp_6ad0d631ca57c75f779cb987","n":"淫梦特工","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016014203/6ad0d631ca57c75f779cb987/cover.jpg","c":"大神精选","e":"6","u":"全6集","h":"81184","f":"5093","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb984","n":"女大学生刘卉试用期","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016014203/6ad0d631ca57c75f779cb984/cover.jpg","c":"大神精选","e":"5","u":"全5集","h":"81708","f":"3478","k":"","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb985","n":"射了么外卖员","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016014203/6ad0d631ca57c75f779cb985/cover.jpg","c":"大神精选","e":"3","u":"全3集","h":"103400","f":"5167","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb986","n":"招阴人","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016014203/6ad0d631ca57c75f779cb986/cover.jpg","c":"大神精选","e":"5","u":"全5集","h":"40960","f":"4445","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb983","n":"囚禁六个女人当性奴","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016014203/6ad0d631ca57c75f779cb983/cover.jpg","c":"大神精选","e":"2","u":"全2集","h":"77164","f":"3803","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb982","n":"临时夫妻","i":"https://d12m928oe7qtlf.cloudfront.net/B20261016014203/6ad0d631ca57c75f779cb982/cover.jpg","c":"大神精选","e":"4","u":"全4集","h":"53264","f":"4668","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb989","n":"诱色游戏-和女神的七天游戏","i":"https://d12m928oe7qtlf.cloudfront.net/B20261015213337/6ad0d631ca57c75f779cb989/cover.jpg","c":"大神精选","e":"10","u":"全10集","h":"88824","f":"3822","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb98a","n":"这个天师明明超强，却只想躺平","i":"https://d12m928oe7qtlf.cloudfront.net/B20261015213337/6ad0d631ca57c75f779cb98a/cover.jpg","c":"大神精选","e":"2","u":"全2集","h":"64992","f":"3835","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ad0d631ca57c75f779cb988","n":"胡太太！夜外露出系列","i":"https://d12m928oe7qtlf.cloudfront.net/B20261015213337/6ad0d631ca57c75f779cb988/cover.jpg","c":"大神精选","e":"2","u":"全2集","h":"73732","f":"3657","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acf3d53ca57c75f779cb816","n":"无敌从收服女天尊开始","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014162907/6acf3d53ca57c75f779cb816/cover.jpg","c":"大神精选","e":"10","u":"全10集","h":"156316","f":"3796","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acf3d53ca57c75f779cb814","n":"仙缘小铺","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014162907/6acf3d53ca57c75f779cb814/cover.jpg","c":"大神精选","e":"3","u":"全3集","h":"62736","f":"3588","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acf3d53ca57c75f779cb815","n":"别当圣人","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014162907/6acf3d53ca57c75f779cb815/cover.jpg","c":"大神精选","e":"3","u":"全3集","h":"54156","f":"4234","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acf3e88ca57c75f779cb819","n":"大和尚之赐福","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014163416/6acf3e88ca57c75f779cb819/cover.jpg","c":"大神精选","e":"2","u":"全2集","h":"17500","f":"3981","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acef440ca57c75f779cb7d4","n":"女老板的地下情人","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014111720/6acef440ca57c75f779cb7d4/cover.jpg","c":"大神精选","e":"10","u":"全10集","h":"195672","f":"4929","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acef156ca57c75f779cb7b9","n":"体育生的榨精生活","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014110454/6acef156ca57c75f779cb7b9/cover.jpg","c":"大神精选","e":"3","u":"全3集","h":"189824","f":"4676","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acea4d1ca57c75f779cb7a3","n":"鸭途无量","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014053825/6acea4d1ca57c75f779cb7a3/cover.jpg","c":"大神精选","e":"2","u":"全2集","h":"88012","f":"3574","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acea21fca57c75f779cb799","n":"画皮局：胭脂债","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014052655/6acea21fca57c75f779cb799/cover.jpg","c":"大神精选","e":"10","u":"全10集","h":"105926","f":"5155","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6acea2c3ca57c75f779cb79d","n":"迪桑气质女郎","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014052939/6acea2c3ca57c75f779cb79d/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"50092","f":"4617","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ace9c91ca57c75f779cb784","n":"点过你爸","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014050313/6ace9c91ca57c75f779cb784/cover.jpg","c":"大神精选","e":"6","u":"全6集","h":"193840","f":"5048","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ace99f2ca57c75f779cb777","n":"梦回大唐花旦","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014045202/6ace99f2ca57c75f779cb777/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"23772","f":"3617","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ace98d7ca57c75f779cb774","n":"我的妈妈徐秋曼","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014044719/6ace98d7ca57c75f779cb774/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"68048","f":"5007","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ace87a7ca57c75f779cb763","n":"时间停止","i":"https://d12m928oe7qtlf.cloudfront.net/B20261014033359/6ace87a7ca57c75f779cb763/cover.jpg","c":"大神精选","e":"1","u":"全1集","h":"38416","f":"4921","k":"会员","s":"rp","p":"vip","b":"热门推荐","t":""},{"d":"rp_6ace0308ca57c75f779c7d73","n":"和干妈乱伦的两三年","i":"https://d12m928oe7qtlf.cloudfront.net/B20261013180808/6ace0308ca57c75f779c7d73/cover.jpg","c":"大神精选","e":"6","u":"全6集","h":"523272","f":"5849","k":"免费","s":"rp","p":"free","b":"热门推荐","t":""}]};
+
+/** md5 -> 原始 16 字节 (同步实现, Workers 里没有 node:crypto) */
+function hd2md5(bytes) {
+  // 纯 JS MD5 — 只用于 16/32 字节的短输入, 性能无所谓
+  function add(x, y) { return (x + y) | 0; }
+  function rol(n, c) { return (n << c) | (n >>> (32 - c)); }
+  const K = [], S = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+                     5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+                     4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+                     6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+  for (let i = 0; i < 64; i++) K[i] = (Math.abs(Math.sin(i + 1)) * 4294967296) | 0;
+  const len = bytes.length;
+  const withOne = len + 1;
+  const blocks = ((withOne + 8 + 63) >> 6) << 6;
+  const buf = new Uint8Array(blocks);
+  buf.set(bytes); buf[len] = 0x80;
+  const bitLen = len * 8;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(blocks - 8, bitLen >>> 0, true);
+  dv.setUint32(blocks - 4, Math.floor(bitLen / 4294967296), true);
+  let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+  for (let off = 0; off < blocks; off += 64) {
+    const M = [];
+    for (let i = 0; i < 16; i++) M[i] = dv.getUint32(off + i * 4, true);
+    let A = a0, B = b0, C = c0, D = d0;
+    for (let i = 0; i < 64; i++) {
+      let F, g;
+      if (i < 16)      { F = (B & C) | (~B & D);        g = i; }
+      else if (i < 32) { F = (D & B) | (~D & C);        g = (5 * i + 1) % 16; }
+      else if (i < 48) { F = B ^ C ^ D;                 g = (3 * i + 5) % 16; }
+      else             { F = C ^ (B | ~D);              g = (7 * i) % 16; }
+      F = add(add(add(F, A), K[i]), M[g]);
+      A = D; D = C; C = B;
+      B = add(B, rol(F, S[i]));
+    }
+    a0 = add(a0, A); b0 = add(b0, B); c0 = add(c0, C); d0 = add(d0, D);
+  }
+  const out = new Uint8Array(16);
+  const ov = new DataView(out.buffer);
+  ov.setUint32(0, a0, true); ov.setUint32(4, b0, true);
+  ov.setUint32(8, c0, true); ov.setUint32(12, d0, true);
+  return out;
+}
+function hd2md5hex(str) {
+  return Array.from(hd2md5(new TextEncoder().encode(str)))
+    .map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+}
+
+/* ---- 密钥派生 (实测口径) ----
+ *   key = HMAC-SHA256( key = utf8(HD2_KEY_WEB), msg = hex_decode(requestId 去横线) )
+ *   注意: 参与派生的是 **requestId 请求头** 的值, 服务端用它反推密钥。
+ *   早期把 msg 当成 md5(字符串) 是错的 —— 那是 hex 解码器, 不是哈希。
+ */
+async function hd2keyBytes(requestId) {
+  const pk = new TextEncoder().encode(HD2_KEY_WEB);
+  const hex = String(requestId || "").replace(/-/g, "");
+  const msg = new Uint8Array(Math.floor(hex.length / 2));
+  for (let i = 0; i < msg.length; i++) msg[i] = parseInt(hex.substr(i * 2, 2), 16);
+  const k = await crypto.subtle.importKey("raw", pk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, msg));
+}
+
+async function hd2gz(u8) {
+  const cs = new CompressionStream("gzip");
+  const w = cs.writable.getWriter();
+  w.write(u8); w.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+async function hd2gunzip(u8) {
+  const ds = new DecompressionStream("gzip");
+  const w = ds.writable.getWriter();
+  w.write(u8); w.close();
+  return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+}
+
+/* 请求体 = IV(16) ‖ AES-256-CBC-PKCS7( gzip(JSON) ) —— 原始二进制, 不做 base64!
+ * 这里踩过最大的坑: CDP 抓包给的是 base64, 照抄成 base64 文本发出去必被服务端判 2001。 */
+async function hd2seal(keyBytes, plainStr) {
+  const gz = await hd2gz(new TextEncoder().encode(plainStr));
+  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-CBC" }, false, ["encrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-CBC", iv: iv }, key, gz));
+  const out = new Uint8Array(16 + ct.length);
+  out.set(iv, 0); out.set(ct, 16);
+  return out;
+}
+
+/* 响应 = IV(16) ‖ AES-256-CBC-PKCS7( utf8(JSON) ) —— 同样原始二进制。
+ * 出错时服务端直接回明文 JSON (首字节 '{')。 */
+async function hd2open(keyBytes, blob) {
+  const u8 = new Uint8Array(blob);
+  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-CBC" }, false, ["decrypt"]);
+  const pt = new Uint8Array(await crypto.subtle.decrypt(
+    { name: "AES-CBC", iv: u8.slice(0, 16) }, key, u8.slice(16)));
+  // 正常是裸 UTF-8 JSON; 万一上游给的是 gzip 再兜一层
+  if (pt[0] === 0x1f && pt[1] === 0x8b) {
+    return new TextDecoder().decode(await hd2gunzip(pt));
+  }
+  return new TextDecoder().decode(pt);
+}
+
+/**
+ * 一次 HD2 调用。
+ * @param {string} line  线路基址, 如 "https://iwgsqufx.cc"
+ * @param {string} apiPath 形如 "/drama/play"
+ * @param {*} payload  业务参数 (放进信封的 data)
+ * @param {{token?:string, deviceId?:string, timeoutMs?:number}} [opts]
+ */
+async function hd2Call(line, apiPath, payload, opts) {
+  const o = (typeof opts === "number") ? { timeoutMs: opts } : (opts || {});
+  const host = line.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const sessionId = hd2rand(16);
+  const requestId = hd2uuid();                 // ★ 同时是签名输入和密钥输入
+  const time = String(Math.floor(Date.now() / 1000));
+  const sign = hd2md5hex("Dart|" + sessionId + "|" + requestId + "|" + time + "|" + host + apiPath)
+             + "-" + time;
+
+  const keyBytes = await hd2keyBytes(requestId);
+  const env = JSON.stringify({
+    token: o.token || "",
+    deviceId: o.deviceId || hd2uuid(),
+    data: (payload === undefined ? null : payload),
+  });
+  const body = await hd2seal(keyBytes, env);
+
+  const ctl = new AbortController();
+  const t = setTimeout(function () { ctl.abort(); }, o.timeoutMs || 12000);
+  let r;
+  try {
+    r = await fetch(line.replace(/\/+$/, "") + "/api" + apiPath, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "version": HD2_VERSION,
+        "deviceType": "web",
+        "time": time,
+        "requestId": requestId,
+        "sessionId": sessionId,
+        "sign": sign,
+        "deviceBrand": "", "deviceModel": "",
+        "systemName": "", "systemVersion": "",
+        "X-Lang": "zh-CN",
+      },
+      body: body,
+      signal: ctl.signal,
+    });
+  } finally { clearTimeout(t); }
+
+  const ab = await r.arrayBuffer();
+  if (!ab || ab.byteLength < 2) throw new Error("empty response (" + r.status + ")");
+  const u8 = new Uint8Array(ab);
+  let txt;
+  if (u8[0] === 0x7b) {                        // '{' → 明文错误信封
+    txt = new TextDecoder().decode(u8);
+  } else {
+    if (u8.length < 32) throw new Error("short response (" + r.status + ")");
+    try { txt = await hd2open(keyBytes, u8); }
+    catch (e) { throw new Error("decrypt failed (" + r.status + ")"); }
+  }
+  let j;
+  try { j = JSON.parse(txt); }
+  catch (e) { throw new Error("响应格式错误"); }
+  if (j.status !== "y") {
+    const err = new Error(j.error || ("status=" + j.status));
+    err.code = j.errorCode;
+    throw err;
+  }
+  return j.data;
+}
+
+function hd2rand(n) {
+  const a = crypto.getRandomValues(new Uint8Array(n || 16));
+  return Array.from(a).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+}
+function hd2uuid() {
+  const h = crypto.getRandomValues(new Uint8Array(16));
+  h[6] = (h[6] & 0x0f) | 0x40;
+  h[8] = (h[8] & 0x3f) | 0x80;
+  const s = Array.from(h).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  return s.slice(0,8) + "-" + s.slice(8,12) + "-" + s.slice(12,16) + "-" + s.slice(16,20) + "-" + s.slice(20);
+}
+
+/* ---- 线路探测: 12 条线里挑一条 ping 得通的 (缓存 5 分钟) ---- */
+let HD2_GOOD = null, HD2_GOOD_AT = 0;
+async function hd2PickLine() {
+  if (HD2_GOOD && Date.now() - HD2_GOOD_AT < 300000) return HD2_GOOD;
+  for (let i = 0; i < HD2_LINES.length; i++) {
+    try {
+      await hd2Call(HD2_LINES[i], "/ping", null, { timeoutMs: 8000 });
+      HD2_GOOD = HD2_LINES[i]; HD2_GOOD_AT = Date.now();
+      return HD2_GOOD;
+    } catch (e) { /* 下一跳 */ }
+  }
+  throw new Error("no reachable hdmgdj line");
+}
+
+/* ---- 匿名设备登录: 拿 token, 缓存 25 分钟 ----
+ *   /login/device 不需要 token, 直接发游客号; 返回 token + user_id。
+ *   发送时 token 字段是 "<token>_<user_id>"。 */
+let HD2_AUTH = null;
+async function hd2Auth(force) {
+  if (!force && HD2_AUTH && (Date.now() - HD2_AUTH.at) < 25 * 60 * 1000) return HD2_AUTH;
+  const order = HD2_AUTH && HD2_AUTH.line
+    ? [HD2_AUTH.line].concat(HD2_LINES.filter(function (x) { return x !== HD2_AUTH.line; }))
+    : HD2_LINES;
+  let lastErr = null;
+  for (let i = 0; i < order.length; i++) {
+    const line = order[i];
+    const deviceId = hd2uuid();
+    try {
+      const d = await hd2Call(line, "/login/device", {
+        line_code: "", channel_code: "", share_code: "",
+        clipboard_text: "", force_new: "", device_info: {},
+      }, { deviceId: deviceId, timeoutMs: 10000 });
+      if (!d || !d.token) throw new Error("login: no token");
+      HD2_GOOD = line; HD2_GOOD_AT = Date.now();
+      HD2_AUTH = {
+        line: line,
+        deviceId: deviceId,
+        token: String(d.token) + "_" + String(d.user_id),
+        uid: String(d.user_id),
+        isVip: d.is_vip || "n",
+        at: Date.now(),
+      };
+      return HD2_AUTH;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("login failed on all lines");
+}
+
+/** 带 token 的业务调用; 撞到 2002 (需登录) 自动重登一次再试 */
+async function hd2Api(apiPath, payload) {
+  let auth = await hd2Auth(false);
+  try {
+    return await hd2Call(auth.line, apiPath, payload,
+      { token: auth.token, deviceId: auth.deviceId });
+  } catch (e) {
+    if (e && Number(e.code) === 2002) {
+      auth = await hd2Auth(true);
+      return await hd2Call(auth.line, apiPath, payload,
+        { token: auth.token, deviceId: auth.deviceId });
+    }
+    throw e;
+  }
+}
 
 // ★ 锚点原文必须原样保留 —— patch_file 的 old 会替换掉这一段,
 //   如果不在这里重新声明, const UA 就没了, 之后每次 fetch 都 ReferenceError。
@@ -232,6 +543,109 @@ const UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Geck
   const HG_MEDIA_HOST_RE = /^(?:[a-z0-9-]+\.)?(?:hzjvlo\.cn|drleao\.cn|eisees\.com)$/i;
 
   const HG_BAD_UNTIL = {};
+
+  /* ============ 黄果媒体回源 (2026-10-17 v20 定案) ============
+   *
+   * 【故障】线上实测 (Observed):
+   *   /api/hg/ep?id=8726&ep=1 → 200，给出 yd-hzjvlo.cn 的 m3u8
+   *   /api/hg/media?u=<同一个 m3u8> → 403，body 为空
+   *   /api/hg/media?u=<该 m3u8 里的 .ts 分片> → 200，分片正常
+   *   对照组：橙果 hls.tpbbwcc.cn 走同一个 Worker → 200
+   *
+   * 【根因】上游 CDN (网宿/EO) 对播放列表做 **Origin 防盗链**，
+   *   不是 IP 封禁。逐个变量隔离的结果：
+   *
+   *     GET 同一个 m3u8，只换 Origin 头：
+   *       Origin: https://huangguoai.com          → 200   ← 自家域，放行
+   *       Origin: https://cxykk…github.io          → 403   ← 站点域，拦
+   *       Origin: https://huangguo-web…workers.dev → 403   ← Worker 域，拦
+   *       Origin: https://random.example.com       → 403   ← 任意域，拦
+   *       Origin: null / http://localhost          → 200   ← 非 http(s)，放行
+   *       完全不带 Origin                           → 200   ← 放行
+   *     （换 Referer、换 UA、换 auth_key 全部无效 —— 只有 Origin 决定）
+   *
+   *   Worker 的 fetch 会自动带上 `Origin: <Worker 自己的域名>`，
+   *   于是每一条播放列表请求都被当成盗链 → 恒定 403。
+   *   分片 .ts 不检查 Origin，所以分片一直是通的 —— 这也是当初
+   *   "能取到源、能下分片，但播放器就是起不来" 的原因。
+   *
+   * 【修法】把 Origin 从回源请求里**摘掉**。
+   *   Cloudflare Workers 允许在 fetch 的 headers 里删改 Origin，
+   *   用 `new Request()` 重建即可（直接传 headers 对象删不掉，会被补回）。
+   *   同时保留多 UA 轮询与公共中转，作为万一再被按 IP 拦时的兜底。
+   * ============================================================ */
+
+  /** 回源请求: 显式把 Origin 抹掉 (防盗链绕行的关键一步) */
+  function hgUpstreamInit(ua, extra) {
+    const h = new Headers();
+    h.set("User-Agent", ua);
+    h.set("Accept", extra && extra.accept ? extra.accept
+      : "application/vnd.apple.mpegurl,application/x-mpegURL,video/*,*/*");
+    h.set("Accept-Encoding", "identity");
+    h.set("Referer", "https://huangguoai.com/");
+    // 注意: 这里**故意不 set Origin**。下面再用 Request 构造一次把它彻底摘掉。
+    return { headers: h, redirect: "follow" };
+  }
+
+  /** 去掉 Origin 的 fetch (Workers 里必须用 Request 重建, 否则会被补回) */
+  async function hgFetchNoOrigin(url, ua, extra) {
+    const init = hgUpstreamInit(ua, extra);
+    let req;
+    try {
+      req = new Request(url, init);
+      // 有些运行时会在构造时补 Origin, 这里再显式删一次
+      req.headers.delete("origin");
+    } catch (e) {
+      req = url;
+    }
+    return fetch(req);
+  }
+
+  // 上游 CDN 的拦截是「按 Origin 防盗链」。UA 变体只作为二级兜底保留：
+  // 万一上游以后改成按 IP/UA 也拦，还能换一张出口指纹再试。
+  const HG_UA_VARIANTS = [
+    // 0 = iOS Safari (HLS 原生播放器, CDN 常见白名单)
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+    // 1 = 项目默认 Android Chrome
+    "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+    // 2 = 桌面 Chrome
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  ];
+
+  /** 公共 CORS 中转 (第三级兜底: 连 Worker 出口 IP 都被封时借别家出口) */
+  /* 清单中继。★ 2026-10-18 实测: 上游 CDN 只拦**清单** (.m3u8) —— 判据是 cf-worker 出口头
+     (本地复现: 只加这一个头就 403)。分片 (.ts) 与 AES key 不检查, Cloudflare 直取 200 全量。
+     allorigins / codetabs 实测到源站是 522 (它们自己连不上), 留作兜底;
+     jina 实测唯一稳定可用, 但**未认证有速率限制**, 会回 429 —— 见下面的重试与缓存。 */
+  const HG_RELAYS = [
+    { name: "jina", text: 1, hopMs: 12000, mk: (u) => "https://r.jina.ai/" + u },
+    { name: "allorigins", mk: (u) => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u) },
+    { name: "codetabs",   mk: (u) => "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(u) },
+  ];
+
+  /* 清单缓存。三个要点, 全是实测逼出来的:
+     ① 键用「去掉 query 的 origin+path」, 不能用整条 URL —— 每次 /api/hg/ep 都会换
+        auth_key, 用整条 URL 做键等于永远不命中。
+     ② 新鲜窗口 10 分钟; 实测同一 path 的 auth_key 有效期约 5 小时, 所以 10 分钟内的
+        缓存分片必然还没过期, 可以放心用。
+     ③ 中继全挂时(HG_PL_REVIVE 窗口内)退回旧清单 —— 比让播放器空转好得多。 */
+  const HG_PL_CACHE = new Map();
+  const HG_PL_FRESH = 600000;      // 正常命中: 10 分钟
+  const HG_PL_REVIVE = 21600000;   // 中继全挂时的兜底: 6 小时内的旧清单仍可播
+  function hgPlKey(u) {
+    try { const x = new URL(u); return x.origin + x.pathname; } catch (e) { return u; }
+  }
+  function hgPlGet(k) {
+    const e = HG_PL_CACHE.get(k);
+    if (!e) return null;
+    const age = Date.now() - e.t;
+    if (age > HG_PL_REVIVE) { HG_PL_CACHE.delete(k); return null; }
+    return { v: e.v, fresh: age <= HG_PL_FRESH };
+  }
+  function hgPlPut(k, v) {
+    if (HG_PL_CACHE.size > 200) HG_PL_CACHE.clear();
+    HG_PL_CACHE.set(k, { t: Date.now(), v: v });
+  }
 
   function hgAbs(u) {
     if (!u) return "";
@@ -1042,29 +1456,40 @@ function filterByKeyword(items, kw) {
   return out;
 }
 
-/** 单页抓取 (走 HD_API_LINES 轮询 + 坏线路标记) */
+/** 单页抓取 (走 HD_API_LINES 轮询 + 每条线 2 次重试 + 坏线软冷却)
+ *  ★ v20: 与 /api/hd/* 同款稳健性。原来一次失败就记坏线 90 秒,
+ *     清单页因此整段拿不到 → 列表空白 → 用户以为"上游挂了"。 */
 async function hdFetchPage(page) {
-  for (const base of HD_API_LINES) {
-    if (HD_BAD[base] && HD_BAD[base] > Date.now()) continue;
-    try {
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), 12000);
-      const r = await fetch(base + "/videos?page=" + page, {
-        headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://hddj30.cc/" },
-        signal: ctl.signal,
-      });
-      clearTimeout(timer);
-      if (!r.ok) { HD_BAD[base] = Date.now() + HD_BAD_TTL; continue; }
-      const j = await r.json();
-      delete HD_BAD[base];
-      return {
-        items: (j && j.items) || [],
-        total: (j && j.total) || 0,
-        hasMore: !!(j && j.hasMore),
-      };
-    } catch (e) {
-      HD_BAD[base] = Date.now() + HD_BAD_TTL;
+  const bases = HD_API_LINES.slice().sort((a, b) => {
+    const ab = (HD_BAD[a] && HD_BAD[a] > Date.now()) ? 1 : 0;
+    const bb = (HD_BAD[b] && HD_BAD[b] > Date.now()) ? 1 : 0;
+    return ab - bb;
+  });
+  for (const base of bases) {
+    let fails = 0;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 250));
+      try {
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 12000);
+        const r = await fetch(base + "/videos?page=" + page, {
+          headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://hddj30.cc/" },
+          signal: ctl.signal,
+        });
+        clearTimeout(timer);
+        if (!r.ok) { fails++; continue; }
+        const j = await r.json();
+        delete HD_BAD[base];
+        return {
+          items: (j && j.items) || [],
+          total: (j && j.total) || 0,
+          hasMore: !!(j && j.hasMore),
+        };
+      } catch (e) {
+        fails++;
+      }
     }
+    if (fails >= 2) HD_BAD[base] = Date.now() + HD_BAD_TTL;
   }
   return null;
 }
@@ -1713,7 +2138,7 @@ const SOURCE_PATHS = new Set([
 ]);
 
 // 构建标记 — 用来确认线上跑的是哪一版 (改动时同步更新)
-const BUILD_ID = "hg-worker-2026-10-18-v19-player-always-on";
+const BUILD_ID = "hg-worker-2026-10-18-v22-hdmgdj-protocol";
 
 export default {
   async fetch(request, env, ctx) {
@@ -1997,6 +2422,55 @@ export default {
 
         // 媒体代理: 拉 m3u8 并把分片 / key 的 URL 重写回本站
         // 这是 IP 保护的关键 —— 不重写的话, 播放器会直连 tp3.drleao.cn 并暴露访客 IP
+        // 诊断: 逐跳打出一条上游媒体地址的真实结果。
+        // 目的 = 把「谁在拒我们」这一个问题一次问完:
+        //   出口指纹 (cf-worker) / Origin / 防盗链头 / 中继可用性。
+        if (path === "/api/hg/diag") {
+          const raw = q.get("u") || "";
+          let target = "";
+          try { target = decodeURIComponent(raw); } catch (e) { target = raw; }
+          if (!/^https?:\/\//i.test(target)) return json({ ok: false, error: "bad url" }, h, 400);
+          const UA0 = HG_UA_VARIANTS[0];
+          const hops = [];
+          const run = async (tag, fn) => {
+            const t0 = Date.now();
+            try {
+              const r = await fn();
+              let len = 0;
+              try { len = (await r.arrayBuffer()).byteLength; } catch (e2) {}
+              hops.push({ tag: tag, status: r.status, ms: Date.now() - t0, len: len });
+            } catch (e) {
+              hops.push({ tag: tag, status: 0, ms: Date.now() - t0, err: String((e && e.message) || e) });
+            }
+          };
+          await run("cf-default", function () {
+            return fetch(target, { headers: { "User-Agent": UA0 } });
+          });
+          await run("del-cf-worker", function () {
+            const req = new Request(target, { headers: { "User-Agent": UA0, "Accept": "*/*" }, redirect: "follow" });
+            req.headers.delete("cf-worker");
+            req.headers.delete("CF-Worker");
+            req.headers.delete("cf-connecting-ip");
+            return fetch(req);
+          });
+          await run("cf-worker-empty", function () {
+            return fetch(target, { headers: { "User-Agent": UA0, "cf-worker": "" } });
+          });
+          await run("cf-worker-spoof", function () {
+            return fetch(target, { headers: { "User-Agent": UA0, "cf-worker": "0" } });
+          });
+          await run("cdn-auth-hdrs", function () {
+            return fetch(target, { headers: { "User-Agent": UA0, "x-cdn-auth": "1", "x-cdn-app": "1" } });
+          });
+          await run("no-ua", function () {
+            return fetch(target, { headers: { "Accept": "*/*" } });
+          });
+          await run("relay-jina", function () {
+            return fetch("https://r.jina.ai/" + target, { headers: { "User-Agent": UA0 } });
+          });
+          return json({ ok: true, target: target.slice(0, 110), hops: hops }, h);
+        }
+
         if (path === "/api/hg/media") {
           const raw = q.get("u") || "";
           let target = "";
@@ -2010,21 +2484,114 @@ export default {
 
           const isPlaylist = /\.m3u8($|\?)/i.test(target);
 
-          let r;
-          try {
-            r = await fetch(target, {
-              headers: {
-                "User-Agent": UA,
-                "Accept": "*/*",
-                "Accept-Encoding": "identity",
-                "Referer": "https://huangguoai.com/",
-              },
-              redirect: "follow",
+          /* ---- 回源取数 (见文件上方「黄果媒体回源」注释) ----
+           *   第一级: 去掉 Origin 后直取 —— 这是本次修复的关键一步。
+           *   第二级: 换 UA 再试 (万一上游改成按 UA 也拦)。
+           *   第三级: 公共中转 (万一 Worker 出口 IP 整段被封)。
+           *   分片 .ts 不检查 Origin，本来一次就通，不必轮询。 */
+          let r = null, lastStatus = 0, lastErr = "";
+          /* ★ 2026-10-18 v21: 每一跳都要有超时。
+           *   上一版没有超时, 上游不回包时 fetch 会挂到运行时的耐心耗尽,
+           *   3 个 UA + 2 个中转串行 = 用户在黄果板块**一直转圈**。
+           *   现在: 单跳 6s 上限, 且第一跳拿到「连接层失败」(status 0) 就把
+           *   后续 UA 跳数砍掉 —— 换 UA 治不了连不上。 */
+          const HG_HOP_MS = 6000;
+          function hgHop(p, ms) {
+            const LIMIT = ms || HG_HOP_MS;
+            return new Promise(function (resolve, reject) {
+              let done = false;
+              const t = setTimeout(function () {
+                if (done) return; done = true; reject(new Error("hop timeout"));
+              }, LIMIT);
+              p.then(function (v) { if (done) return; done = true; clearTimeout(t); resolve(v); },
+                     function (e) { if (done) return; done = true; clearTimeout(t); reject(e); });
             });
-          } catch (e) {
-            return json({ ok: false, error: String((e && e.message) || e) }, h, 502);
           }
-          if (!r.ok) return json({ ok: false, error: "upstream " + r.status }, h, r.status);
+          if (isPlaylist) {
+            /* ★ 2026-10-18 实测根因: 上游 CDN 只对**清单**做出口指纹拦截 ——
+             *   请求带 cf-worker 头就 403 (本地复现: 只加这一个头 → 403)。
+             *   Cloudflare 出站由运行时强制带该头, 删 / 置空 / 伪造三种都试过, 仍是 403。
+             *   而**分片与密钥不检查**: 同一出口直取 .ts 是 200 全量 (实测 1,680,544 字节)。
+             *   所以清单换出口走中继, 分片密钥保持直连 —— 快, 且少一跳。
+             *   上一版先直连再中继, 白等 3×6s, 这正是"黄果一直转圈"的来源。 */
+            const plKey = hgPlKey(target);
+            const plHit = hgPlGet(plKey);
+            if (plHit && plHit.fresh) r = new Response(plHit.v, { status: 200 });
+            for (let ri = 0; ri < HG_RELAYS.length && !r; ri++) {
+              const relay = HG_RELAYS[ri];
+              /* 中继限流(429)或过载(503)时退避重试 3 次; 其他错误直接换下一家。 */
+              for (let attempt = 0; attempt < 3 && !r; attempt++) {
+                try {
+                  const rr = await hgHop(fetch(relay.mk(target), {
+                    headers: { "Accept": "*/*" },
+                    redirect: "follow",
+                  }), relay.hopMs || HG_HOP_MS);
+                  if (rr.ok) {
+                    let body;
+                    if (relay.text) {
+                      /* jina 会在正文前加 "Title:/URL Source:/Markdown Content:" 包装头。
+                       * 从 #EXTM3U 处截断 —— 实测截断后与本机直取逐字节一致。 */
+                      const rawTxt = await rr.text();
+                      const kk = rawTxt.indexOf("#EXTM3U");
+                      body = kk >= 0 ? rawTxt.slice(kk) : rawTxt;
+                    } else {
+                      body = await rr.text();
+                    }
+                    if (body.indexOf("#EXTM3U") < 0) {
+                      /* 中继给我一段错误页/拦截页 —— 当成本次失败, 不要污染缓存。 */
+                      lastErr = "relay returned non-m3u8";
+                      lastStatus = 502;
+                      break;
+                    }
+                    hgPlPut(plKey, body);
+                    r = new Response(body, { status: 200 });
+                  } else {
+                    lastStatus = rr.status;
+                    if (rr.status === 429 || rr.status === 503) {
+                      await new Promise(function (s) { setTimeout(s, 1200 * (attempt + 1)); });
+                    } else break;
+                  }
+                } catch (e) {
+                  lastErr = String((e && e.message) || e);
+                  if (attempt < 2) await new Promise(function (s) { setTimeout(s, 700); });
+                  else break;
+                }
+              }
+            }
+            if (!r) {
+              /* 中继全挂 —— 先看兜底缓存, 再试一次直连 (万一上游哪天放开了出口)。 */
+              if (plHit) {
+                r = new Response(plHit.v, { status: 200 });
+                lastErr = "served-stale-playlist";
+              } else {
+                try {
+                  const rr = await hgHop(hgFetchNoOrigin(target, HG_UA_VARIANTS[0]));
+                  if (rr.ok) r = rr; else lastStatus = rr.status;
+                } catch (e) {
+                  lastErr = String((e && e.message) || e);
+                }
+              }
+            }
+          } else {
+            /* 分片 / AES key: Cloudflare 直取即可 (实测 200 全量), 超时放宽到 15s。 */
+            try {
+              r = await hgHop(hgFetchNoOrigin(target, HG_UA_VARIANTS[1]), 15000);
+            } catch (e) {
+              return json({ ok: false, error: String((e && e.message) || e) }, h, 502);
+            }
+          }
+          if (!r || !r.ok) {
+            /* ★ 不再只回一个裸 403。告诉前端「Worker 出口被上游拦了」，
+             *   前端据此走直连/中转回退，而不是让 <video> 空转。 */
+            return json({
+              ok: false,
+              error: "上游拦截: Worker 出口被 CDN 拒绝 (status " + (lastStatus || 0) + ")",
+              blocked: lastStatus === 403,
+              kind: isPlaylist ? "playlist" : "segment",
+              hint: "frontend-fallback",
+              lastErr: lastErr || undefined,
+            }, h, isPlaylist ? 403 : (lastStatus || 502));
+          }
 
           if (isPlaylist) {
             const txt = await r.text();
@@ -2043,8 +2610,7 @@ export default {
               let abs;
               try { abs = new URL(u, target).href; } catch (e) { return u; }
               return mediaOrigin + "/api/hg/media?u=" + encodeURIComponent(abs);
-            };
-            const out = txt.split("\n").map(function (line) {
+            };            const out = txt.split("\n").map(function (line) {
               const t = line.trim();
               if (!t) return line;
               if (t.charAt(0) === "#") {
@@ -3374,6 +3940,103 @@ export default {
           }
         }
 
+        // ============ 黄豆魔改 (hdmgdj) v22 — 新协议直连 ============
+        //   走 HD2 协议 (签名 + AES-CBC), 见文件上方「黄豆魔改 v22 新协议」注释。
+        //   前端接口保持不变, 只是后端换了一条真正能拿到播放源的上游。
+        //     GET /api/hd2/list?block=<id>&page=1   → 某个板块的视频列表
+        //     GET /api/hd2/nav                       → 顶部频道 (10 个)
+        //     GET /api/hd2/detail?id=<drama_id>      → 剧集详情
+        //     GET /api/hd2/play?id=<drama_id>&seq=1  → 播放源
+        if (path.startsWith("/api/hd2")) {
+          const sub = path.slice("/api/hd2".length) || "/nav";
+          try {
+            // 搜索: 上游 /drama/searchResult { keyword }
+            if (sub === "/search") {
+              const kw = q.get("q") || q.get("keyword") || "";
+              if (!kw) return json({ ok: true, items: [], total: 0 }, h);
+              const d = await hd2Api("/drama/searchResult", { keyword: kw });
+              return json({ ok: true, data: d }, h);
+            }
+            // 频道列表: 上游 /drama/more { name, filter, ad_insert_every, ad_source }
+            //   name   = 频道下某个筛选页签的名字 (见 /drama/navList 的 filters[].name)
+            //   filter = 该页签的 filter 对象, 以 JSON 字符串形式传入
+            if (sub === "/more") {
+              const name = q.get("name") || "";
+              const filter = q.get("filter") || "{}";
+              if (!name) return json({ ok: false, error: "name required" }, h, 400);
+              const d = await hd2Api("/drama/more", {
+                name: name,
+                filter: filter,
+                ad_insert_every: 0,
+                ad_source: "",
+              });
+              return json({ ok: true, data: d }, h);
+            }
+            if (sub === "/status") {
+              // 诊断: 报当前线路 + 游客号状态
+              const a = await hd2Auth(false);
+              return json({ ok: true, line: a.line, uid: a.uid, vip: a.isVip,
+                            tokenLen: String(a.token).length,
+                            ageSec: Math.floor((Date.now() - a.at) / 1000) }, h);
+            }
+            if (sub === "/nav") {
+              try {
+                const d = await hd2Api("/drama/navList", {});
+                return json({ ok: true, source: "upstream", items: d.list || [] }, h);
+              } catch (e) {
+                return json({ ok: true, source: "catalog",
+                              note: "upstream:" + String((e && e.message) || e),
+                              items: HD2_CATALOG.channels }, h);
+              }
+            }
+            if (sub === "/list") {
+              const id = q.get("block") || "2";
+              const page = parseInt(q.get("page") || "1", 10) || 1;
+              try {
+                const d = await hd2Api("/drama/navBlock", { id: id, page: String(page) });
+                return json({ ok: true, source: "upstream", data: d }, h);
+              } catch (e) {
+                return json({ ok: true, source: "catalog",
+                              note: "upstream:" + String((e && e.message) || e),
+                              total: HD2_CATALOG.total,
+                              blocks: HD2_CATALOG.blocks,
+                              items: HD2_CATALOG.items }, h);
+              }
+            }
+            if (sub === "/catalog") {
+              return json({ ok: true, source: "catalog",
+                            generated: HD2_CATALOG.gen,
+                            total: HD2_CATALOG.total,
+                            channels: HD2_CATALOG.channels,
+                            blocks: HD2_CATALOG.blocks,
+                            items: HD2_CATALOG.items }, h);
+            }
+            if (sub === "/detail") {
+              const id = q.get("id") || "";
+              if (!id) return json({ ok: false, error: "id required" }, h, 400);
+              const d = await hd2Api("/drama/detail", { id: id });
+              return json({ ok: true, data: d }, h);
+            }
+            // 播放源: 上游 /drama/play 返回签好名的 m3u8 (15 分钟有效)。
+            // 媒体本身 (m3u8/分片/AES 密钥) 支持跨域, 播放器可以直连, 不必过 Worker。
+            if (sub === "/play") {
+              const id = q.get("id") || "";
+              const seq = q.get("seq") || "1";
+              if (!id) return json({ ok: false, error: "id required" }, h, 400);
+              const d = await hd2Api("/drama/play", { id: id, seq: String(seq) });
+              return json({ ok: true, data: d }, h);
+            }
+            return json({ ok: false, error: "未知子路径: " + sub }, h, 404);
+          } catch (e) {
+            // 付费集 (813005 需金币 / 会员) 属于业务结果, 不是故障, 用 200 回带 code 便于前端识别
+            const code = Number(e && e.code) || 0;
+            const biz = (code === 813005 || code === 813004 || code === 2002 || code === 813001);
+            return json({ ok: false, error: String((e && e.message) || e),
+                          code: (e && e.code) || null, upstream: "hdmgdj" },
+                        h, biz ? 200 : 502);
+          }
+        }
+
         // ============ 黄豆短剧 (hddj) 代理 ============
         //   前端 /api/hd/list       → 上游 /api/app/videos
         //   前端 /api/hd/ep?videoId=1&seq=1 → /api/app/playback
@@ -3479,33 +4142,105 @@ export default {
             target = sub + qs;
           }
 
+          /* ============ 黄豆取数 (2026-10-17 v20 修复) ============
+           *
+           * 【故障】线上实测 (Observed):
+           *   /api/hd/ep?videoId=4402&seq=3 → 502，同一秒重试 → 200
+           *   /api/hd/ep?videoId=4402&seq=2 → 200 … 第 5 次 → 502
+           *   约每 10 次里有 1 次 502。上游 hddj.zen-vip.com 本身
+           *   同一时刻直接访问是 200（连着试 7 集全 200）。
+           *
+           * 【根因 1】HD_API_LINES 只有一条线路。任何一次网络抖动 /
+           *   上游边缘节点抽风 / CF 出口慢，直接落到 502 —— 没有第二条可换。
+           * 【根因 2】失败一次就把唯一的线路写进 HD_BAD、冷却 90 秒。
+           *   于是"抖一下"被放大成"整段不可用"：这 90 秒里所有请求
+           *   直接全 502，连重试都不发。用户看到的就是"上游链接错误，
+           *   无法获取播放源"。
+           *
+           * 【修法】
+           *   1) 同一条目标做 3 次尝试 (短退避 0/250/700ms)，抖动期足以覆盖；
+           *   2) 只有"连续 3 次都失败"才记 HD_BAD，且冷却从 90s 降到 20s；
+           *   3) HD_BAD 命中时不再直接跳过 —— 仍然尝试 1 次 (软冷却)，
+           *      避免一条线挂掉后出现"整段时间全灭"的黑洞；
+           *   4) 仍然失败才回 502，并把真实原因写进 error，前端据此提示。
+           * ============================================================ */
+          const HD_TRY = [
+            { wait: 0,   timeout: 9000 },
+            { wait: 250, timeout: 9000 },
+            { wait: 700, timeout: 12000 },
+          ];
+          const hdSleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
           let lastErr = null;
-          for (const base of HD_API_LINES) {
-            if (HD_BAD[base] && HD_BAD[base] > Date.now()) continue;
-            try {
-              const ctl = new AbortController();
-              const timer = setTimeout(() => ctl.abort(), 12000);
-              const r = await fetch(base + target, {
-                headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://hddj30.cc/" },
-                signal: ctl.signal,
-              });
-              clearTimeout(timer);
-              if (!r.ok) { lastErr = new Error("status " + r.status); HD_BAD[base] = Date.now() + HD_BAD_TTL; continue; }
-              const txt = await r.text();
-              delete HD_BAD[base];
-              // 把 managed-media 相对地址补成可直接播的绝对地址
-              const fixed = txt.replace(/"(\/api\/app\/managed-media\/[^"]+)"/g,
-                (m, p1) => '"' + base.replace(/\/api\/app\/?$/, "") + p1 + '"');
-              return new Response(fixed, {
-                status: 200,
-                headers: { ...h, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-              });
-            } catch (e) {
-              lastErr = e;
-              HD_BAD[base] = Date.now() + HD_BAD_TTL;
+          let respTxt = null, respBase = null;
+          const hdURL = (base) => base + target;
+
+          // 软冷却: 即使被标记为坏线, 也给它一次机会
+          const bases = HD_API_LINES.slice().sort((a, b) => {
+            const ab = (HD_BAD[a] && HD_BAD[a] > Date.now()) ? 1 : 0;
+            const bb = (HD_BAD[b] && HD_BAD[b] > Date.now()) ? 1 : 0;
+            return ab - bb;                      // 好线优先, 坏线垫底但仍会试
+          });
+
+          outer:
+          for (const base of bases) {
+            let fails = 0;
+            for (const t of HD_TRY) {
+              if (t.wait) await hdSleep(t.wait);
+              try {
+                const ctl = new AbortController();
+                const timer = setTimeout(() => ctl.abort(), t.timeout);
+                const r = await fetch(hdURL(base), {
+                  headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://hddj30.cc/" },
+                  signal: ctl.signal,
+                });
+                clearTimeout(timer);
+                if (!r.ok) {
+                  lastErr = new Error("status " + r.status);
+                  fails++;
+                  continue;
+                }
+                const txt = await r.text();
+                respTxt = txt; respBase = base;
+                delete HD_BAD[base];
+                break outer;
+              } catch (e) {
+                clearTimeout(timer);
+                lastErr = e;
+                fails++;
+              }
             }
+            // 3 次都失败才算这条线坏了
+            if (fails >= HD_TRY.length) HD_BAD[base] = Date.now() + HD_BAD_TTL;
           }
-          return json({ ok: false, error: String((lastErr && lastErr.message) || lastErr) }, h, 502);
+
+          if (respTxt == null) {
+            return json({
+              ok: false,
+              error: String((lastErr && lastErr.message) || lastErr || "上游无响应"),
+              upstream: "hddj",
+              tried: bases.length,
+              attemptsEach: HD_TRY.length,
+            }, h, 502);
+          }
+
+          {
+            const base = respBase;
+            // 把 managed-media 相对地址补成可直接播的绝对地址
+            // ★ v20: 除了 /api/app/managed-media/ 之外, 上游还会下发
+            //   "/api/app/media/…" 与 "//host/…" 形态; 统一按「站内绝对路径」补全,
+            //   避免播放器拿到相对地址后解析到本站域名下 → 404。
+            const origin = base.replace(/\/api\/app\/?$/, "");
+            const fixed = respTxt
+              .replace(/"(\/api\/app\/(?:managed-media|media)\/[^"]+)"/g,
+                (m, p1) => '"' + origin + p1 + '"')
+              .replace(/"(\/(?:api|media|hls|videos)\/[^"]{4,})"/g,
+                (m, p1) => (m && p1.length > 12 ? '"' + origin + p1 + '"' : m));
+            return new Response(fixed, {
+              status: 200,
+              headers: { ...h, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+            });
+          }
         }
 
         // ============ EROSHORT (eroshort.net) 代理 ============
@@ -4065,12 +4800,58 @@ export default {
 
     // ============ 静态资源 (env.ASSETS) ============
     if (path === "/" || path === "") {
-      if (env.ASSETS) return env.ASSETS.fetch(new Request(new URL("/index.html", url), request));
-      return new Response("index.html not bound", { status: 500 });
+      if (!env.ASSETS) return new Response("index.html not bound", { status: 500 });
+      // ★ 实测 (2026-10-18): 直接转发原始 request 给绑定, "/" 会拿回
+      //   `307 Location: /` 的自跳转 —— 浏览器看到就是"重定向次数过多", 首页永远打不开。
+      //   根路径必须**显式**构造 /index.html 的请求去取正文, 不能指望绑定自己归一化。
+      const r0 = await env.ASSETS.fetch(new Request(new URL("/index.html", url), { method: "GET" }));
+      if (r0.status !== 200) {
+        return new Response("assets: index.html " + r0.status, { status: 502, headers: h });
+      }
+      return new Response(r0.body, {
+        status: 200,
+        headers: {
+          ...h,
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          "Pragma": "no-cache",
+          "Expires": "0",
+          "X-Build": BUILD_ID,
+        },
+      });
     }
 
     if (env.ASSETS) {
       const res = await env.ASSETS.fetch(request);
+
+      // ★ 静态绑定偶尔会回一个指向自身的 3xx (实测: / 与 /index.html 都回
+      //   Location: / —— 浏览器看到就是"重定向次数过多", 页面永远出不来)。
+      //   这类响应绝不能透传。判据放宽到「任何 3xx 且目标是本站根路径」,
+      //   命中就自己把 index.html 的正文取出来, 用 200 回。
+      if (res.status >= 300 && res.status < 400) {
+        let loc = "";
+        try { loc = new URL(res.headers.get("location") || "", url).pathname; } catch (e) { loc = ""; }
+        if (loc === "/" || loc === "/index.html" || loc === "" || loc === url.pathname) {
+          const again = await env.ASSETS.fetch(
+            new Request(new URL("/index.html", url), { method: "GET" }));
+          if (again.status === 200) {
+            return new Response(again.body, {
+              status: 200,
+              headers: {
+                ...h,
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0",
+                "X-Build": BUILD_ID,
+                "X-Asset-Loop": "1",
+              },
+            });
+          }
+          // 连 index.html 也取不到 → 别把 3xx 丢给浏览器, 明确报 502 更好排查
+          return new Response("assets: index.html unavailable", { status: 502, headers: h });
+        }
+      }
 
       // sw.js: 绝对不许缓存。任何一层缓存留住旧 sw.js, 更新检查就会失效,
       // 用户会永远卡在旧版本上 (页面自愈逻辑也拿不到新版本号)。
