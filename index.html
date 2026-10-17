@@ -2136,7 +2136,10 @@ function coverUrl(u, src) {
   //       并且必须是绝对地址 —— 前端在 GitHub Pages 上, 相对路径会 404。
   if (cur === 'dt') {
     const p = s.indexOf('/api/dt/img') === 0 ? s : ('/api/dt/img?u=' + encodeURIComponent(s));
-    return (typeof API === 'string' && API) ? (API + p) : p;
+    /* API 可能在探测前是空串 —— 直接兜底到 DEFAULT_API, 不能返回相对路径 */
+    const base = (typeof API === 'string' && API) ? API
+               : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '');
+    return base ? (base + p) : p;
   }
 
   // EROSHORT: 封面在 Cloudflare R2 公开桶 (pub-*.r2.dev), 无防盗链,
