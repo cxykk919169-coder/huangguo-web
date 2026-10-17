@@ -2124,6 +2124,16 @@ function pg(d) { /* 已改为无限滚动, 保留兼容 */ }
 function coverUrl(u, src) {
   if (!u) return '';
   const s = String(u).trim();
+  const cur0 = src || SITE;
+  /* ★ 2048 的封面是本站的相对路径 (/api/dt/img?u=…),
+   *   必须在下面那条「非 http 就直接返回」之前处理, 否则会被原样返回,
+   *   浏览器再按页面域名去拼 → 404。 */
+  if (cur0 === 'dt') {
+    const p = s.indexOf('/api/dt/img') === 0 ? s : ('/api/dt/img?u=' + encodeURIComponent(s));
+    const base = (typeof API === 'string' && API) ? API
+               : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '');
+    return base ? (base + p) : p;
+  }
   if (!/^https?:\/\//i.test(s)) return s;
   // 占位图直接透传, 没必要代理
   if (/cover-placeholder|placeholder\.(png|webp)/i.test(s)) return s;
@@ -2132,15 +2142,6 @@ function coverUrl(u, src) {
 
   // 黄豆的封面是 CloudFront, 直连就很好, 不折腾
   if (cur === 'hd') return s;
-  // 2048: 封面走 /api/dt/img 代理 (上游图片床要 Referer, 直连 403),
-  //       并且必须是绝对地址 —— 前端在 GitHub Pages 上, 相对路径会 404。
-  if (cur === 'dt') {
-    const p = s.indexOf('/api/dt/img') === 0 ? s : ('/api/dt/img?u=' + encodeURIComponent(s));
-    /* API 可能在探测前是空串 —— 直接兜底到 DEFAULT_API, 不能返回相对路径 */
-    const base = (typeof API === 'string' && API) ? API
-               : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '');
-    return base ? (base + p) : p;
-  }
 
   // EROSHORT: 封面在 Cloudflare R2 公开桶 (pub-*.r2.dev), 无防盗链,
   // <img> 不受 CORS 限制, 直接原图最稳 —— 走代理反而多一跳。
