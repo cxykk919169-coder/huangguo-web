@@ -452,6 +452,9 @@ function api(path, params) {
   // ---- 黄豆短剧分支 (经本站 Worker 代理) ----
   if (SITE === 'hd') return hdApi(path, params);
 
+  // ---- 2048 短剧分支 (全部经 Worker 的 /api/dt/*) ----
+  if (SITE === 'dt') return dtApi(path, params);
+
   // ---- 海角网分支 ----
   // 实测 (2026-10 runner): www.hjw01.com / hjw01.com **不发** Access-Control-Allow-Origin,
   // 只有 CDN 边缘 hjw1.com 带 * —— 而那台是 8KB 空壳。
@@ -1721,6 +1724,115 @@ let curCat = '', curPage = 1;
 const esc = s => (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app = () => document.getElementById('app');
 
+/* ===================== 2048 短剧 (独立板块) ===================== */
+/* 数据面全部走 Worker 的 /api/dt/*:
+ *   列表 / 详情 / 播放 / 搜索 / 封面 都由 Worker 代理, 前端不直连上游。
+ * 播放: /api/dt/play 回一个**绝对地址**的 m3u8 (本站 Worker 代取并补 CORS),
+ *       hls.js 拿它当普通清单播; 分片和 AES 密钥由浏览器直连上游 CDN。
+ *       —— 上游 CDN 不校验 Origin, 实测分片 206 / 密钥 16B 全通。
+ */
+const DT_CATS = [
+  { id: '',    name: '最新' },
+  { id: 'hot', name: '最热' },
+];
+let DT_LIST = [];
+
+async function dtApi(path, params) {
+  const p = params || {};
+  if (path === '/api/list') {
+    return apiRaw('/api/dt/list?page=' + (p.page || 1) + '&size=24');
+  }
+  if (path === '/api/search') {
+    return apiRaw('/api/dt/search?q=' + encodeURIComponent(p.q || ''));
+  }
+  return apiRaw(path);
+}
+
+/* 直接打 Worker 的相对路径拼接, 统一走 API 基址 */
+async function apiRaw(p) {
+  const url = API + p;
+  const r = await fetch(url, { method: 'GET' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+
+/* 列表卡片 → 首页网格 */
+function dtCards(j) {
+  const items = (j && j.items) || [];
+  DT_LIST = items;
+  return items.map(x =>
+    '<div class="card" onclick="openDt(' + JSON.stringify(String(x.id)) + ')">' +
+      '<div class="thumb"><img loading="lazy" src="' + API + esc(x.cover || '') + '" alt="">' +
+        (x.duration ? '<i class="dur">' + dtDur(x.duration) + '</i>' : '') +
+      '</div>' +
+      '<div class="cap">' + esc(x.title || '') + '</div>' +
+    '</div>').join('');
+}
+
+function dtDur(sec) {
+  const n = Number(sec) || 0;
+  const m = Math.floor(n / 60), s2 = n % 60;
+  return m + ':' + (s2 < 10 ? '0' : '') + s2;
+}
+
+/* 打开详情: 取详情 + 播放地址, 直接起播 */
+async function openDt(id) {
+  VIEW_DETAIL = true;
+  const T = newView();
+  app().innerHTML = '<div class="load"><span class="spin"></span>加载中…</div>';
+  let d = null, play = null;
+  try {
+    d = await apiRaw('/api/dt/detail?id=' + encodeURIComponent(id));
+    play = await apiRaw('/api/dt/play?id=' + encodeURIComponent(id));
+  } catch (e) {
+    if (stale(T)) return;
+    app().innerHTML = '<div class="err">取播放源失败：' + esc(String(e.message || e)) + '</div>';
+    return;
+  }
+  if (stale(T)) return;
+  const it = (d && d.data) || {};
+  if (!play || !play.ok || !play.url) {
+    app().innerHTML = '<div class="err">这部剧暂时拿不到播放源，换一部试试。</div>';
+    return;
+  }
+  const cover = API + ((it.cover) || '');
+  app().innerHTML =
+    '<div class="detail">' +
+      '<div class="dhead"><img src="' + esc(cover) + '" alt="">' +
+        '<div class="dinfo"><h1>' + esc(it.title || '2048') + '</h1>' +
+          '<div class="dmeta">' + esc(it.author || '') +
+            (it.duration ? ' · ' + dtDur(it.duration) : '') +
+            (it.views ? ' · ' + it.views + ' 次播放' : '') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="player"><video id="dtv" controls playsinline preload="metadata" poster="' + esc(cover) + '"></video></div>' +
+      '<div class="dact"><button onclick="goHome()">返回列表</button></div>' +
+    '</div>';
+  dtPlay(play.url);
+}
+
+function dtPlay(src) {
+  const v = document.getElementById('dtv');
+  if (!v) return;
+  if (window.Hls && Hls.isSupported()) {
+    const h = new Hls({ manifestLoadingMaxRetry: 3, fragLoadingMaxRetry: 4, manifestLoadingTimeOut: 15000 });
+    h.loadSource(src);
+    h.attachMedia(v);
+    h.on(Hls.Events.ERROR, function (ev, d) {
+      if (!d || !d.fatal) return;
+      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) h.startLoad();
+      else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) h.recoverMediaError();
+      else h.destroy();
+    });
+    v.play().catch(function () {});
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    v.src = src;
+    v.play().catch(function () {});
+  } else {
+    v.src = src;
+  }
+}
+
 function renderTabs() {
   const el = document.getElementById('tabs');
   if (SITE === 'hd') {
@@ -1733,6 +1845,12 @@ function renderTabs() {
   if (SITE === 'es') {
     const list = CATS_MG.length ? CATS_MG : [{ id: '', name: '全部' }];
     el.innerHTML = list.map(c =>
+      '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
+      esc(c.name) + '</div>').join('');
+    return;
+  }
+  if (SITE === 'dt') {
+    el.innerHTML = DT_CATS.map(c =>
       '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
       esc(c.name) + '</div>').join('');
     return;
