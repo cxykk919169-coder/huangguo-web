@@ -357,6 +357,25 @@ const SITES = {
     desc: '完整可播 · 公开 JSON 接口 · 明文切片免解密',
     hasEps: true,
   },
+
+  /* ===== 2048 短剧 (2026-10-18 新增, 独立板块) ===== 
+   * 数据面全部由 Worker 的 /api/dt/* 代理:
+   *   /api/dt/list?page&size     列表 (上游总库约 1.98 万部)
+   *   /api/dt/detail?id          详情
+   *   /api/dt/play?id            播放 (返回带 CORS 的 m3u8 绝对地址)
+   *   /api/dt/search?q           搜索
+   *   /api/dt/img?u=             封面代理
+   * 播放链路: 清单走本站代理 (上游那个 /m3u8/proxy 不带 CORS 头),
+   *          分片与 AES 密钥由浏览器直连上游 CDN —— 不校验 Origin, 200/206 全通。
+   * ============================================= */
+  dt: {
+    key: 'dt',
+    name: '2048短剧',
+    short: '2048',
+    color: '#38bdf8',
+    desc: '完整可播 · 近两万部 · 清单本站代理',
+    hasEps: false,
+  },
 };
 let SITE = localStorage.getItem('hg_site') || 'hg';
 if (!SITES[SITE]) SITE = 'hg';
