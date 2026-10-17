@@ -1775,7 +1775,11 @@ async function dtApi(path, params) {
     return {
       id: String(x.id),
       title: x.title || '',
-      cover: x.cover || '',
+      /* ★ 这里直接给绝对地址。coverUrl 里虽然也有 dt 分支, 但它前面有
+       *   「非 http(s) 直接原样返回」的早退, 相对路径会被放过去 → 浏览器
+       *   按页面域名拼 → 404。数据层补好, 后面任何一处理都不会再出错。 */
+      cover: (typeof API === 'string' && API ? API
+             : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '')) + (x.cover || ''),
       site: 'dt',
       views: x.views || 0,
       dur: x.duration || 0,
