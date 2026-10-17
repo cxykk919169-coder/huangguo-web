@@ -1495,23 +1495,78 @@ function  hdApi(path, params) {
   if (typeof HDHd === 'undefined') return Promise.reject(new Error('黄豆短剧模块未加载'));
   const p = params || {};
 
-  // ---- 黄豆魔改 (hdmgdj) 目录快照 ----
+  // ---- 黄豆魔改 (hdmgdj) ----
   //   上游 hddj32/hddj36 那套 /api/app 已死; 现行上游是 Flutter 应用 hdmgdj,
-  //   走签名 + AES-CBC 的私有协议, 且服务端对第三方来源返回 2001。
-  //   这里改用已解密的真实目录快照 (10 频道 / 117 部, 来自 /api/hd2/catalog),
-  //   保证列表与分类始终有真实内容可看。
-  //   注意: 播放地址不在这份数据里 —— 那需要上游 /drama/play 下发。
+  //   走签名 + AES-CBC 的私有协议。
+  //
+  //   ★ 2026-10-18 改: 以前这里**只**读本地快照, 结果上游换新批次后
+  //     快照里的 117 部全成了旧数据, 而 /api/hd2/list 明明能拿到 63 部新剧。
+  //     现在反过来: 先打实时接口, 成功就用实时数据; 失败才退回快照。
+  //     快照仍然保留 —— 上游 2001 / 断线时页面不会空白。
   if (WORKER_OK !== false && API && (path === '/api/list' || path === '/api/categories'
       || path === '/api/hd2/catalog' || path === '/api/hd2/nav' || path === '/api/hd2/list')) {
     const t = p && p.cat;
-    return hdCatalog(API).then(cat => {
-      if (!cat) throw new Error('目录快照不可用');
-      const items = hdCatalogMap(cat, t);
-      if (path === '/api/categories') {
-        return cat.channels.map(c => ({ slug: c.code, name: c.name }));
-      }
-      return { items: items, total: items.length, from: 'hdmgdj-catalog' };
-    });
+
+    // 实时列表: /api/hd2/list 返回 { ok, data:{ list:[楼层] } },
+    // 每个楼层里有 items[] 才是剧集; 把所有楼层的 items 摊平去重。
+    const live = fetch(API + '/api/hd2/list?block=1&page=' + ((p && p.page) || 1), { method: 'GET' })
+      .then(r => r.ok ? r.json() : null)
+      .then(function (j) {
+        if (!j || !j.ok || !j.data || !Array.isArray(j.data.list)) return null;
+        const seen = Object.create(null);
+        const out = [];
+        for (const fl of j.data.list) {
+          for (const it of (fl.items || [])) {
+            const id = it && it.drama_id;
+            if (!id || seen[id]) continue;
+            seen[id] = 1;
+            out.push({
+              i: id,
+              d: id,
+              n: it.name || '',
+              c: it.category || '',
+              img: it.img || '',
+              img_x: it.img_x || '',
+              img_y: it.img_y || '',
+              e: String(it.episode_count || ''),
+              u: it.update_label || '',
+              h: String(it.hot_rate || ''),
+              f: String(it.favorite || ''),
+              s: it.source || '',
+              p: it.pay_type || '',
+              m: String(it.money || '0'),
+              t: it.description || '',
+              y: it.type || 'drama',
+              _live: 1,
+            });
+          }
+        }
+        return out.length ? out : null;
+      })
+      .catch(function () { return null; });
+
+    return live.then(function (liveItems) {
+      return hdCatalog(API).then(function (cat) {
+        const snap = cat || { channels: [], items: [] };
+        if (path === '/api/categories') {
+          return snap.channels.map(c => ({ slug: c.code, name: c.name }));
+        }
+        const items = liveItems || hdCatalogMap(snap, t);
+        const filtered = (liveItems && t && t !== 'all' && t !== '全部')
+          ? (function () {
+              const ch = (snap.channels || []).filter(c => c.code === t || c.name === t)[0];
+              const nm = ch ? ch.name : t;
+              const hit = items.filter(it => it.c === nm);
+              return hit.length ? hit : items;
+            })()
+          : items;
+        return {
+          items: filtered,
+          total: filtered.length,
+          from: liveItems ? 'hdmgdj-live' : 'hdmgdj-catalog',
+        };
+      });
+    }).catch(function () { throw new Error('目录不可用'); });
   }
 
   // Worker 代理优先 (已验证 WORKER_OK===false 时跳过)

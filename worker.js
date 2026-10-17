@@ -237,7 +237,24 @@ const HD_MEDIA_HOSTS = [
  * ============================================================ */
 
 // 官方 system/info 下发的接口线 (2026-10-18 抓取, 12 条全部 ping 通)
+/* 线路池。★ 2026-10-18 实测: 上游主站已换到「黄豆魔改 Flutter 版」,
+   momodrift.top 这一批是它的官方 API 域名 (从 main.ef678af4ba73.js 里挖出的
+   china_1 / oversea_1 两组), 协议与本文件里的 HD2_* 完全一致。
+   实测可达的三组: momodrift.top(网页入口) / sxqirtho.top / hvthtcpa.top,
+   其余 .top/.cc 为备用。老的 *.cc 保留在后, 万一新批全挂还能兜底。
+   探活顺序 = 数组顺序, hd2PickLine 会逐个 ping 取第一个通的。 */
 const HD2_LINES = [
+  "https://momodrift.top",
+  "https://sxqirtho.top",
+  "https://hvthtcpa.top",
+  "https://qicuknlj.top",
+  "https://ferncider.cc",
+  "https://onyxripple.cc",
+  "https://vivifable.top",
+  "https://kucvcxrv.cc",
+  "https://larkgarden.top",
+  "https://niniharbor.top",
+  "https://larksummit.icu",
   "https://myeuzprt.cc",
   "https://wfzrznei.cc",
   "https://tjfccdvt.cc",
@@ -248,7 +265,6 @@ const HD2_LINES = [
   "https://unbmagme.cc",
   "https://ekkaioqz.cc",
   "https://umycelaw.cc",
-  "https://sxqirtho.top",
 ];
 const HD2_KEY_WEB = "7961beb44246e3012ce228d6b5ced05a";
 const HD2_VERSION = "1.0.0";
@@ -2422,55 +2438,6 @@ export default {
 
         // 媒体代理: 拉 m3u8 并把分片 / key 的 URL 重写回本站
         // 这是 IP 保护的关键 —— 不重写的话, 播放器会直连 tp3.drleao.cn 并暴露访客 IP
-        // 诊断: 逐跳打出一条上游媒体地址的真实结果。
-        // 目的 = 把「谁在拒我们」这一个问题一次问完:
-        //   出口指纹 (cf-worker) / Origin / 防盗链头 / 中继可用性。
-        if (path === "/api/hg/diag") {
-          const raw = q.get("u") || "";
-          let target = "";
-          try { target = decodeURIComponent(raw); } catch (e) { target = raw; }
-          if (!/^https?:\/\//i.test(target)) return json({ ok: false, error: "bad url" }, h, 400);
-          const UA0 = HG_UA_VARIANTS[0];
-          const hops = [];
-          const run = async (tag, fn) => {
-            const t0 = Date.now();
-            try {
-              const r = await fn();
-              let len = 0;
-              try { len = (await r.arrayBuffer()).byteLength; } catch (e2) {}
-              hops.push({ tag: tag, status: r.status, ms: Date.now() - t0, len: len });
-            } catch (e) {
-              hops.push({ tag: tag, status: 0, ms: Date.now() - t0, err: String((e && e.message) || e) });
-            }
-          };
-          await run("cf-default", function () {
-            return fetch(target, { headers: { "User-Agent": UA0 } });
-          });
-          await run("del-cf-worker", function () {
-            const req = new Request(target, { headers: { "User-Agent": UA0, "Accept": "*/*" }, redirect: "follow" });
-            req.headers.delete("cf-worker");
-            req.headers.delete("CF-Worker");
-            req.headers.delete("cf-connecting-ip");
-            return fetch(req);
-          });
-          await run("cf-worker-empty", function () {
-            return fetch(target, { headers: { "User-Agent": UA0, "cf-worker": "" } });
-          });
-          await run("cf-worker-spoof", function () {
-            return fetch(target, { headers: { "User-Agent": UA0, "cf-worker": "0" } });
-          });
-          await run("cdn-auth-hdrs", function () {
-            return fetch(target, { headers: { "User-Agent": UA0, "x-cdn-auth": "1", "x-cdn-app": "1" } });
-          });
-          await run("no-ua", function () {
-            return fetch(target, { headers: { "Accept": "*/*" } });
-          });
-          await run("relay-jina", function () {
-            return fetch("https://r.jina.ai/" + target, { headers: { "User-Agent": UA0 } });
-          });
-          return json({ ok: true, target: target.slice(0, 110), hops: hops }, h);
-        }
-
         if (path === "/api/hg/media") {
           const raw = q.get("u") || "";
           let target = "";
