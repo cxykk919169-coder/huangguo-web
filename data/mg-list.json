@@ -988,6 +988,17 @@
   },
   {
    "cats": [
+    "adult-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917151525/6aab938dca57c75f779ac5d8/cover.jpg",
+   "ep": "65",
+   "epLabel": "更新至65集",
+   "id": "6aab938dca57c75f779ac5d8",
+   "title": "Boss别撩了，我捡的是狗呀",
+   "updating": true
+  },
+  {
+   "cats": [
     "ai-comic-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6a6/cover.jpg",
@@ -1990,17 +2001,6 @@
    "epLabel": "全29集",
    "id": "6aba6248ca57c75f779bfe73",
    "title": "钢铁小棉袄，为父斩风霜",
-   "updating": false
-  },
-  {
-   "cats": [
-    "adult-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260928204910/6aba6248ca57c75f779bfe81/cover.jpg",
-   "ep": "29",
-   "epLabel": "全29集",
-   "id": "6aba6248ca57c75f779bfe81",
-   "title": "风云再起，从掌公主归来开始",
    "updating": false
   },
   {
