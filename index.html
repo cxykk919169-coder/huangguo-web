@@ -1758,13 +1758,31 @@ let DT_LIST = [];
 
 async function dtApi(path, params) {
   const p = params || {};
+  let j = null;
   if (path === '/api/list') {
-    return apiRaw('/api/dt/list?page=' + (p.page || 1) + '&size=24');
+    j = await apiRaw('/api/dt/list?page=' + (p.page || 1) + '&size=24');
+  } else if (path === '/api/search') {
+    j = await apiRaw('/api/dt/search?q=' + encodeURIComponent(p.q || ''));
+  } else {
+    j = await apiRaw(path);
   }
-  if (path === '/api/search') {
-    return apiRaw('/api/dt/search?q=' + encodeURIComponent(p.q || ''));
+  if (!j || !j.ok) {
+    return { items: [], notice: (j && j.error) || '2048 暂时取不到数据' };
   }
-  return apiRaw(path);
+  /* 适配成通用卡片字段: id / title / cover / site / views / dur
+   * 封面走 /api/dt/img 代理 (上游图片要带 Referer, 直连会 403)。 */
+  const items = (j.items || []).map(function (x) {
+    return {
+      id: String(x.id),
+      title: x.title || '',
+      cover: x.cover || '',
+      site: 'dt',
+      views: x.views || 0,
+      dur: x.duration || 0,
+      author: x.author || '',
+    };
+  });
+  return { items: items, total: j.total || 0, page: j.page || 1, hasMore: (j.page || 1) < (j.totalPages || 1) };
 }
 
 /* 直接打 Worker 的相对路径拼接, 统一走 API 基址 */
@@ -2145,7 +2163,7 @@ function cardHtml(it) {
   // data-hg="1" 会让 onerror 直接认输 (黄果封面是 AES 加密的, 直连必失败)。
   // ERO 封面是 R2 公链, 无防盗链, 直连通常成功; 万一失败也值得退回原图再试一次,
   // 所以 es 不打这个标记。
-  const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es') ? '' : ' data-hg="1"';
+  const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es' || src === 'dt') ? '' : ' data-hg="1"';
   const SITE_LABEL = { hd: '黄豆', es: 'ERO', hg: '黄果', hjw: '海角' };
   const tag = it.showSite
     ? '<div class="badge src" style="left:auto;right:6px;background:rgba(10,10,14,.72)">' +
@@ -2517,6 +2535,8 @@ let HIS_TIMER = null;
 async function openVid(id, from) {
   const T = newView();
   const src = from || SITE;
+  // 2048 板块走自己的详情/播放 (单剧单视频, 无选集)
+  if (src === 'dt') { openDt(id); return; }
   app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
   try {
     let v;
@@ -4148,7 +4168,7 @@ function goMine() {
     const src = x.site || SITE;
     const cv = coverUrl(x.cover, src);
     // 只有黄果封面是加密的 (必须走 /img, 直连必败); es/hjw/hd 都直接放行
-    const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es') ? '' : ' data-hg="1"';
+    const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es' || src === 'dt') ? '' : ' data-hg="1"';
     return '<div class="item" data-id="' + esc(x.id) + '" data-site="' + esc(src) + '"' +
       ' onclick="openVid(\'' + esc(x.id) + '\',\'' + esc(src) + '\')">' +
       '<div class="thumb">' +
