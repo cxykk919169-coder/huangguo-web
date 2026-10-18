@@ -2354,6 +2354,17 @@ function coverUrl(u, src) {
                : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '');
     return base ? (base + p) : p;
   }
+  /* ★ 黄果漫剧: 后端已经把 .bnc 封面改写成 /api/mj/img?u=… (Worker 上的解密接口)。
+   *   必须在「非 http 直接返回」之前处理, 否则会被原样丢给浏览器,
+   *   在 Pages 域名下变成 https://xxx.github.io/api/mj/img → 404。
+   *   站内相对路径 /api/uploads/… 后端已补成绝对地址, 这里兜底也拼 origin。 */
+  if (cur0 === 'mj') {
+    const base = (typeof API === 'string' && API) ? API
+               : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '');
+    if (/^\/api\//.test(s)) return base ? (base + s) : s;
+    if (!/^https?:\/\//i.test(s)) return s;
+    return s;
+  }
   if (!/^https?:\/\//i.test(s)) return s;
   // 占位图直接透传, 没必要代理
   if (/cover-placeholder|placeholder\.(png|webp)/i.test(s)) return s;
