@@ -77,6 +77,10 @@ video{width:100%;display:block;background:#000;max-height:74vh}
 .epbtn{padding:9px 14px;border-radius:9px;background:#1e1e25;color:#8fb4ff;font-size:14px;border:1px solid #2a2a33;cursor:pointer;transition:.12s;font-family:inherit}
 .epbtn:active,.epbtn.on{background:#ff7a18;color:#fff;border-color:#ff7a18}
 .epbtn.on{font-weight:700}
+/* ★ 2026-10-20: 漫剧锁集 (上游 wallType=vip, 第2集起不返回播放地址)。
+ *   视觉对齐上面 EROSHORT 的 .ep.locked, 让两个板块的"锁"长得一样。 */
+.epbtn.lk{background:#221a12;color:#a07a3a;border-color:#3a2c18}
+.epbtn.lk:active,.epbtn.lk.on{background:#3a2c18;color:#ffb02e;border-color:#5a4525}
 /* EROSHORT: 付费集样式 */
 .ep.locked{background:#221a12;color:#a07a3a;border-color:#3a2c18;position:relative}
 .ep.locked .lockb{display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;background:#ffb02e;color:#231a08;font-size:10px;font-style:normal;font-weight:700;vertical-align:1px}
@@ -2141,7 +2145,11 @@ async function mjApi(path, params) {
       j = await apiRaw('/api/mj/list?page=' + (p.page || 1) + '&limit=24&tag=' + encodeURIComponent(p.cat || ''));
     }
   } else if (path === '/api/search') {
-    j = await apiRaw('/api/mj/search?q=' + encodeURIComponent(p.q || ''));
+    /* ★ 2026-10-20: 走上游真搜索接口 (后端已换成 /api/dramas?page=&pageSize=&kw=)。
+     *   旧写法只把 keyword 传给后端, 后端当时用的是猜的路径 (404/410) ——
+     *   实际一直是本地过滤兜底。现在能真搜到分区外的剧, 顺带带分页。 */
+    j = await apiRaw('/api/mj/search?q=' + encodeURIComponent(p.q || '') +
+      '&page=' + (p.page || 1));
   } else {
     j = await apiRaw(path);
   }
@@ -2187,8 +2195,16 @@ async function openMj(id) {
     const coverHtml = j.cover
       ? '<img src="' + esc(coverUrl(j.cover, 'mj')) + '" alt="" onerror="this.style.display=none">'
       : '';
+    /* ★ 2026-10-20: 锁集标记。
+     *   上游 wallType="vip" 的剧第 2 集起 video 为空 + locked=true。
+     *   以前后端拿第 1 集冒充 (已修), 前端也没有任何标记 —— 点哪集都播第 1 集,
+     *   看起来像"选集功能坏了"。现在把 locked 如实画出来: 灰底 + 🔒 + title 提示。 */
+    const mjTip = j.payable ? '该集为付费内容，购买后可观看' : '该集为会员专享，开通会员后可观看';
     const epHtml = eps.map(function (x) {
-      return '<button class="epbtn" data-ep="' + x.ep + '">第 ' + x.ep + ' 集</button>';
+      const lk = x.locked || !x.video;
+      return '<button class="epbtn' + (lk ? ' lk' : '') + '" data-ep="' + x.ep + '"' +
+        (lk ? ' data-lk="1" title="' + mjTip + '"' : '') +
+        '>第 ' + x.ep + ' 集' + (lk ? ' 🔒' : '') + '</button>';
     }).join('');
     app().innerHTML =
       '<div class="mjd">' +
@@ -2218,13 +2234,28 @@ async function openMj(id) {
       });
     }
     installScrollTop();
-    if (eps.length) mjPlay(id, eps[0].ep);
+    /* 首播: 优先挑第一个没锁的集 (锁集点进去也只是弹提示, 不如直接落可播的那集) */
+    if (eps.length) {
+      const firstOk = eps.filter(function (x) { return !(x.locked || !x.video); })[0];
+      mjPlay(id, (firstOk || eps[0]).ep);
+    }
   } catch (e) { if (!stale(T)) showErr(e); }
 }
 
 async function mjPlay(id, ep) {
   const box = document.getElementById('mjplayer');
   if (!box) return;
+  /* ★ 2026-10-20: 锁集点了不再发请求假装播第 1 集, 直接给明确提示。 */
+  const bar0 = document.getElementById('mjepbar');
+  const btn0 = bar0 && bar0.querySelector('.epbtn[data-ep="' + ep + '"]');
+  if (btn0 && btn0.getAttribute('data-lk') === '1') {
+    const tip = btn0.getAttribute('title') || '该集为会员专享，开通会员后可观看';
+    box.innerHTML = '<div class="err" style="line-height:1.9">🔒 ' + esc(tip) +
+      '<br><span style="opacity:.72;font-size:13px">上游对这一集不返回播放地址，本站拿不到真源；' +
+      '换一部单集作品或选未标锁的集数可以正常看。</span></div>';
+    if (toast) toast(tip);
+    return;
+  }
   box.innerHTML = '<div class="load"><span class="spin"></span>取播放源…</div>';
   const bar = document.getElementById('mjepbar');
   if (bar) {
@@ -2235,7 +2266,11 @@ async function mjPlay(id, ep) {
   try {
     const j = await apiRaw('/api/mj/play?id=' + encodeURIComponent(id) + '&ep=' + ep);
     if (!j || !j.ok) {
-      box.innerHTML = '<div class="err">' + esc((j && j.error) || '这一集取不到播放源') + '</div>';
+      /* 后端锁集回 403 + locked:true —— 用同一套提示, 不要笼统说"取不到播放源" */
+      const msg = (j && j.locked)
+        ? '🔒 ' + ((j && j.error) || '该集为会员专享，开通会员后可观看')
+        : '⚠️ ' + ((j && j.error) || '这一集取不到播放源');
+      box.innerHTML = '<div class="err">' + esc(msg) + '</div>';
       return;
     }
     box.innerHTML = '<video id="mjv" controls playsinline webkit-playsinline preload="metadata" style="width:100%;border-radius:12px;background:#000"></video>';
