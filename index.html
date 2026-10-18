@@ -227,6 +227,25 @@ html[data-site="hjw"] .hgtoast{border-color:#5a2a3e}
 .hjwbar .k{color:#6e6e7a}
 .hjwbar .v{color:#dedee4;font-weight:600}
 .hjwbar .free{margin-left:auto;color:#6ad89a;font-weight:700}
+
+/* ================= 黄果漫剧 (hgmj1.com) ================= */
+.mjd{max-width:760px;margin:0 auto;padding:14px 12px 40px}
+.mjd .top{display:flex;gap:14px;margin-bottom:14px}
+.mjd .cv{width:118px;flex:0 0 118px;aspect-ratio:3/4;border-radius:11px;overflow:hidden;background:#1b1b22;position:relative}
+.mjd .cv img{width:100%;height:100%;object-fit:cover;display:block}
+.mjd .mt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:7px}
+.mjd .mt h1{font-size:17px;line-height:1.35;color:#eaeaf0;margin:0;font-weight:700}
+.mjd .tgs{display:flex;flex-wrap:wrap;gap:5px}
+.mjd .tgs span{font-size:11px;color:#b9a6ff;background:rgba(150,120,255,.13);border:1px solid rgba(150,120,255,.25);padding:2px 8px;border-radius:9px}
+.mjd .sub{font-size:12px;color:#8b8b97;line-height:1.5}
+.mjd .sub b{color:#6ad89a;font-weight:700}
+.mjd .pl{margin-bottom:14px}
+.mjd .pl video{width:100%;border-radius:12px;background:#000;display:block}
+.mjd .eps{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:15px}
+.mjd .eps button{font:inherit;font-size:12.5px;color:#c9c9d3;background:#191920;border:1px solid #2a2a34;border-radius:9px;padding:7px 12px;cursor:pointer;transition:.15s}
+.mjd .eps button:hover{border-color:#3d3d4c;color:#eaeaf0}
+.mjd .eps button.on{background:#f472b6;border-color:#f472b6;color:#14141a;font-weight:700}
+.mjd .sum{font-size:13px;line-height:1.75;color:#9a9aa6;background:#16161c;border:1px solid #242430;border-radius:11px;padding:12px 14px;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -375,6 +394,20 @@ const SITES = {
     color: '#38bdf8',
     desc: '完整可播 · 近两万部 · 清单本站代理',
     hasEps: false,
+  },
+
+  /* ===== 黄果漫剧 (hgmj1.com) — 2026-10-18 新增独立板块 =====
+   * 和黄果短剧是两套后端: 那边清单在 yd-hls.hzjvlo.cn 需中继,
+   * 这边清单就在站内 /api/hls, 分片密钥在 cdn.djisajisj.top 无忌链。
+   * 接口: /api/mj/{tabs,sections,list,hot,detail,play,m3u8,img}
+   * =============================================== */
+  mj: {
+    key: 'mj',
+    name: '黄果漫剧',
+    short: '漫剧',
+    color: '#f472b6',
+    desc: '完整可播 · 一万一千部 · 分片免解链',
+    hasEps: true,
   },
 };
 let SITE = localStorage.getItem('hg_site') || 'hg';
@@ -1874,7 +1907,167 @@ function dtPlay(src) {
   }
 }
 
+/* ==================================================================
+ * 黄果漫剧 (hgmj1.com) — 前端模块
+ *
+ * 与 2048 模块的区别: 这里**有选集** (hasEps: true),
+ * 所以详情页要渲染集数网格, 点某集再取播放源。
+ *
+ * 数据结构 (Worker /api/mj/* 归一化之后):
+ *   列表项 { id, title, cover, tags[], serial, eps, score, playCount }
+ *   详情   { id, title, cover, summary, tags[], eps, episodes[{ep, video}] }
+ * ================================================================== */
+
+const MJ_TABS = [
+  { id: '21', name: '黄果原创' },
+  { id: '40', name: '魔改漫剧' },
+  { id: '52', name: '二次元' },
+  { id: '59', name: '抖阴剧场' },
+  { id: '54', name: '真人短剧' },
+  { id: '56', name: '黑料吃瓜' },
+  { id: '57', name: '国产传媒' },
+  { id: '58', name: '欧美风情' },
+  { id: '60', name: '日本AV' },
+];
+
+let MJ_TAB = '21';
+let MJ_SEC = '';
+let MJ_ORDER = 'latest';
+
+async function mjApi(path, params) {
+  const p = params || {};
+  let j = null;
+  if (path === '/api/list') {
+    if (MJ_SEC) {
+      j = await apiRaw('/api/mj/list?section=' + encodeURIComponent(MJ_SEC) +
+        '&offset=' + ((p.page ? (p.page - 1) : 0) * 24) + '&limit=24&order=' + encodeURIComponent(MJ_ORDER));
+    } else {
+      j = await apiRaw('/api/mj/list?page=' + (p.page || 1) + '&limit=24&tag=' + encodeURIComponent(p.cat || ''));
+    }
+  } else if (path === '/api/search') {
+    j = await apiRaw('/api/mj/search?q=' + encodeURIComponent(p.q || ''));
+  } else {
+    j = await apiRaw(path);
+  }
+  if (!j || !j.ok) {
+    return { items: [], notice: (j && j.error) || '黄果漫剧暂时取不到数据' };
+  }
+  const items = (j.items || []).map(function (x) {
+    return {
+      id: String(x.id),
+      title: x.title || '',
+      cover: x.cover || '',
+      site: 'mj',
+      ep: x.eps || 0,
+      views: x.playCount || 0,
+      tags: x.tags || [],
+    };
+  });
+  return { items: items, total: j.total || items.length, hasMore: !!j.hasMore, page: p.page || 1 };
+}
+
+async function mjPickTab(tabId) {
+  MJ_TAB = String(tabId);
+  MJ_SEC = '';
+  try {
+    const j = await apiRaw('/api/mj/sections?tab=' + encodeURIComponent(MJ_TAB));
+    if (j && j.ok && j.items && j.items.length) MJ_SEC = j.items[0].id;
+  } catch (e) {}
+  curCat = '';
+  curPage = 1;
+  HAS_MORE = true;
+  return goHome();
+}
+
+async function openMj(id) {
+  const T = newView();
+  app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
+  try {
+    const j = await apiRaw('/api/mj/detail?id=' + encodeURIComponent(id));
+    if (stale(T)) return;
+    if (!j || !j.ok) { showErr(new Error((j && j.error) || '详情取不到')); return; }
+    const eps = j.episodes || [];
+    const tags = (j.tags || []).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('');
+    const coverHtml = j.cover
+      ? '<img src="' + esc(coverUrl(j.cover, 'mj')) + '" alt="" onerror="this.style.display=none">'
+      : '';
+    const epHtml = eps.map(function (x) {
+      return '<button class="epbtn" data-ep="' + x.ep + '">第 ' + x.ep + ' 集</button>';
+    }).join('');
+    app().innerHTML =
+      '<div class="mjd">' +
+        '<div class="top">' +
+          '<div class="cv">' + coverHtml + '</div>' +
+          '<div class="mt">' +
+            '<h1>' + esc(j.title || '') + '</h1>' +
+            '<div class="tgs">' + tags + '</div>' +
+            '<div class="sub">' +
+              (j.serial ? esc(j.serial) + ' · ' : '') +
+              '共 ' + (j.eps || eps.length) + ' 集' +
+              (j.score ? ' · 评分 ' + j.score : '') +
+              (j.free ? ' · <b>免费</b>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="pl"><div id="mjplayer"></div></div>' +
+        '<div class="eps" id="mjepbar">' + epHtml + '</div>' +
+        (j.summary ? '<div class="sum">' + esc(j.summary) + '</div>' : '') +
+      '</div>';
+    const bar = document.getElementById('mjepbar');
+    if (bar) {
+      bar.addEventListener('click', function (ev) {
+        const b = ev.target.closest('.epbtn');
+        if (!b) return;
+        mjPlay(id, Number(b.getAttribute('data-ep')));
+      });
+    }
+    installScrollTop();
+    if (eps.length) mjPlay(id, eps[0].ep);
+  } catch (e) { if (!stale(T)) showErr(e); }
+}
+
+async function mjPlay(id, ep) {
+  const box = document.getElementById('mjplayer');
+  if (!box) return;
+  box.innerHTML = '<div class="load"><span class="spin"></span>取播放源…</div>';
+  const bar = document.getElementById('mjepbar');
+  if (bar) {
+    Array.prototype.forEach.call(bar.querySelectorAll('.epbtn'), function (b) {
+      b.classList.toggle('on', Number(b.getAttribute('data-ep')) === ep);
+    });
+  }
+  try {
+    const j = await apiRaw('/api/mj/play?id=' + encodeURIComponent(id) + '&ep=' + ep);
+    if (!j || !j.ok) {
+      box.innerHTML = '<div class="err">' + esc((j && j.error) || '这一集取不到播放源') + '</div>';
+      return;
+    }
+    box.innerHTML = '<video id="mjv" controls playsinline webkit-playsinline preload="metadata" style="width:100%;border-radius:12px;background:#000"></video>';
+    const v = document.getElementById('mjv');
+    const src = j.url;
+    if (window.Hls && Hls.isSupported()) {
+      if (window.__mjhls) { try { window.__mjhls.destroy(); } catch (e) {} }
+      const hls = new Hls({ maxBufferLength: 30, manifestLoadingTimeOut: 20000 });
+      hls.loadSource(src);
+      hls.attachMedia(v);
+      hls.on(Hls.Events.ERROR, function (evt, data) {
+        if (!data || !data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+        else { hls.destroy(); v.src = src; }
+      });
+      window.__mjhls = hls;
+    } else {
+      v.src = src;
+    }
+    v.play().catch(function () {});
+  } catch (e) {
+    box.innerHTML = '<div class="err">' + esc(String((e && e.message) || e)) + '</div>';
+  }
+}
+
 function renderTabs() {
+
   const el = document.getElementById('tabs');
   if (SITE === 'hd') {
     el.innerHTML = CATS_HD.map(c =>
@@ -1893,6 +2086,13 @@ function renderTabs() {
   if (SITE === 'dt') {
     el.innerHTML = DT_CATS.map(c =>
       '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
+      esc(c.name) + '</div>').join('');
+    return;
+  }
+  if (SITE === 'mj') {
+    /* 黄果漫剧: tab 是上游的 9 个分类, 点了先取分区再刷列表 */
+    el.innerHTML = MJ_TABS.map(c =>
+      '<div class="tab' + (MJ_TAB === String(c.id) ? ' on' : '') + '" onclick="mjPickTab(\'' + c.id + '\')">' +
       esc(c.name) + '</div>').join('');
     return;
   }
@@ -2177,7 +2377,7 @@ function cardHtml(it) {
   // data-hg="1" 会让 onerror 直接认输 (黄果封面是 AES 加密的, 直连必失败)。
   // ERO 封面是 R2 公链, 无防盗链, 直连通常成功; 万一失败也值得退回原图再试一次,
   // 所以 es 不打这个标记。
-  const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es' || src === 'dt') ? '' : ' data-hg="1"';
+  const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es' || src === 'dt' || src === 'mj') ? '' : ' data-hg="1"';
   const SITE_LABEL = { hd: '黄豆', es: 'ERO', hg: '黄果', hjw: '海角' };
   const tag = it.showSite
     ? '<div class="badge src" style="left:auto;right:6px;background:rgba(10,10,14,.72)">' +
@@ -2551,6 +2751,7 @@ async function openVid(id, from) {
   const src = from || SITE;
   // 2048 板块走自己的详情/播放 (单剧单视频, 无选集)
   if (src === 'dt') { openDt(id); return; }
+  if (src === 'mj') { openMj(id); return; }
   app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
   try {
     let v;
@@ -4182,7 +4383,7 @@ function goMine() {
     const src = x.site || SITE;
     const cv = coverUrl(x.cover, src);
     // 只有黄果封面是加密的 (必须走 /img, 直连必败); es/hjw/hd 都直接放行
-    const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es' || src === 'dt') ? '' : ' data-hg="1"';
+    const hgFlag = (src === 'hd' || src === 'hjw' || src === 'es' || src === 'dt' || src === 'mj') ? '' : ' data-hg="1"';
     return '<div class="item" data-id="' + esc(x.id) + '" data-site="' + esc(src) + '"' +
       ' onclick="openVid(\'' + esc(x.id) + '\',\'' + esc(src) + '\')">' +
       '<div class="thumb">' +
