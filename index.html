@@ -508,6 +508,12 @@ function api(path, params) {
   // ---- 2048 短剧分支 (全部经 Worker 的 /api/dt/*) ----
   if (SITE === 'dt') return dtApi(path, params);
 
+  // ---- 黄果漫剧分支 (全部经 Worker 的 /api/mj/*) ----
+  // 与黄果短剧 (hg) 是两套后端: 那边清单在 yd-hls.hzjvlo.cn 且被 cf-worker 头拦,
+  // 必须走中继; 这边清单就在 hgmj1.com 站内, 分片在 cdn.djisajisj.top 无忌链,
+  // 所以只代取清单, 分片浏览器直连。
+  if (SITE === 'mj') return mjApi(path, params);
+
   // ---- 海角网分支 ----
   // 实测 (2026-10 runner): www.hjw01.com / hjw01.com **不发** Access-Control-Allow-Origin,
   // 只有 CDN 边缘 hjw1.com 带 * —— 而那台是 8KB 空壳。
