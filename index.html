@@ -3991,26 +3991,36 @@ function hdSetSrc(url) {
   video.dataset.hdFallback = '';
   video.onerror = null;
 
-  /* ★ 2026-10-18 起, 黄豆的播放源走的是上游签名的 HLS 清单。
-   *   旧代码把它塞给 /api/hd/stream 代理 (那条上游已死), 而且 Chrome 桌面端
-   *   不会自己解 HLS —— 结果就是「一直转圈」。现在按媒体类型分流:
-   *     · .m3u8 → hls.js 直连 (跨域已放行, 不需要代理)
-   *     · 其它  → 直连 + 一次代理兜底 (保留旧通路, 万一将来又下发 mp4) */
+  /* ★ 黄豆的播放源是上游签名的 HLS 清单, 但 iwgsqufx.cc 在不少网络下
+   *   浏览器直连会被重置 —— curl 拿 200, 页面里 fetch 直接 'Failed to fetch',
+   *   hls.js 于是抛 manifestLoadError, 表现就是「一直转圈, 只有集数没有画面」。
+   *   所以清单和分片一律走 Worker 的 /api/hd2/px 代取 (清单里的 URI 已在
+   *   服务端改写回代理), 不再依赖浏览器能否连上那个域名。
+   *   只有 Worker 整体不可用时才退回直连。 */
   if (/\.m3u8(\?|$)/i.test(raw)) {
-    if (!HLS_READY()) {              // Safari / iOS 原生 HLS, 直接给 src 最稳
-      video.src = raw;
+    const px = (API && WORKER_OK !== false)
+      ? (API + '/api/hd2/px?u=' + encodeURIComponent(raw)) : raw;
+    if (!HLS_READY()) {              // Safari / iOS 原生 HLS
+      video.src = px;
       video.load();
       try { video.play().catch(() => {}); } catch (e) {}
       return;
     }
     destroyHls();
-    hlsLoad(video, raw, {}).then(res => {
+    hlsLoad(video, px, {}).then(res => {
       const v2 = document.getElementById('pl');
       if (v2 !== video) return;                    // 用户已切走
       if (res === 'ok') {
         try { video.play().catch(() => {}); } catch (e) {}
+      } else if (px !== raw) {
+        // 代理也没起来 → 最后退回直连, 至少不是死等
+        hlsLoad(video, raw, {}).then(r2 => {
+          const v3 = document.getElementById('pl');
+          if (v3 !== video) return;
+          if (r2 === 'ok') { try { video.play().catch(() => {}); } catch (e) {} }
+          else { try { video.src = raw; video.load(); video.play().catch(() => {}); } catch (e) {} }
+        });
       } else {
-        // hls.js 没起来 (少数内核/清单异常) → 退回原生 src, 至少不是死等
         try { video.src = raw; video.load(); video.play().catch(() => {}); } catch (e) {}
       }
     });
