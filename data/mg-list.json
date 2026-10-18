@@ -34,17 +34,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907200037/6a9ea765e53e713f3c6feb6c/cover.jpg",
-   "ep": "11",
-   "epLabel": "全11集",
-   "id": "6a9ea765e53e713f3c6feb6c",
-   "title": "被潜规则的女孩",
-   "updating": false
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907201430/6a9eaaa6e53e713f3c6feb8d/cover.jpg",
    "ep": "30",
    "epLabel": "更新至30集",
@@ -2190,6 +2179,17 @@
    "updating": true
   },
   {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261008172914/6ac7626aca57c75f779c764b/cover.jpg",
+   "ep": "5",
+   "epLabel": "更新至5集",
+   "id": "6ac7626aca57c75f779c764b",
+   "title": "小乡村里的爱情故事",
+   "updating": true
+  },
+  {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009120348/6ac867a4ca57c75f779c7701/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2534,9 +2534,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017112444/6ad2ea7cca57c75f779cbabc/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2545,9 +2542,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017112444/6ad2ea7cca57c75f779cbabd/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2556,9 +2550,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae4/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2568,8 +2559,7 @@
   },
   {
    "cats": [
-    "ai-comic-drama",
-    "remixed-short-drama"
+    "ai-comic-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae5/cover.jpg",
    "ep": "3",
@@ -2579,9 +2569,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae6/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2590,9 +2577,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae7/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2602,8 +2586,7 @@
   },
   {
    "cats": [
-    "ai-comic-drama",
-    "remixed-short-drama"
+    "ai-comic-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae8/cover.jpg",
    "ep": "5",
@@ -2613,9 +2596,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017123922/6ad2fbfaca57c75f779cbafc/cover.jpg",
    "ep": "7",
    "epLabel": "更新至7集",
