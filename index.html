@@ -392,8 +392,8 @@ const SITES = {
     name: '2048短剧',
     short: '2048',
     color: '#38bdf8',
-    desc: '完整可播 · 近两万部 · 清单本站代理',
-    hasEps: false,
+    desc: '279 部 · 多集连播 · 清单本站代理',
+    hasEps: true,
   },
 
   /* ===== 黄果漫剧 (hgmj1.com) — 2026-10-18 新增独立板块 =====
@@ -1870,114 +1870,165 @@ let DT_LIST = [];
 
 async function dtApi(path, params) {
   const p = params || {};
-  let j = null;
+  let p2 = '';
   if (path === '/api/list') {
-    j = await apiRaw('/api/dt/list?page=' + (p.page || 1) + '&size=24');
+    p2 = '/api/dt/list?page=' + (p.page || 1) + '&size=24&sort=' + (p.sort || 'heat');
   } else if (path === '/api/search') {
-    j = await apiRaw('/api/dt/search?q=' + encodeURIComponent(p.q || ''));
+    p2 = '/api/dt/search?q=' + encodeURIComponent(p.q || '');
   } else {
-    j = await apiRaw(path);
+    p2 = path;
   }
+  const j = await apiRaw(p2);
   if (!j || !j.ok) {
     return { items: [], notice: (j && j.error) || '2048 暂时取不到数据' };
   }
-  /* 适配成通用卡片字段: id / title / cover / site / views / dur
-   * 封面走 /api/dt/img 代理 (上游图片要带 Referer, 直连会 403)。 */
   const items = (j.items || []).map(function (x) {
     return {
       id: String(x.id),
       title: x.title || '',
-      /* ★ 这里直接给绝对地址。coverUrl 里虽然也有 dt 分支, 但它前面有
-       *   「非 http(s) 直接原样返回」的早退, 相对路径会被放过去 → 浏览器
-       *   按页面域名拼 → 404。数据层补好, 后面任何一处理都不会再出错。 */
-      cover: (typeof API === 'string' && API ? API
-             : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '')) + (x.cover || ''),
+      cover: x.cover || '',
       site: 'dt',
-      views: x.views || 0,
-      dur: x.duration || 0,
-      author: x.author || '',
+      rating: x.rating,
+      ep: x.ep || 0,
+      views: x.heat || 0,
+      tags: x.tags || [],
     };
   });
-  return { items: items, total: j.total || 0, page: j.page || 1, hasMore: (j.page || 1) < (j.totalPages || 1) };
+  return {
+    items: items,
+    total: j.total || 0,
+    page: j.page || 1,
+    sortBy: j.sortBy || 'heat',
+    hasMore: (j.page || 1) < (j.totalPages || 1),
+  };
 }
 
 /* 直接打 Worker 的相对路径拼接, 统一走 API 基址 */
 async function apiRaw(p) {
   const url = API + p;
   const r = await fetch(url, { method: 'GET' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return await r.json();
-}
-
-/* 列表卡片 → 首页网格 */
-function dtCards(j) {
-  const items = (j && j.items) || [];
-  DT_LIST = items;
-  return items.map(x =>
-    '<div class="card" onclick="openDt(' + JSON.stringify(String(x.id)) + ')">' +
-      '<div class="thumb"><img loading="lazy" src="' + API + esc(x.cover || '') + '" alt="">' +
-        (x.duration ? '<i class="dur">' + dtDur(x.duration) + '</i>' : '') +
-      '</div>' +
-      '<div class="cap">' + esc(x.title || '') + '</div>' +
-    '</div>').join('');
+  return r.json();
 }
 
 function dtDur(sec) {
-  const n = Number(sec) || 0;
-  const m = Math.floor(n / 60), s2 = n % 60;
-  return m + ':' + (s2 < 10 ? '0' : '') + s2;
+  sec = Number(sec) || 0;
+  if (!sec) return '';
+  const m = Math.floor(sec / 60), ss = Math.floor(sec % 60);
+  return m + ':' + String(ss).padStart(2, '0');
 }
 
-/* 打开详情: 取详情 + 播放地址, 直接起播 */
+/* ==================================================================
+ * 2048 短剧联盟 (2048ai.xyz) — 前端模块
+ *
+ * ★ 2026-10-19 重写: 发布页 94m42v6q_fzacx.ztwqekj7.work 上的
+ *   「2048网站在线观看」指向本站, 内容在 /short-dramas 下面。
+ *   之前接的是 /videos (短视频流), 拿到的不是短剧, 所以内容对不上。
+ *
+ * 数据 (Worker /api/dt/* 归一化后):
+ *   列表 { id, title, cover, rating, ep, heat, tags[], date }
+ *   详情 { ...同上, eps:[{no,title,raw,dur}], epTotal, segSize }
+ *   播放 { url(清单绝对地址), ep, epTotal }
+ * ================================================================== */
+
+const DT_SORTS = [
+  { key: 'heat', name: '热度' },
+  { key: 'latest', name: '最新' },
+];
+
 async function openDt(id) {
   VIEW_DETAIL = true;
   const T = newView();
   app().innerHTML = '<div class="load"><span class="spin"></span>加载中…</div>';
-  let d = null, play = null;
+  let d = null;
   try {
     d = await apiRaw('/api/dt/detail?id=' + encodeURIComponent(id));
-    play = await apiRaw('/api/dt/play?id=' + encodeURIComponent(id));
   } catch (e) {
     if (stale(T)) return;
-    app().innerHTML = '<div class="err">取播放源失败：' + esc(String(e.message || e)) + '</div>';
+    app().innerHTML = '<div class="err">读取剧集失败：' + esc(String(e.message || e)) + '</div>';
     return;
   }
   if (stale(T)) return;
-  const it = (d && d.data) || {};
-  if (!play || !play.ok || !play.url) {
-    app().innerHTML = '<div class="err">这部剧暂时拿不到播放源，换一部试试。</div>';
+  if (!d || !d.ok) {
+    app().innerHTML = '<div class="err">' + esc((d && d.error) || '这部剧暂时取不到') + '</div>';
     return;
   }
-  const cover = API + ((it.cover) || '');
+  const it = d.data || {};
+  curVid = it;
+  curSrc = 'dt';
+  curEp = '1';
+  pushDetailState();
+
+  const cover = it.cover || '';
+  const eps = it.eps || [];
+  const epBtns = eps.map(function (e2) {
+    return '<button class="epbtn' + (e2.no === 1 ? ' on' : '') + '" data-ep="' + e2.no +
+           '" onclick="dtPickEp(' + e2.no + ')">第' + e2.no + '集</button>';
+  }).join('');
+
   app().innerHTML =
-    '<div class="detail">' +
-      '<div class="dhead"><img src="' + esc(cover) + '" alt="">' +
-        '<div class="dinfo"><h1>' + esc(it.title || '2048') + '</h1>' +
-          '<div class="dmeta">' + esc(it.author || '') +
-            (it.duration ? ' · ' + dtDur(it.duration) : '') +
-            (it.views ? ' · ' + it.views + ' 次播放' : '') + '</div>' +
+    '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
+    '<div class="mjd">' +
+      '<div class="top">' +
+        '<div class="cv">' + (cover ? '<img src="' + esc(cover) + '" alt="">' : '') + '</div>' +
+        '<div class="mt">' +
+          '<h1>' + esc(it.title || '2048') + '</h1>' +
+          '<div class="sub">' +
+            (it.rating ? '★ ' + it.rating + ' · ' : '') +
+            (it.epTotal ? '共 ' + it.epTotal + ' 集' : '') +
+            (it.heat ? ' · 🔥 ' + Math.round(it.heat / 10000) + 'w' : '') +
+          '</div>' +
+          '<div class="tgs">' + (it.tags || []).map(function (t) {
+            return '<span>' + esc(t) + '</span>';
+          }).join('') + '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="player"><video id="dtv" controls playsinline preload="metadata" poster="' + esc(cover) + '"></video></div>' +
-      '<div class="dact"><button onclick="goHome()">返回列表</button></div>' +
+      '<div class="pl"><video id="dtv" controls playsinline preload="metadata" poster="' + esc(cover) + '"></video></div>' +
+      (eps.length ? '<div class="eps" id="dtepbar">' + epBtns + '</div>' : '') +
+      (it.desc ? '<div class="sum">' + esc(it.desc) + '</div>' : '') +
     '</div>';
-  dtPlay(play.url);
+
+  dtPlayEp(1);
 }
 
+function dtPickEp(no) {
+  const bar = document.getElementById('dtepbar');
+  if (bar) {
+    [].forEach.call(bar.querySelectorAll('.epbtn'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-ep') === String(no));
+    });
+  }
+  dtPlayEp(no);
+}
+
+async function dtPlayEp(no) {
+  const it = curVid;
+  if (!it || !it.id) return;
+  curEp = String(no);
+  const j = await apiRaw('/api/dt/play?id=' + encodeURIComponent(it.id) + '&ep=' + no);
+  if (!j || !j.ok || !j.url) {
+    toast((j && j.error) || '第 ' + no + ' 集暂时拿不到播放源');
+    return;
+  }
+  dtPlay(j.url);
+}
+
+let DT_HLS = null;
 function dtPlay(src) {
   const v = document.getElementById('dtv');
   if (!v) return;
+  if (DT_HLS) { try { DT_HLS.destroy(); } catch (e) {} DT_HLS = null; }
   if (window.Hls && Hls.isSupported()) {
-    const h = new Hls({ manifestLoadingMaxRetry: 3, fragLoadingMaxRetry: 4, manifestLoadingTimeOut: 15000 });
+    const h = new Hls({ manifestLoadingMaxRetry: 3, fragLoadingMaxRetry: 4, manifestLoadingTimeOut: 20000 });
+    DT_HLS = h;
     h.loadSource(src);
     h.attachMedia(v);
+    h.on(Hls.Events.MANIFEST_PARSED, function () { v.play().catch(function () {}); });
     h.on(Hls.Events.ERROR, function (ev, d) {
       if (!d || !d.fatal) return;
       if (d.type === Hls.ErrorTypes.NETWORK_ERROR) h.startLoad();
       else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) h.recoverMediaError();
       else h.destroy();
     });
-    v.play().catch(function () {});
   } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
     v.src = src;
     v.play().catch(function () {});
