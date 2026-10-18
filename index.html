@@ -38,6 +38,14 @@ main{max-width:1180px;margin:0 auto;padding:14px 12px}
 .thumb{position:relative;width:100%;aspect-ratio:3/4;background:#22222a;overflow:hidden}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#4a4a55;font-size:26px}
+/* ★ 骨架屏: 封面还没到的时候 .ph 占位块给出呼吸感, 而不是一块死黑。
+ *   黄豆封面单张要 ~2s (CloudFront 绕路), 没这层会像卡死。 */
+.thumb .ph{background:linear-gradient(100deg,#1c1c23 30%,#26262f 50%,#1c1c23 70%);background-size:200% 100%;animation:sk 1.3s ease-in-out infinite}
+@keyframes sk{0%{background-position:100% 0}100%{background-position:-100% 0}}
+/* 封面图淡入, 避免"啪"一下跳出来 */
+.thumb img{opacity:0;transition:opacity .25s}
+.thumb img.ok{opacity:1}
+
 .badge{position:absolute;top:6px;left:6px;background:rgba(255,122,24,.92);color:#fff;font-size:10.5px;padding:2px 6px;border-radius:5px;font-weight:600}
 .badge.src{background:rgba(10,10,14,.72);color:#cfcfda;font-weight:500}
 .item .t{font-size:12.5px;padding:8px 8px 3px;line-height:1.4;max-height:52px;overflow:hidden;color:#dcdce2;font-weight:500}
@@ -63,6 +71,12 @@ video{width:100%;display:block;background:#000;max-height:74vh}
 .ep{padding:9px 14px;border-radius:9px;background:#1e1e25;color:#8fb4ff;font-size:14px;border:1px solid #2a2a33;cursor:pointer;transition:.12s;text-decoration:none;display:inline-block;font-family:inherit}
 .ep:active,.ep.on{background:#ff7a18;color:#fff;border-color:#ff7a18}
 .ep.on{font-weight:700}
+/* ★ 2026-10-19 补: .epbtn 从来没定义过样式 ——
+ *   黄果漫剧的选集按钮一直在裸奔 (浏览器默认灰按钮), 2048 重写后同样。
+ *   这里把 .epbtn 对齐到已有的 .ep 视觉, 一处修复两个板块。 */
+.epbtn{padding:9px 14px;border-radius:9px;background:#1e1e25;color:#8fb4ff;font-size:14px;border:1px solid #2a2a33;cursor:pointer;transition:.12s;font-family:inherit}
+.epbtn:active,.epbtn.on{background:#ff7a18;color:#fff;border-color:#ff7a18}
+.epbtn.on{font-weight:700}
 /* EROSHORT: 付费集样式 */
 .ep.locked{background:#221a12;color:#a07a3a;border-color:#3a2c18;position:relative}
 .ep.locked .lockb{display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;background:#ffb02e;color:#231a08;font-size:10px;font-style:normal;font-weight:700;vertical-align:1px}
@@ -303,6 +317,50 @@ let MODE_TOLD = false;     // 是否已经提示过用户
 // 两个数据源:
 //   hg (黄果短剧) —— GitHub Pages 前端 + 直连上游网页解析
 //   hd (黄豆短剧) —— 官方公开 JSON API, 数据规整, 带分类/排行/搜索
+/* ==================================================================
+ * 全局错误边界
+ *
+ * 之前任何一处未捕获异常 (上游返回怪字段、DOM 拿 null、Promise 没
+ * catch) 都会让页面停在「加载中…」永远不消失, 用户只看到转圈。
+ * 这里接住三类错误, 统一把当前视图切成可读的失败态 + 重试按钮,
+ * 并且把原始信息留在 console 方便排查。
+ * ================================================================== */
+let __ERR_SHOWN = 0;
+function __errBoundary(msg, stack) {
+  try {
+    if (Date.now() - __ERR_SHOWN < 1500) return;   // 连环报错只显示一次
+    __ERR_SHOWN = Date.now();
+    const a = document.getElementById('app');
+    if (!a) return;
+    /* 详情页出错时给「返回列表」, 列表页给「重试」 */
+    const back = VIEW_DETAIL
+      ? '<button class="back" onclick="goBack()">‹ 返回列表</button>'
+      : '';
+    a.innerHTML = back +
+      '<div class="err">' +
+        '<div style="margin-bottom:10px">出了点问题：' + esc(String(msg || '未知错误')).slice(0, 200) + '</div>' +
+        '<button class="gh" onclick="location.reload()">刷新页面</button>' +
+        '<button class="gh" onclick="goHome()" style="margin-left:8px">回到首页</button>' +
+      '</div>';
+    console.error('[boundary]', msg, stack || '');
+  } catch (e) { /* 边界自己出错就放弃, 不再递归 */ }
+}
+
+window.addEventListener('error', function (ev) {
+  /* 图片/脚本加载失败不算致命, 交给各自的 onerror 处理 */
+  if (ev && ev.target && ev.target !== window && ev.target.tagName &&
+      /^(IMG|SCRIPT|LINK|VIDEO|SOURCE)$/.test(ev.target.tagName)) return;
+  __errBoundary((ev && ev.message) || 'script error', ev && ev.error && ev.error.stack);
+});
+
+window.addEventListener('unhandledrejection', function (ev) {
+  const r = ev && ev.reason;
+  const m = (r && (r.message || r.error || String(r))) || 'unhandled rejection';
+  /* 主动 abort 的请求不算错误 (切板块时大量并发会被 abort) */
+  if (/abort/i.test(String(m))) return;
+  __errBoundary(m, r && r.stack);
+});
+
 const SITES = {
   hg: {
     key: 'hg',
@@ -1862,9 +1920,11 @@ const app = () => document.getElementById('app');
  *       hls.js 拿它当普通清单播; 分片和 AES 密钥由浏览器直连上游 CDN。
  *       —— 上游 CDN 不校验 Origin, 实测分片 206 / 密钥 16B 全通。
  */
+/* 后端 sortBy 只认 heat / latest —— 传别的一律 400。
+ * id 直接用 sortBy 值, pickCat 会把 curCat 传给 /api/list。 */
 const DT_CATS = [
-  { id: '',    name: '最新' },
-  { id: 'hot', name: '最热' },
+  { id: 'heat',   name: '最热' },
+  { id: 'latest', name: '最新' },
 ];
 let DT_LIST = [];
 
@@ -1872,7 +1932,7 @@ async function dtApi(path, params) {
   const p = params || {};
   let p2 = '';
   if (path === '/api/list') {
-    p2 = '/api/dt/list?page=' + (p.page || 1) + '&size=24&sort=' + (p.sort || 'heat');
+    p2 = '/api/dt/list?page=' + (p.page || 1) + '&size=24&sort=' + (p.sort || p.cat || 'heat');
   } else if (path === '/api/search') {
     p2 = '/api/dt/search?q=' + encodeURIComponent(p.q || '');
   } else {
@@ -1930,10 +1990,7 @@ function dtDur(sec) {
  *   播放 { url(清单绝对地址), ep, epTotal }
  * ================================================================== */
 
-const DT_SORTS = [
-  { key: 'heat', name: '热度' },
-  { key: 'latest', name: '最新' },
-];
+/* DT_CATS 已经覆盖了排序, 这份别留重复定义 */
 
 async function openDt(id) {
   VIEW_DETAIL = true;
@@ -2474,6 +2531,9 @@ function coverUrl(u, src) {
    *   必须在下面那条「非 http 就直接返回」之前处理, 否则会被原样返回,
    *   浏览器再按页面域名去拼 → 404。 */
   if (cur0 === 'dt') {
+    /* 后端 dtCard2 已经给了绝对封面地址; 只有相对路径才需要套代理。
+     * 原来无脑套 /api/dt/img?u= 会把绝对地址再编码一层 (能显示但白绕一跳)。 */
+    if (/^https?:\/\//i.test(s)) return s;
     const p = s.indexOf('/api/dt/img') === 0 ? s : ('/api/dt/img?u=' + encodeURIComponent(s));
     const base = (typeof API === 'string' && API) ? API
                : (typeof DEFAULT_API === 'string' ? DEFAULT_API : '');
@@ -2571,7 +2631,7 @@ function cardHtml(it) {
  *   没等到的图永久空着 —— 表现就是「封面不显示」。黄豆改 eager,其余站保持 lazy。 */
         '<img ' + (src === 'hd' ? 'loading="eager" decoding="async"' : 'loading="lazy"') +
           ' src="' + esc(cv) + '" data-raw="' + esc(it.cover) + '"' + hgFlag +
-          ' onerror="hgImgFallback(this)">'
+          ' onload="this.classList.add(\'ok\')" onerror="hgImgFallback(this)">'
         : '') +
       '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
       (it.ep ? '<div class="badge">' + it.ep + '集</div>' : '') +
@@ -2828,6 +2888,21 @@ async function doSearch() {
 /* ===================== 收藏 + 观看历史 (本地存储) ===================== */
 const FAV_KEY = 'hg_favs_v1';
 const HIS_KEY = 'hg_history_v1';
+
+/* ---- 搜索防抖 ----
+ * 回车/点按钮才触发搜索本身是对的 (全站搜索要打很多请求), 但用户常常
+ * 打了字又改主意 —— 这里只在输入框里做轻量的「清空回首页」联动,
+ * 并保证连续按回车不会叠着发请求。 */
+let __SEARCH_AT = 0;
+const _doSearchRaw = doSearch;
+async function doSearch() {
+  const kw = (document.getElementById('q') || {}).value || '';
+  if (!String(kw).trim()) { goHome(); return; }
+  const now = Date.now();
+  if (now - __SEARCH_AT < 800) return;      // 800ms 内的重复触发直接吞掉
+  __SEARCH_AT = now;
+  return _doSearchRaw.apply(null, arguments);
+}
 
 function loadJSON(k, dflt) {
   try { return JSON.parse(localStorage.getItem(k) || 'null') ?? dflt; }
