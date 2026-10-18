@@ -5474,7 +5474,7 @@
   },
   {
    "category": "黄豆原创",
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/8d6487970a0e9e84.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/58d4f5d77c801a5f.jpg",
    "desc": "",
    "ep": "5",
    "id": "4401",
@@ -6857,6 +6857,14 @@
    "title": "绿帽契约"
   },
   {
+   "category": "黄豆原创",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261012193155/6accc52bca57c75f779c7a63/cover.jpg",
+   "desc": "",
+   "ep": "3",
+   "id": "5366",
+   "title": "时停手表"
+  },
+  {
    "category": "大神精选",
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260916004855/6aa976f77c68f1b88c2aa27f/cover.jpg",
    "desc": "",
@@ -8161,5 +8169,5 @@
    "title": "夫人她专治不服4"
   }
  ],
- "total": 1020
+ "total": 1021
 }
