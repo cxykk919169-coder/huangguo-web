@@ -2516,7 +2516,10 @@ function cardHtml(it) {
     ' onclick="openVid(\'' + esc(it.id) + '\',\'' + esc(src) + '\')">' +
     '<div class="thumb">' +
       (cv
-        ? '<img loading="lazy" src="' + esc(cv) + '" data-raw="' + esc(it.cover) + '"' + hgFlag +
+        ? /* ★ 黄豆封面单张要 2s (CloudFront 绕路)。lazy 时用户一滚就换屏,
+ *   没等到的图永久空着 —— 表现就是「封面不显示」。黄豆改 eager,其余站保持 lazy。 */
+        '<img ' + (src === 'hd' ? 'loading="eager" decoding="async"' : 'loading="lazy"') +
+          ' src="' + esc(cv) + '" data-raw="' + esc(it.cover) + '"' + hgFlag +
           ' onerror="hgImgFallback(this)">'
         : '') +
       '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
