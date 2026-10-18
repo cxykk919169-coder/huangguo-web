@@ -1586,13 +1586,21 @@ async function hdDetail(id) {
   const j = await r.json().catch(function () { return null; });
   if (!j || !j.ok || !j.data) throw new Error((j && j.error) || "黄豆详情取不到");
   const d = j.data;
-  const n = parseInt(d.total || d.episode_count || 1, 10) || 1;
+  /* ★ /api/hd2/play 只回单集 (seq) 的地址, **不含总集数** —— 总集数只在列表的
+   *   episode_count 里。以前这里读 d.total 永远拿不到, 于是详情页只显示 1 集。
+   *   现在从列表缓存捞; 捞不到就按 1 集处理 (至少能播第 1 集)。 */
+  const meta = hdMetaOf(id);
+  const n = parseInt(meta.ep || d.total || d.episode_count || 1, 10) || 1;
   const eps = {};
   for (let i = 1; i <= n; i++) eps[String(i)] = "";   // 地址按集现取 (带时效签名)
   return {
     id: id,
-    title: d.title || d.name || "",
-    cover: hdCoverOf(id),
+    title: meta.title || d.name || "",
+    cover: meta.cover || "",
+    cat: meta.cat || "",
+    desc: meta.desc || "",
+    views: meta.views || "",
+    heatNum: parseInt(meta.views || "0", 10) || 0,
     epTotal: n,
     duration: d.duration || 0,
     lines: d.lines || [],
@@ -1602,15 +1610,19 @@ async function hdDetail(id) {
   };
 }
 
-/* 从当前列表里捞封面 (详情接口不回封面) */
-function hdCoverOf(id) {
+/* 从当前列表捞详情页缺的字段 (封面 / 总集数 / 简介 / 分类) —— 详情接口不回这些 */
+function hdMetaOf(id) {
   try {
     const hit = (window.__HD_LIST || []).filter(function (x) {
       return String(x.id) === String(id);
     })[0];
-    if (hit) return hit.cover || hit.img || "";
+    if (hit) return hit;
   } catch (e) {}
-  return "";
+  return {};
+}
+function hdCoverOf(id) {
+  const m = hdMetaOf(id);
+  return m.cover || m.img || "";
 }
 
 function  hdApi(path, params) {
