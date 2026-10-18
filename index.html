@@ -422,6 +422,7 @@ function setSite(k) {
   curSrc = k;            // 详情页来源跟着板块走
   HD_CUR = null; HD_LINES = []; HD_LINE_I = 0;
   HJW_CATS_LOADED = false;   // 海角分类按板块重载
+  MJ_SEC = '';               // 黄果漫剧: 分区要按分类重取
   document.documentElement.setAttribute('data-site', k);
   renderSiteBar();       // ← 之前漏了这句: 按钮高亮不刷新
   renderTabs();
@@ -1937,6 +1938,15 @@ let MJ_ORDER = 'latest';
 async function mjApi(path, params) {
   const p = params || {};
   let j = null;
+  /* ★ 首次进板块时 MJ_SEC 是空的 —— 那样会退到分页接口,
+   *   而分页接口给的是「全站」而不是当前分类, 于是卡片和 tab 对不上。
+   *   这里先按当前分类把分区取出来。 */
+  if (path === '/api/list' && !MJ_SEC) {
+    try {
+      const sj = await apiRaw('/api/mj/sections?tab=' + encodeURIComponent(MJ_TAB));
+      if (sj && sj.ok && sj.items && sj.items.length) MJ_SEC = sj.items[0].id;
+    } catch (e) {}
+  }
   if (path === '/api/list') {
     if (MJ_SEC) {
       j = await apiRaw('/api/mj/list?section=' + encodeURIComponent(MJ_SEC) +
