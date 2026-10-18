@@ -1049,24 +1049,43 @@ function esApi(path, params) {
   // path 形如 '/api/list' → 去掉前缀, 映射到上游子路径
   let sub = path.replace(/^\/api\/?/, '');
   const map = {
-    'list': '/shorts',
-    'video': '/shorts/' + encodeURIComponent(p.id || ''),
-    'ep': '/playlines/episode/' + encodeURIComponent(p.epId || p.id || ''),
-    'ent': '/wallet/entitlement/' + encodeURIComponent(p.id || ''),
-    'home': '/browse/layouts/short',
-    'tags': '/tags?schema=short_video&only_with_content=true',
-    'search': '/shorts',
-    'resolve': '/playback/resolve',
+    /* ★ 2026-10-20: 上游从 /api/v1/* 迁到 /api/*, 路径与参数名一起换了。
+     *   旧: /shorts?page=&page_size=&tag=&q=      → 404
+     *   新: /dramas?page=&limit=&tagId=           → 200 {items,total,page,limit}
+     *   旧: /shorts/{id} + /hierarchy/.../children
+     *   新: /dramas/{id} + /dramas/{id}/episodes   (Worker 的 /api/es/video 已合并)
+     *   旧: /playlines/episode/{id} + /wallet/entitlement/{id} + /playback/resolve
+     *   新: POST /playback/episodes/{id}           (Worker 的 /api/es/ep 已封装)
+     *   旧: /tags?schema=short_video&only_with_content=true
+     *   新: /tags
+     *   旧: /browse/layouts/short
+     *   新: /home?locale=zh
+     * 搜索: 上游没有 /search, 用 /dramas?kw= 在本地过滤 (Worker 侧不做)。
+     */
+    'list': '/list',
+    'video': '/video',            // Worker 合并详情+分集
+    'ep': '/ep',                  // Worker 封装 entitlement
+    'ent': '/ep',
+    'home': '/home?locale=zh',
+    'tags': '/tags',
+    'search': '/list',
+    'resolve': '/ep',
   };
   const target = map[sub] || ('/' + sub);
 
   const q = {};
   if (sub === 'list' || sub === 'search') {
     if (p.page) q.page = p.page;
-    if (p.pageSize) q.page_size = p.pageSize;
-    if (p.cat) q.tag = p.cat;
+    if (p.pageSize) q.pageSize = p.pageSize;
+    if (p.cat) q.cat = p.cat;
     if (p.q) q.q = p.q;
-    if (p.sort) q.sort = p.sort;
+  }
+  /* Worker 的 /api/es/video 与 /api/es/ep 靠 query 取 id,
+   * 这里必须显式带上, 否则 Worker 侧直接 MISSING_ID 400。 */
+  if (sub === 'video' || sub === 'ent') { if (p.id) q.id = p.id; }
+  if (sub === 'ep' || sub === 'resolve') {
+    const eid = p.epId || p.id || '';
+    if (eid) q.epId = eid;
   }
   const qsStr = new URLSearchParams(q).toString();
 
@@ -1230,26 +1249,31 @@ async function esList(params) {
   const cat = (params && params.cat) || '';
   const page = (params && params.page) || 1;
   const pageSize = Math.max(1, Math.min(48, (params && params.pageSize) || 48));
+  /* ★ 2026-10-20: 改成实时优先。
+   *   以前是"快照优先" —— 因为旧接口被 CF 拦, 实时基本必挂, 等 60-80s 不如先给快照。
+   *   现在上游接口通了 (Worker 直连 200), 而且快照里只有 18 条、实时有 20 条,
+   *   快照反而是更旧更少的那份。所以顺序反过来: 实时 → 失败才回快照。
+   *   快照同时保留做"秒开占位"——先返回快照让用户立刻有内容, 实时回来再覆盖。 */
+  try {
+    const j = await esApi('/api/list', { cat, page, pageSize });
+    if (j && j.items && j.items.length) {
+      return {
+        ok: true, items: j.items, source: 'es', live: true,
+        total: j.total || j.items.length, page, hasMore: !!j.hasMore,
+      };
+    }
+  } catch (e) { /* 落到快照 */ }
   const snap = await loadSnap('es-list');
   if (snap && snap.items && snap.items.length) {
     let items = esFilterSnap(snap.items, cat);
     const off = (page - 1) * pageSize;
     const slice = items.slice(off, off + pageSize);
-    // 后台升级: 实时拿到了就通知调用方 (不阻塞本次返回)
-    esListLive(cat, page, pageSize).catch(() => {});
     return {
       ok: true, items: slice, snapshot: true, source: 'es',
       total: items.length, page, hasMore: off + pageSize < items.length,
     };
   }
-  // 没快照 (首次部署 / 快照丢失) → 只能等实时
-  try {
-    const j = await esApi('/api/list', { cat, page, pageSize });
-    if (j && j.items && j.items.length) return j;
-    throw new Error((j && j.error) || '空结果');
-  } catch (e) {
-    return { ok: true, items: [], snapshot: true, source: 'es', page, hasMore: false };
-  }
+  return { ok: true, items: [], snapshot: true, source: 'es', page, hasMore: false };
 }
 
 /** 后台实时请求: 结果只用于刷新缓存, 失败静默 */
