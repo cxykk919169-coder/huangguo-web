@@ -66,6 +66,8 @@ main{max-width:1180px;margin:0 auto;padding:14px 12px}
 .vwrap{margin-top:14px;background:#000;border-radius:12px;overflow:hidden;position:relative}
 video{width:100%;display:block;background:#000;max-height:74vh}
 .playbar{display:flex;align-items:center;gap:9px;padding:10px 12px;background:#131318;border-top:1px solid #22222a;flex-wrap:wrap}
+.hdpv{padding:9px 12px;background:#2a2113;border-top:1px solid #4a3a12;color:#ffc46b;font-size:13px;line-height:1.6}
+.hdpv a.hdplaybtn{background:#ff7a18;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;display:inline-block}
 .playbar .curep{color:#ff7a18;font-weight:600;font-size:14px}
 .eps{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
 .ep{padding:9px 14px;border-radius:9px;background:#1e1e25;color:#8fb4ff;font-size:14px;border:1px solid #2a2a33;cursor:pointer;transition:.12s;text-decoration:none;display:inline-block;font-family:inherit}
@@ -3172,6 +3174,7 @@ async function openVid(id, from) {
             '<button class="gh" onclick="step(1)">下一集</button>' +
             '<span class="spdwrap" id="spdwrap"></span>' +
           '</div>' +
+          '<div class="hdpv" id="hdpv" style="display:none"></div>' +
           '<div class="resume" id="resume" style="display:none"></div>' +
           '</div>' : '') +
         (v.epTotal ? '<div class="sec">剧集列表（共 ' + v.epTotal + ' 集）' +
@@ -3991,6 +3994,7 @@ function hdEpList(v) {
 let HD_CUR = null;         // {id, epTotal, title, cover}
 let HD_LINES = [];         // 当前集的多线路
 let HD_LINE_I = 0;
+let HD_IS_PREVIEW = false; // 当前播的是不是付费集的试看片段
 
 function hdPickEp(ep) {
   if (!HD_CUR) return;
@@ -4063,6 +4067,24 @@ async function hdLoadEp(vid, ep, first, T) {
     HD_LINES = r.lines || [];
     HD_LINE_I = 0;
     if (box) box.style.display = 'none';
+
+    /* ★ 试看集提示: 付费集的试看片段是真能播的, 但它不是正片。
+     *   不提示会让用户以为"这就是全集, 只有 2MB 这么短?" —— 明确标出来。 */
+    HD_IS_PREVIEW = !!r.preview;
+    {
+      const tip = document.getElementById('hdpv');
+      if (tip) {
+        if (HD_IS_PREVIEW) {
+          tip.style.display = 'block';
+          tip.innerHTML = '👁 第 ' + esc(String(ep)) + ' 集为付费集，当前播放的是官方试看片段' +
+            '<a class="hdplaybtn" style="margin-left:8px;padding:4px 10px" href="' +
+            esc(HDHd.h5Url(vid)) + '" target="_blank" rel="noopener noreferrer">去官方看正片</a>';
+        } else {
+          tip.style.display = 'none';
+          tip.innerHTML = '';
+        }
+      }
+    }
 
     // 记历史
     hisPut({ id: vid, title: HD_CUR.title, cover: HD_CUR.cover, ep: String(ep), epTotal: HD_CUR.epTotal });
@@ -4165,7 +4187,22 @@ async function hdPlay2(vid, ep) {
   const lines = (d.lines || []).filter(L => L && L.url)
     .map(L => ({ name: L.name, label: L.name, url: L.url }));
   if (!lines.length) throw new Error('上游未返回可用线路');
-  return { lines: lines, playUrl: lines[0].url, duration: d.duration, hlsKey: d.hls_key };
+
+  /* ★ 付费集策略 (2026-10-20)
+   *   上游对金币/VIP 集**不发签名 HLS**, 只发 is_preview:true + 试看 mp4。
+   *   签名按集算 (exp/sig/uid 绑死 seq), 换集复用第 1 集的签名实测 403,
+   *   私钥在服务端, 伪造不了 —— 所以"全部可看"做不到, 但"全部可点"可以:
+   *   付费集直接播上游给的试看片段, 并标注是试看, 不再弹"去官方解锁"卡住用户。
+   *   真免费集 (is_preview 不为 true) 走签名 HLS, 行为不变。
+   */
+  const isPreview = d.is_preview === true || d.is_preview === 1 || d.is_preview === '1';
+  return {
+    lines: lines,
+    playUrl: lines[0].url,
+    duration: d.duration,
+    hlsKey: d.hls_key,
+    preview: isPreview,
+  };
 }
 
 function hdSetSrc(url) {
