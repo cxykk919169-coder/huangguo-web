@@ -1553,6 +1553,66 @@ function hdCatalogMap(cat, catCode) {
   return hit.length ? hit : items;      // 该分类暂无数据时退回全集, 不给空白页
 }
 
+/* ★ 黄豆的数据层一直用单字母缩写 (i=id, n=name, img=封面, e=集数, ...),
+ *   但 cardHtml / openVid / 详情页读的是 id / title / cover —— 两边从来没对上,
+ *   表现就是卡片能排出来但 data-id 为空、标题空白、封面不显示 (点进去必然失败)。
+ *   这里在出口统一补齐全名字段, 缩写原样保留 (详情页还在用)。 */
+function hdNorm(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(function (x) {
+    if (!x) return x;
+    const id = x.i || x.d || x.id || x.drama_id || "";
+    return Object.assign({}, x, {
+      id: id,
+      title: x.title || x.n || x.name || "",
+      cover: x.cover || x.img || x.img_y || "",
+      coverX: x.img_x || "",
+      coverY: x.img_y || "",
+      ep: x.ep != null ? x.ep : (x.e || ""),
+      views: x.views || x.h || "",
+      likes: x.likes || x.f || "",
+      cat: x.cat || x.c || "",
+      desc: x.desc || x.t || "",
+      payType: x.payType || x.p || "",
+      money: x.money != null ? x.money : x.m,
+      site: "hd",
+    });
+  });
+}
+
+/* 黄豆详情 —— 拉 /api/hd2/play 并归一成详情页通用结构 */
+async function hdDetail(id) {
+  const r = await fetch(API + "/api/hd2/play?id=" + encodeURIComponent(id) + "&seq=1", { method: "GET" });
+  const j = await r.json().catch(function () { return null; });
+  if (!j || !j.ok || !j.data) throw new Error((j && j.error) || "黄豆详情取不到");
+  const d = j.data;
+  const n = parseInt(d.total || d.episode_count || 1, 10) || 1;
+  const eps = {};
+  for (let i = 1; i <= n; i++) eps[String(i)] = "";   // 地址按集现取 (带时效签名)
+  return {
+    id: id,
+    title: d.title || d.name || "",
+    cover: hdCoverOf(id),
+    epTotal: n,
+    duration: d.duration || 0,
+    lines: d.lines || [],
+    hlsKey: d.hls_key || "",
+    eps: eps,
+    _hd: 1,
+  };
+}
+
+/* 从当前列表里捞封面 (详情接口不回封面) */
+function hdCoverOf(id) {
+  try {
+    const hit = (window.__HD_LIST || []).filter(function (x) {
+      return String(x.id) === String(id);
+    })[0];
+    if (hit) return hit.cover || hit.img || "";
+  } catch (e) {}
+  return "";
+}
+
 function  hdApi(path, params) {
   if (typeof HDHd === 'undefined') return Promise.reject(new Error('黄豆短剧模块未加载'));
   const p = params || {};
@@ -1613,7 +1673,7 @@ function  hdApi(path, params) {
         if (path === '/api/categories') {
           return snap.channels.map(c => ({ slug: c.code, name: c.name }));
         }
-        const items = liveItems || hdCatalogMap(snap, t);
+        const items = liveItems || hdNorm(hdCatalogMap(snap, t));
         const filtered = (liveItems && t && t !== 'all' && t !== '全部')
           ? (function () {
               const ch = (snap.channels || []).filter(c => c.code === t || c.name === t)[0];
@@ -1623,7 +1683,7 @@ function  hdApi(path, params) {
             })()
           : items;
         return {
-          items: filtered,
+          items: hdNorm(filtered),
           total: filtered.length,
           from: liveItems ? 'hdmgdj-live' : 'hdmgdj-catalog',
         };
@@ -2203,6 +2263,8 @@ async function goHome() {
     }
     if (SITE === 'hg') applyCoverCache(j.items);
     SEEN_IDS = new Set(j.items.map(x => String(x.id)));
+    /* 黄豆详情接口不回封面, 从列表里捞 —— 存一份给 hdCoverOf 用 */
+    if (SITE === 'hd') window.__HD_LIST = j.items;
 
     // ---- 海角首页: 分区楼层 (复刻源站) ----
     if (SITE === 'hjw' && j.sections && j.sections.length) {
@@ -2827,6 +2889,12 @@ async function openVid(id, from) {
         related: v.related || [],
         eps: v.m3u8 ? { '1': v.m3u8 } : {}
       };
+    } else if (src === 'hd') {
+      /* ★ 黄豆详情: /api/video 与 /api/hd/video 指的都是老的 hddj 上游 (已死, 回 400/404)。
+       *   现行接口是 /api/hd2/play —— 它 200 并且直接带 lines[] (三条线路) + hls_key。
+       *   以前这里走通用 /api/video → 必 400 → 页面报「上游失败」, 剧点不进去。
+       *   现在拉 hd2/play 再归一成详情页要的字段 (eps 用集数序号, m3u8 稍后按集现取)。 */
+      v = await hdDetail(id);
     } else {
       v = src === SITE ? await api('/api/video', { id }) : await apiOf(src, '/api/video', { id });
     }
