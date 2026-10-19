@@ -58,10 +58,36 @@
   ];
 
   // ---------- 取数 ----------
-  // Worker 前缀优先; 本地调试时 window.HG_API_BASE 可覆盖成 http://127.0.0.1:8787
+  /* ★ 2026-10-19: API 基址必须按「页面在哪」来定。
+   *
+   *   翻过的车: 原来 base() 一律返回相对路径 "/api/lz", 在 Worker 域名下
+   *   (huangguo-web.*.workers.dev/lz/) 没问题 —— 同源。但页面同时也发到
+   *   GitHub Pages (cxykk919169-coder.github.io/huangguo-web/lz.html),
+   *   那里**没有 Worker**, 相对路径会打到 github.io/api/lz/... → 404,
+   *   页面能打开但列表空白、点开没内容, 就是"看不了"。
+   *
+   *   所以: 同源能用就用同源 (Worker 域名 / 本地 dev), 否则退回 Worker 绝对地址。
+   *   判断方式不写死域名 —— 探测一下 Host 更稳, 本地/file 也一样成立。
+   */
+  var WORKER = 'https://huangguo-web.cxykk919169.workers.dev';
+
+  function onWorkerHost() {
+    try {
+      var h = (typeof location !== 'undefined' && location.hostname) || '';
+      // Worker 域名 / 本地开发 / 容器 IP 都算"自己能代理"
+      return /workers\.dev$/i.test(h) ||
+             /^(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/i.test(h) ||
+             /^192\.168\./i.test(h) || /^10\./i.test(h);
+    } catch (e) { return false; }
+  }
+
   function base() {
-    var b = (typeof window !== 'undefined' && window.HG_API_BASE) || '';
-    return b + PREFIX;
+    // 手动覆盖优先 (调试用)
+    if (typeof window !== 'undefined' && window.HG_API_BASE) return window.HG_API_BASE + PREFIX;
+    // 在 Worker 自己域名下 → 同源相对路径
+    if (onWorkerHost()) return PREFIX;
+    // 在 GitHub Pages 或别处 → 走 Worker 绝对地址
+    return WORKER + PREFIX;
   }
 
   function request(path, opts) {
@@ -92,12 +118,24 @@
 
   // ---------- 归一化 ----------
   // Worker 已经吐扁平结构了, 这里只做兜底, 保证前端字段永远齐全。
+  /* ★ 封面地址补全: Worker 返回的是 "/api/lz/img?..."
+   *   同源页面直接用没问题, 但在 GitHub Pages 上会变成 github.io/api/lz/img → 404。
+   *   这里统一过一遍 abs()。 */
+  function abs(u) {
+    if (!u) return '';
+    if (/^https?:\/\//i.test(u)) return u;
+    if (u.charAt(0) !== '/') return u;
+    var bs = base();
+    if (/^https?:\/\//i.test(bs)) return bs.replace(PREFIX, '') + u;
+    return (typeof location !== 'undefined' ? location.origin : '') + u;
+  }
+
   function mapCard(x) {
     if (!x) return null;
     return {
       id: String(x.id || ''),
       title: x.title || '',
-      cover: x.cover || '',
+      cover: abs(x.cover || ''),
       desc: x.desc || '',
       ep: x.epCount ? ('更新至' + x.epCount + '集') : (x.epTotal ? ('全' + x.epTotal + '集') : ''),
       epCount: Number(x.epCount) || 0,
@@ -207,7 +245,7 @@
           title: j.title || '',
           slug: j.slug || '',
           desc: j.desc || '',
-          cover: j.cover || '',
+          cover: abs(j.cover || ''),
           coverRaw: j.coverRaw || '',
           tags: Array.isArray(j.tags) ? j.tags : [],
           cate: j.cate || '',
@@ -235,10 +273,17 @@
           if (!j.ok || !j.url) {
             return { ok: false, locked: !!j.locked, reason: j.reason || 'no_source', source: 'lz' };
           }
-          // Worker 回的是相对路径, 补上本站 origin 让 <video> 直接用
+          /* Worker 回的是相对路径 (/api/lz/media?...)。
+           * ★ 这里不能拼 location.origin —— 页面在 GitHub Pages 上时那样会拼成
+           *   github.io/api/lz/media, 照样 404。要拼的是**实际用的 API 基址**。 */
           var u = j.url;
-          if (u.charAt(0) === '/' && typeof location !== 'undefined') {
-            u = location.origin + u;
+          if (u.charAt(0) === '/') {
+            var bs = base();                       // 已是绝对地址或 /api/lz
+            if (/^https?:\/\//i.test(bs)) {
+              u = bs.replace(PREFIX, '') + u;
+            } else if (typeof location !== 'undefined') {
+              u = location.origin + u;
+            }
           }
           return {
             ok: true,
@@ -270,7 +315,7 @@
     /** 封面代理地址 (Worker 会解密) */
     cover: function (rawUrl) {
       if (!rawUrl) return '';
-      return PREFIX + '/img?u=' + encodeURIComponent(rawUrl);
+      return base() + '/img?u=' + encodeURIComponent(rawUrl);
     },
   };
 
