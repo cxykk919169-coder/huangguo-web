@@ -3453,7 +3453,7 @@ function patchCard(id, cover) {
  *     2) 空格/标点敏感 —— 搜「笼中 雀」匹配不到「笼中雀」
  *     3) 拼音搜不了 —— 搜「lzq」找不到「笼中雀」
  *   现在四级降级: 原文 → 归一化 → 多词全含 → 拼音首字母。 */
-function hdNorm(s) {
+function hdKey(s) {
   let t = String(s == null ? '' : s).toLowerCase();
   t = t.replace(/[\uFF01-\uFF5E]/g, function (c) {
     return String.fromCharCode(c.charCodeAt(0) - 0xFEE0);
@@ -3505,7 +3505,7 @@ function hdPyInitial(ch) {
   return '';
 }
 function hdPy(s) {
-  const t = hdNorm(s);
+  const t = hdKey(s);
   let out = '';
   for (const ch of t) {
     const c = ch.codePointAt(0);
@@ -3536,18 +3536,18 @@ function hitTitle(it, kw) {
   // 1. 原文子串
   if (hay.toLowerCase().indexOf(raw.toLowerCase()) >= 0) return true;
 
-  const nHay = hdNorm(hay);
-  const nKw = hdNorm(raw);
+  const nHay = hdKey(hay);
+  const nKw = hdKey(raw);
   if (!nKw) return false;
 
   // 2. 归一化子串（忽略空格/标点）
   if (nHay.indexOf(nKw) >= 0) return true;
 
   // 3. 多词全含（单字词不参与，否则长标题必然命中）
-  const words = raw.split(/\s+/).filter(function (w) { return hdNorm(w).length >= 2; });
+  const words = raw.split(/\s+/).filter(function (w) { return hdKey(w).length >= 2; });
   if (words.length > 1) {
     const ok = words.every(function (w) {
-      const nw = hdNorm(w);
+      const nw = hdKey(w);
       return nw && nHay.indexOf(nw) >= 0;
     });
     if (ok) return true;
