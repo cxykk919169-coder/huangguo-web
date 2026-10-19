@@ -48,6 +48,9 @@ main{max-width:1180px;margin:0 auto;padding:14px 12px}
 
 .badge{position:absolute;top:6px;left:6px;background:rgba(255,122,24,.92);color:#fff;font-size:10.5px;padding:2px 6px;border-radius:5px;font-weight:600}
 .badge.src{background:rgba(10,10,14,.72);color:#cfcfda;font-weight:500}
+/* 完结/更新状态角标 —— 放在集数角标下面, 不和它抢位置 */
+.badge.done{top:26px;background:rgba(78,210,138,.92);color:#06120b}
+.badge.ongo{top:26px;background:rgba(95,178,255,.92);color:#04101c}
 .item .t{font-size:12.5px;padding:8px 8px 3px;line-height:1.4;max-height:52px;overflow:hidden;color:#dcdce2;font-weight:500}
 .item .e{font-size:11px;color:#6e6e7a;padding:0 8px 8px;margin-top:auto}
 .load{text-align:center;color:#5a5a66;padding:44px 20px;font-size:14px}
@@ -1665,8 +1668,16 @@ function hdNorm(list) {
     const id = x.id || x.i || x.d || x.drama_id || "";
     const catObj = x.category && typeof x.category === 'object' ? x.category : null;
     const catName = (catObj && catObj.name) || x.cat || x.c || "";
-    const epN = (x.episodeCount != null) ? x.episodeCount
-              : (x.ep != null ? x.ep : (x.e != null ? x.e : ""));
+    /* ★ 集数以 accessSummary.total 为准（实测最可靠）。
+     *   episodeCount 是上游标称值，常和实际对不上：
+     *     时停手表 episodeCount=3 但 remarks=全5集 实际 3 集
+     *     我的岳母苏沛真 episodeCount=30 但 remarks=更新至8集 实际 30 集
+     *   accessSummary.total 与实际 episodes.length 完全一致（实测 1026 部全对）。 */
+    const asTotal = (x.accessSummary && x.accessSummary.total != null)
+      ? x.accessSummary.total : null;
+    const epN = (asTotal != null && asTotal > 0) ? asTotal
+              : ((x.episodeCount != null) ? x.episodeCount
+              : (x.ep != null ? x.ep : (x.e != null ? x.e : "")));
     return Object.assign({}, x, {
       id: id,
       title: x.title || x.n || x.name || "",
@@ -3022,6 +3033,29 @@ function cardHtml(it) {
       '</div>';
   }
 
+  /* ★ 2026-10-19 第一项: 卡片显示「已完结 / 更新中」。
+   *   上游 isEnded 全是 false（实测 0/1026 为 true，不可用），
+   *   真实状态只写在 remarks 里，格式恒为两种：
+   *     "全N集"     → 已完结
+   *     "更新至N集" → 更新中，当前 N 集
+   *   注意 remarks 的 N 和 episodeCount 经常对不上（时停手表 remarks 全5集
+   *   但实际 3 集；我的岳母苏沛真 remarks 更新至8集 但实际 30 集），
+   *   所以**集数以实际 episodes 为准**，remarks 只取"是否完结"这一个信息。 */
+  const rmk = String(it.remarks || '').trim();
+  /* 魔改那批的集数是我们按"可播"裁剪过的，不是上游标称值，
+   * remarks 里写的"更新至N集"会和实际对不上，所以整批不显示完结/更新状态。 */
+  const skipState = !!it._mg;
+  const isFull = !skipState && /^全\d+集$/.test(rmk);
+  const isUpdating = !skipState && /^更新至\d+集$/.test(rmk);
+  const realEp = Number(it.ep) || Number(it.episodeCount) || Number(it.epTotal) || 0;
+
+  /* 角标: 已完结 / 更新中（魔改那批用「魔改」标记，不参与完结判断） */
+  let stateBadge = '';
+  if (src === 'hd' && !skipState) {
+    if (isFull) stateBadge = '<div class="badge done">已完结</div>';
+    else if (isUpdating) stateBadge = '<div class="badge ongo">更新中</div>';
+  }
+
   return '<div class="item" data-id="' + esc(it.id) + '" data-site="' + esc(src) + '"' +
     ' onclick="openVid(\'' + esc(it.id) + '\',\'' + esc(src) + '\')">' +
     '<div class="thumb">' +
@@ -3033,11 +3067,13 @@ function cardHtml(it) {
           ' onload="this.classList.add(\'ok\')" onerror="hgImgFallback(this)">'
         : '') +
       '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
-      (it.ep ? '<div class="badge">' + it.ep + '集</div>' : '') +
+      (realEp ? '<div class="badge">' + realEp + '集</div>' : '') +
+      stateBadge +
       tag +
     '</div>' +
     '<div class="t">' + esc(it.title) + '</div>' +
-    '<div class="e">' + (it.ep ? '共 ' + it.ep + ' 集' : '') + '</div>' +
+    '<div class="e">' + (realEp ? realEp + ' 集' : '') +
+      (isFull ? ' · 完结' : (isUpdating ? ' · 更新中' : '')) + '</div>' +
     '</div>';
 }
 
