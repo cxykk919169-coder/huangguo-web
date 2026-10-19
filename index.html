@@ -2929,6 +2929,23 @@ async function goHome() {
       ? { cat: curCat, page: 1, sort: HD_SORT }
       : { cat: curCat, page: 1 });
     if (stale(T)) return;                     // 期间用户已经切走/点进详情
+    /* ★ 2026-10-19 兜底归一化
+     *   实测报错过 "j.items.map is not a function" —— 说明某条路径回上来的
+     *   items 不是数组 (对象 / 字符串 / undefined 都见过)。页面只要能渲染就
+     *   不该白屏，这里统一压成数组，同时把原始形态记进诊断位，方便后续定位。 */
+    if (!j || typeof j !== 'object') j = { items: [] };
+    if (!Array.isArray(j.items)) {
+      if (j.items && typeof j.items === 'object' && Array.isArray(j.items.items)) {
+        j.items = j.items.items;            // 被多包了一层
+      } else {
+        window.__HD_BAD_ITEMS = {
+          at: new Date().toISOString(), site: SITE, path: '/api/list',
+          type: typeof j.items, keys: j.items && typeof j.items === 'object' ? Object.keys(j.items).slice(0, 8) : null,
+          sample: String(JSON.stringify(j).slice(0, 200)),
+        };
+        j.items = [];
+      }
+    }
     let jRetryOk = false;                     // 直连补救是否成功
     if (!j.items || !j.items.length) {
       /* ★ 2026-10-19 黄豆空结果时自动补救
