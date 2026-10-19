@@ -1972,26 +1972,77 @@ async function dtApi(path, params) {
   if (!j || !j.ok) {
     return { items: [], notice: (j && j.error) || '2048 暂时取不到数据' };
   }
-  const items = (j.items || []).map(function (x) {
-    return {
-      id: String(x.id),
+  /* ★ 2026-10-19 跨页去重 (真机有效的那一层):
+   *
+   *   上游有 7 组「同名不同 ID」的条目, 分散在不同页 ——
+   *   翻到第 9 页才会撞见第 3 页见过的那个标题。
+   *
+   *   ⚠ 曾经想在 Worker 里用模块级变量做跨页表, 已证伪:
+   *     Worker 的 isolate 不保证复用, `let` 不跨请求共享,
+   *     实测翻 12 页照样漏 6 组。浏览器里这份 DT_SEEN 是真的持久的,
+   *     所以跨页判断必须放在这里。
+   *
+   *   规则:
+   *     · page<=1 视为新一轮浏览, 清空 (换排序 / 重新进板块 / 搜索);
+   *     · 之后累积; 已见过的 ID 或标题直接丢;
+   *     · 同标题若新来的集数更多, 顶掉旧的 —— 留信息更全的那条。
+   */
+  const isFirst = (Number(p.page) || 1) <= 1;
+  if (isFirst) {
+    DT_SEEN.id = Object.create(null);
+    DT_SEEN.title = Object.create(null);
+    DT_SEEN.at = Object.create(null);
+  }
+  const items = [];
+  let swap = 0;
+  for (const x of (j.items || [])) {
+    const id = String(x.id);
+    const ttl = String(x.title || '').replace(/\s+/g, '').trim();
+    const ep = Number(x.ep) || 0;
+    if (DT_SEEN.id[id]) continue;
+    if (ttl && DT_SEEN.title[ttl]) {
+      /* 已见过同标题: 只有集数明显更多才顶替, 否则丢弃 */
+      const prev = DT_SEEN.title[ttl];
+      if (ep > (prev.ep || 0) + 2) {
+        const oldIdx = items.findIndex(function (y) { return y.id === prev.id; });
+        const repl = {
+          id: id, title: x.title || '', cover: x.cover || '', site: 'dt',
+          rating: x.rating, ep: ep, views: x.heat || 0, tags: x.tags || [],
+        };
+        if (oldIdx >= 0) { items[oldIdx] = repl; swap++; }
+        else { items.push(repl); }
+        DT_SEEN.id[id] = 1;
+        DT_SEEN.id[prev.id] = 0;          // 旧 ID 让位, 允许它以后重新出现
+        DT_SEEN.title[ttl] = { id: id, ep: ep };
+      }
+      continue;
+    }
+    DT_SEEN.id[id] = 1;
+    if (ttl) DT_SEEN.title[ttl] = { id: id, ep: ep };
+    items.push({
+      id: id,
       title: x.title || '',
       cover: x.cover || '',
       site: 'dt',
       rating: x.rating,
-      ep: x.ep || 0,
+      ep: ep,
       views: x.heat || 0,
       tags: x.tags || [],
-    };
-  });
+    });
+  }
   return {
     items: items,
+    deduped: (j.items || []).length - items.length,
+    swapped: swap,
     total: j.total || 0,
     page: j.page || 1,
     sortBy: j.sortBy || 'heat',
     hasMore: (j.page || 1) < (j.totalPages || 1),
   };
 }
+
+/* 跨页去重表 (dtApi 用) — 浏览器内存活整个会话, 这是它比 Worker 内存态强的地方 */
+const DT_SEEN = { id: Object.create(null), title: Object.create(null), at: Object.create(null) };
 
 /* 直接打 Worker 的相对路径拼接, 统一走 API 基址 */
 async function apiRaw(p) {
@@ -2070,6 +2121,8 @@ async function openDt(id) {
         '</div>' +
       '</div>' +
       '<div class="pl"><video id="dtv" controls playsinline preload="metadata" poster="' + esc(cover) + '"></video></div>' +
+      '<div id="dterr" style="display:none;margin-top:8px;padding:10px 12px;border-radius:9px;' +
+        'background:#2a1518;border:1px solid #4a2028;color:#ff9aa8;font-size:12.5px;line-height:1.6"></div>' +
       (eps.length ? '<div class="eps" id="dtepbar">' + epBtns + '</div>' : '') +
       (it.desc ? '<div class="sum">' + esc(it.desc) + '</div>' : '') +
     '</div>';
@@ -2100,21 +2153,102 @@ async function dtPlayEp(no) {
 }
 
 let DT_HLS = null;
+/* ★ 2026-10-19 2048 播放器重写
+ *
+ * 原来的配置只有三个参数 (retry 几个 + 超时), 漏掉的正是「长片会卡」的关键:
+ *
+ *  1) 没有 maxBufferLength → hls.js 默认只缓冲 30 秒。2048 一集常有 200+ 片、
+ *     十几分钟, 播到后半段一旦某片慢一点, 缓冲见底就卡; 而且每次只能往前
+ *     拿 30 秒, 网速抖一下就补不上。
+ *  2) 没有 maxMaxBufferLength → 缓冲上限被锁在默认值, 拖动进度条之后
+ *     要重新填很久的缓冲, 表现就是「一拖就卡」。
+ *  3) NETWORK_ERROR 直接 startLoad() 无限重试 → 如果分片签名真的过期,
+ *     会陷进死循环, 画面永远停在那个位置而不是报错重取。
+ *
+ * 现在: 缓冲拉长到 60s / 上限 120s, 分片失败按次数退避, 连续失败超过阈值
+ * 就把整个清单重新拉一遍 (新签名), 而不是原地重试旧 URL。
+ */
 function dtPlay(src) {
   const v = document.getElementById('dtv');
   if (!v) return;
   if (DT_HLS) { try { DT_HLS.destroy(); } catch (e) {} DT_HLS = null; }
+
+  const tip = (function () {
+    var el = document.getElementById('dterr');
+    if (el) el.style.display = 'none';
+    return el;
+  })();
+  function fail(msg) {
+    if (tip) { tip.textContent = msg; tip.style.display = 'block'; }
+    if (typeof toast === 'function') toast(msg);
+  }
+
   if (window.Hls && Hls.isSupported()) {
-    const h = new Hls({ manifestLoadingMaxRetry: 3, fragLoadingMaxRetry: 4, manifestLoadingTimeOut: 20000 });
+    const h = new Hls({
+      /* 缓冲: 长片必须给足, 否则后段一卡就复不回来 */
+      maxBufferLength: 60,
+      maxMaxBufferLength: 120,
+      maxBufferSize: 60 * 1000 * 1000,
+      maxBufferHole: 0.5,
+      /* 起播快一点, 先用低清顶上 */
+      startLevel: -1,
+      /* 重试: 分片失败多给几次, 但要有上限, 不能无限 `startLoad` */
+      manifestLoadingMaxRetry: 3,
+      levelLoadingMaxRetry: 3,
+      fragLoadingMaxRetry: 6,
+      manifestLoadingRetryDelay: 500,
+      fragLoadingRetryDelay: 500,
+      fragLoadingMaxRetryTimeout: 20000,
+      /* 网络抖动容忍 */
+      manifestLoadingTimeOut: 20000,
+      levelLoadingTimeOut: 20000,
+      fragLoadingTimeOut: 30000,
+      /* 关键: 允许自动追进度, 网络恢复后不用用户手动拖 */
+      lowLatencyMode: false,
+      backBufferLength: 30,
+    });
     DT_HLS = h;
+
+    let netFails = 0;
+    let reloaded = 0;
     h.loadSource(src);
     h.attachMedia(v);
-    h.on(Hls.Events.MANIFEST_PARSED, function () { v.play().catch(function () {}); });
+    h.on(Hls.Events.MANIFEST_PARSED, function () {
+      netFails = 0;
+      if (tip) tip.style.display = 'none';
+      v.play().catch(function () {});
+    });
+    h.on(Hls.Events.FRAG_LOADED, function () { netFails = 0; });
     h.on(Hls.Events.ERROR, function (ev, d) {
       if (!d || !d.fatal) return;
-      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) h.startLoad();
-      else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) h.recoverMediaError();
-      else h.destroy();
+
+      if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        try { h.recoverMediaError(); return; } catch (e) {}
+      }
+
+      if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        netFails++;
+        /* 前两次: 原地重试 (多半是抖动) */
+        if (netFails <= 2) { try { h.startLoad(); return; } catch (e) {} }
+        /* 再失败: 重新取一次播放地址 —— 拿新签名, 这是修「后段卡死」的关键 */
+        if (reloaded < 2 && typeof curVid !== 'undefined' && curVid && curVid.id) {
+          reloaded++;
+          netFails = 0;
+          try { h.destroy(); } catch (e) {}
+          DT_HLS = null;
+          if (tip) { tip.textContent = '重新获取播放地址…'; tip.style.display = 'block'; }
+          setTimeout(function () { dtPlayEp(Number(curEp) || 1); }, 600);
+          return;
+        }
+        fail('这一段取不到了，换一集试试');
+        try { h.destroy(); } catch (e) {}
+        DT_HLS = null;
+        return;
+      }
+
+      try { h.destroy(); } catch (e) {}
+      DT_HLS = null;
+      fail('播放出错');
     });
   } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
     v.src = src;
