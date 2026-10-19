@@ -50,7 +50,9 @@ jobs:
           mkdir -p _site
           # 前端文件 (白名单, 避免源码泄露)
           # ★ hg-brands.js 是新增的多品牌模块, 漏掉它就 404
-          for f in index.html hg-brands.js hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
+          # ★ 2026-10-19: lz.html + hg-lz.js 是荔枝短剧独立站 (/lz/),
+          #   漏掉它们 Pages 上直接 404 —— 加进白名单前已经踩过一次。
+          for f in index.html hg-brands.js hls.min.js hg-direct.js hg-hd.js hg-es.js hg-stego.js hg-hjw.js hg-lz.js lz.html crypto-js.min.js site.json manifest.json sw.js favicon.png icon-192.png icon-512.png DISCLAIMER.md LICENSE; do
             if [ -f "$f" ]; then
               cp "$f" _site/
               echo "  + $f"
