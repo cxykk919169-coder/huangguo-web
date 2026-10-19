@@ -117,7 +117,28 @@ footer{text-align:center;color:#494951;font-size:11.5px;padding:28px 16px 12px;l
 /* ===== 无限滚动哨兵 ===== */
 .sentinel{display:flex;align-items:center;justify-content:center;gap:9px;padding:26px 0 34px;color:#6e6e7a;font-size:13px}
 /* 黄豆数据状态条 —— 让人一眼看出数据是实时的、全免费 */
-/* 黄豆排序条 (默认/最新更新/集数最多/最热) */
+/* ===== 移动端底部固定导航 =====
+ * 只在窄屏出现；桌面端顶部 sitebar 已经够用了。
+ * 底部留 safe-area，iPhone 刘海屏不会被 home indicator 压住。 */
+.botnav{display:none}
+@media(max-width:700px){
+  .botnav{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;
+    background:rgba(14,14,18,.96);backdrop-filter:blur(10px);
+    border-top:1px solid #26262f;
+    padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px));
+  }
+  .botnav button{
+    flex:1;background:none;border:0;color:#7d7d8a;font-family:inherit;
+    font-size:10.5px;padding:5px 2px;display:flex;flex-direction:column;
+    align-items:center;gap:2px;cursor:pointer;line-height:1.25;border-radius:9px;
+  }
+  .botnav button .bi{font-size:17px;line-height:1}
+  .botnav button.on{color:#5fb2ff}
+  .botnav button.on .bi{transform:translateY(-1px)}
+  /* 给内容留出底部导航的高度，否则最后一行卡片被挡住 */
+  main{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))}
+}/* 黄豆排序条 (默认/最新更新/集数最多/最热) */
 .sortbar{display:flex;gap:7px;padding:0 0 9px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .sortbar::-webkit-scrollbar{display:none}
 .sbtn{flex:0 0 auto;background:#16161d;border:1px solid #26262f;color:#9a9aa7;
@@ -304,6 +325,10 @@ html[data-site="hjw"] .hgtoast{border-color:#5a2a3e}
   </div>
   <div class="tabs" id="tabs"></div>
 </header>
+<!-- ★ 2026-10-19 移动端底部固定导航
+     手机上切模块原来要点顶部那一排小按钮，一屏操作距离太远（拇指够不到）。
+     这里给常用四个入口 + 我的，固定在屏幕底部，只在窄屏显示。 -->
+<nav class="botnav" id="botnav"></nav>
 <main id="app"><div class="load"><span class="spin"></span>加载中…</div></main>
 <footer style="font-size:12px;line-height:1.8;color:#6e6e7a;padding:16px 12px;max-width:1180px;margin:0 auto">
   <div style="border-top:1px solid #22222a;padding-top:12px">
@@ -511,6 +536,7 @@ function setSite(k) {
   MJ_SEC = '';               // 黄果漫剧: 分区要按分类重取
   document.documentElement.setAttribute('data-site', k);
   renderSiteBar();       // ← 之前漏了这句: 按钮高亮不刷新
+  renderBotNav();        // 底部导航同样要高亮当前模块
   renderTabs();
   goHome();
 }
@@ -3102,7 +3128,7 @@ function cardHtml(it) {
         ? /* ★ 黄豆封面单张要 2s (CloudFront 绕路)。lazy 时用户一滚就换屏,
  *   没等到的图永久空着 —— 表现就是「封面不显示」。黄豆改 eager,其余站保持 lazy。 */
         '<img ' + (src === 'hd' ? 'loading="eager" decoding="async"' : 'loading="lazy"') +
-          ' src="' + esc(cv) + '" data-raw="' + esc(it.cover) + '"' + hgFlag +
+          ' src="' + esc(cv) + '" data-raw="' + esc(it.cover) + '" data-site="' + esc(src) + '"' + hgFlag +
           ' onload="this.classList.add(\'ok\')" onerror="hgImgFallback(this)">'
         : '') +
       '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
@@ -3125,13 +3151,32 @@ function hgImgFallback(img) {
   const raw = img.getAttribute('data-raw') || '';
   const step = img.getAttribute('data-fb') || '0';
   const isHg = img.getAttribute('data-hg') === '1';
+  const site = img.getAttribute('data-site') || SITE;
+
+  /* ★ 2026-10-19 黄豆封面回退
+   *   黄豆封面全在 d12m928oe7qtlf.cloudfront.net，域名写死在数据里，
+   *   CDN 一换就整站封面同时挂。这里第二级走 Worker 的 /api/hd/cover，
+   *   它会在多个域名之间自动重试（原域名 → 官方 hddj → hdv1..hdv6）。 */
+  if (site === 'hd' && !isHg && step === '0' && raw) {
+    img.setAttribute('data-fb', '1');
+    const base = (typeof API === 'string' && API) ? API : '';
+    if (base) {
+      img.src = base + '/api/hd/cover?u=' + encodeURIComponent(raw);
+      return;
+    }
+  }
+
   if (!isHg && step === '0' && raw && img.src.indexOf('data:') !== 0) {
     // 第一步: 换成原图直连
     img.setAttribute('data-fb', '1');
     img.src = raw;
     return;
   }
-  // 第二步: 认输, 显示占位
+  if (!isHg && step === '1' && raw && site === 'hd') {
+    // 第三步: 原图也挂了 → 交回占位
+    img.setAttribute('data-fb', '2');
+  }
+  // 认输, 显示占位
   img.style.display = 'none';
   const ph = img.nextElementSibling;
   if (ph && ph.classList.contains('ph')) ph.style.display = 'flex';
@@ -3699,7 +3744,7 @@ async function openVid(id, from) {
       '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
       '<div class="card">' +
         '<div class="dhead">' +
-          (v.cover ? '<img class="dcover" src="' + esc(coverUrl(v.cover, curSrc)) + '" data-raw="' + esc(v.cover) + '" data-fb="0" data-hg="' + (curSrc === 'hd' ? '0' : '1') + '" onerror="hgImgFallback(this)">' : '') +
+          (v.cover ? '<img class="dcover" src="' + esc(coverUrl(v.cover, curSrc)) + '" data-raw="' + esc(v.cover) + '" data-site="' + esc(curSrc) + '" data-fb="0" data-hg="' + (curSrc === 'hd' ? '0' : '1') + '" onerror="hgImgFallback(this)">' : '') +
           '<div class="dinfo">' +
             '<div class="dtitle">' + esc(v.title) +
               '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()">' +
@@ -4494,7 +4539,7 @@ function renderHdVid(v) {
     '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
     '<div class="card">' +
       '<div class="dhead">' +
-        (v.cover ? '<img class="dcover" src="' + esc(coverUrl(v.cover, curSrc)) + '" data-raw="' + esc(v.cover) + '" data-fb="0" data-hg="' + (curSrc === 'hd' ? '0' : '1') + '" onerror="hgImgFallback(this)">' : '') +
+        (v.cover ? '<img class="dcover" src="' + esc(coverUrl(v.cover, curSrc)) + '" data-raw="' + esc(v.cover) + '" data-site="' + esc(curSrc) + '" data-fb="0" data-hg="' + (curSrc === 'hd' ? '0' : '1') + '" onerror="hgImgFallback(this)">' : '') +
         '<div class="dinfo">' +
           '<div class="dtitle">' + esc(v.title) +
             '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()">' +
@@ -5310,7 +5355,7 @@ function goMine() {
     return '<div class="item" data-id="' + esc(x.id) + '" data-site="' + esc(src) + '"' +
       ' onclick="openVid(\'' + esc(x.id) + '\',\'' + esc(src) + '\')">' +
       '<div class="thumb">' +
-        (cv ? '<img loading="lazy" src="' + esc(cv) + '" data-raw="' + esc(x.cover) + '" data-fb="0"' + hgFlag + ' onerror="hgImgFallback(this)">' : '') +
+        (cv ? '<img loading="lazy" src="' + esc(cv) + '" data-raw="' + esc(x.cover) + '" data-site="' + esc(src) + '" data-fb="0"' + hgFlag + ' onerror="hgImgFallback(this)">' : '') +
         '<div class="ph" style="' + (cv ? 'display:none' : '') + '">🎬</div>' +
         (x.ep ? '<div class="badge">' + x.ep + '集</div>' : '') +
         '<div class="badge src" style="left:auto;right:6px;background:rgba(10,10,14,.72)">' +
@@ -5454,6 +5499,26 @@ if ('serviceWorker' in navigator) {
 }
 
 /* ===================== 站点切换 ===================== */
+/* ★ 2026-10-19 移动端底部导航
+ *   窄屏下把常用模块放到拇指能够到的地方。桌面端隐藏（CSS 控制）。
+ *   只放 4 个模块 + 我的，多了太挤。 */
+function renderBotNav() {
+  const el = document.getElementById('botnav');
+  if (!el) return;
+  const picks = [
+    { k: 'hg',  icon: '🎬', name: '黄果' },
+    { k: 'hd',  icon: '🍿', name: '黄豆' },
+    { k: 'hjw', icon: '🔥', name: '海角' },
+    { k: 'mj',  icon: '📖', name: '漫剧' },
+  ];
+  let html = picks.map(function (p) {
+    return '<button class="' + (SITE === p.k ? 'on' : '') + '" onclick="setSite(\'' + p.k + '\')">' +
+      '<span class="bi">' + p.icon + '</span><span>' + p.name + '</span></button>';
+  }).join('');
+  html += '<button onclick="goMine()"><span class="bi">♡</span><span>我的</span></button>';
+  el.innerHTML = html;
+}
+
 function renderSiteBar() {
   const el = document.getElementById('sitebar');
   if (!el) return;
@@ -5500,6 +5565,7 @@ function renderSiteBar() {
 
 /* ===================== 启动 ===================== */
 renderSiteBar();
+renderBotNav();
 renderTabs();
 document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 goHome();
@@ -5509,7 +5575,7 @@ maybeShowIosHint();
 // 机制: 把「线上 index.html」下载下来, 抠出它的 PAGE_BUILD 和当前跑着的比。
 // 为什么不用 sw.js 的 VERSION: SW 自己会被缓存, 断网/弱网时拿到的是旧的,
 // 版本号永远相等 → 自愈逻辑等于没写。
-const PAGE_BUILD = 'hg-v8-20261007';
+const PAGE_BUILD = 'hg-v9-20261019';
 (function checkBuild() {
   if (sessionStorage.getItem('hg_ver_reload')) return;   // 每次会话只自愈一次
   const url = location.pathname.replace(/[^/]*$/, '') + 'index.html?t=' + Date.now();
