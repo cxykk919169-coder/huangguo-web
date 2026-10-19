@@ -3308,7 +3308,13 @@ function hitTitle(it, kw) {
   const raw = String(kw == null ? '' : kw).trim();
   if (!raw) return false;
 
-  const fields = [it.title, it.name, it.description, it.remarks, it.year, it.tags];
+  /* ★ 2026-10-19 修正: description 不参与匹配。
+   *   黄豆部分剧的 description 是整篇正文（上千字），归一化去标点后
+   *   连成一串，任何单字都能命中 —— 搜「笼 中 雀」返回几百条不相干结果。
+   *   只匹配标题 / 别名 / 分类 / 备注 / 标签。 */
+  const fields = [it.title, it.name, it.cat,
+                  (it.category && it.category.name), it.remarks, it.badge,
+                  Array.isArray(it.tags) ? it.tags.join(' ') : it.tags];
   const hay = fields.filter(Boolean).join(' ');
   if (!hay) return false;
 
@@ -3322,18 +3328,18 @@ function hitTitle(it, kw) {
   // 2. 归一化子串（忽略空格/标点）
   if (nHay.indexOf(nKw) >= 0) return true;
 
-  // 3. 多词全含
-  const words = raw.split(/\s+/).filter(Boolean);
+  // 3. 多词全含（单字词不参与，否则长标题必然命中）
+  const words = raw.split(/\s+/).filter(function (w) { return hdNorm(w).length >= 2; });
   if (words.length > 1) {
     const ok = words.every(function (w) {
       const nw = hdNorm(w);
-      return nw && (nHay.indexOf(nw) >= 0 || hdPy(hay).indexOf(hdPy(w)) >= 0);
+      return nw && nHay.indexOf(nw) >= 0;
     });
     if (ok) return true;
   }
 
-  // 4. 拼音首字母（关键词纯字母时才启用）
-  if (/^[a-z]+$/i.test(raw)) {
+  // 4. 拼音首字母（关键词纯字母且 ≥2 位）
+  if (/^[a-z]{2,}$/i.test(raw)) {
     const pTitle = hdPy(it.title || it.name || '');
     if (pTitle && pTitle.indexOf(raw.toLowerCase()) >= 0) return true;
   }
