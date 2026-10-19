@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0d0d0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="荔枝短剧">
+<meta name="mobile-web-app-capable" content="yes">
+<title>荔枝短剧 · 独立站</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+body{background:#0d0d0f;color:#eee;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding-bottom:40px;min-height:100vh}
+
+/* ===== 顶栏 ===== */
+header{position:sticky;top:0;z-index:60;background:rgba(13,13,15,.97);backdrop-filter:blur(14px);border-bottom:1px solid #1c1c22;padding:11px 12px 0}
+.bar{display:flex;align-items:center;gap:9px;max-width:1180px;margin:0 auto}
+.logo{font-size:17px;font-weight:800;white-space:nowrap;flex:0 0 auto;letter-spacing:.5px}
+.logo b{color:#e8384f}
+.logo i{font-style:normal;font-size:10px;color:#6a6a76;font-weight:500;margin-left:5px}
+.search{flex:1;display:flex;gap:7px;min-width:0}
+input{flex:1;min-width:60px;font-size:16px;padding:10px 13px;border-radius:10px;border:1px solid #2a2a32;background:#16161b;color:#eee;outline:none;font-family:inherit}
+input:focus{border-color:#e8384f;background:#1a1a20}
+button{font-size:15px;padding:10px 15px;border-radius:10px;border:0;background:#e8384f;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+button:active{transform:scale(.96)}
+.backbtn{background:#1e1e24;color:#a9a9b6;font-size:13px;padding:9px 12px}
+
+/* ===== 分类条 ===== */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:9px 0 10px;max-width:1180px;margin:0 auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:7px 14px;border-radius:20px;background:#18181e;color:#8b8b96;font-size:14px;border:1px solid #24242c;cursor:pointer;white-space:nowrap;transition:.15s}
+.tab.on{background:#e8384f;color:#fff;border-color:#e8384f;font-weight:600}
+
+/* ===== 内容区 ===== */
+main{max-width:1180px;margin:0 auto;padding:14px 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:11px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}}
+.item{background:#16161b;border:1px solid #212129;border-radius:12px;overflow:hidden;cursor:pointer;transition:.15s;display:flex;flex-direction:column}
+.item:active{transform:scale(.97);border-color:#e8384f}
+.thumb{position:relative;width:100%;aspect-ratio:3/4;background:#1e1e24;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#3d3d47;font-size:26px}
+.corner{position:absolute;top:6px;left:6px;padding:2px 7px;border-radius:6px;background:rgba(232,56,79,.92);color:#fff;font-size:10.5px;font-weight:700}
+.corner.free{background:rgba(34,160,90,.92)}
+.meta{padding:8px 9px 10px}
+.ttl{font-size:12.5px;line-height:1.4;color:#e2e2ea;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:34px}
+.sub{font-size:10.5px;color:#6d6d79;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
+
+/* ===== 详情页 ===== */
+.detail{display:none}
+.detail.on{display:block}
+.dhead{display:flex;gap:14px;margin-bottom:16px}
+.dcover{width:118px;flex:0 0 auto;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#1e1e24}
+.dcover img{width:100%;height:100%;object-fit:cover;display:block}
+.dinfo{flex:1;min-width:0}
+.dinfo h1{font-size:18px;line-height:1.35;margin-bottom:8px;font-weight:700}
+.dtag{display:inline-block;padding:2px 8px;border-radius:6px;background:#1e1e26;color:#9d9daa;font-size:11px;margin:0 5px 5px 0}
+.dtag.free{background:rgba(34,160,90,.16);color:#4ed28a;font-weight:600}
+.ddesc{font-size:12.5px;line-height:1.75;color:#9a9aa7;margin:10px 0 16px;padding:12px;background:#14141a;border-radius:10px;border:1px solid #202028}
+.secttl{font-size:13px;color:#7b7b88;margin:16px 0 9px;font-weight:600;display:flex;align-items:center;gap:7px}
+.secttl::after{content:'';flex:1;height:1px;background:#202028}
+.eps{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:8px}
+.epbtn{padding:9px 4px;border-radius:9px;background:#1c1c23;color:#9fb4de;border:1px solid #26262f;font-size:12.5px;text-align:center;cursor:pointer;transition:.13s;font-family:inherit}
+.epbtn:active{background:#2a2a34}
+.epbtn.on{background:#e8384f;color:#fff;border-color:#e8384f;font-weight:700}
+.epbtn.lk{background:#1f1719;color:#8a5560;border-color:#332027;cursor:not-allowed}
+.epbtn.dd{opacity:.4;cursor:not-allowed}
+
+/* ===== 播放器 ===== */
+.plwrap{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;margin-bottom:12px}
+.plwrap video{width:100%;height:100%;display:block;background:#000}
+.pltip{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,.82);color:#b9b9c4;font-size:13px;text-align:center;padding:20px}
+.pltip.off{display:none}
+.pltip .big{font-size:30px}
+.pltip button{font-size:13px;padding:8px 18px}
+
+/* ===== 其他 ===== */
+.loading{text-align:center;padding:40px 0;color:#5c5c68;font-size:13px}
+.more{text-align:center;padding:18px 0 8px}
+.more button{background:#1e1e24;color:#a4a4b0;font-size:13.5px;padding:11px 26px}
+.empty{text-align:center;padding:50px 0;color:#4d4d58;font-size:13.5px}
+.toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%) translateY(14px);background:rgba(30,30,38,.97);color:#e8e8f0;font-size:13px;padding:11px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:.22s;z-index:200;border:1px solid #33333d;max-width:88vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="logo">荔枝<b>短剧</b><i>独立站</i></div>
+    <div class="search">
+      <input id="q" type="search" placeholder="搜索剧名 / 标签" autocomplete="off">
+      <button id="btnSearch">搜索</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main>
+  <!-- 列表页 -->
+  <div id="home">
+    <div class="grid" id="grid"></div>
+    <div class="more" id="moreWrap" style="display:none">
+      <button id="btnMore">加载更多</button>
+    </div>
+    <div class="loading" id="loading">加载中…</div>
+    <div class="empty" id="empty" style="display:none">没有内容</div>
+  </div>
+
+  <!-- 详情页 -->
+  <div class="detail" id="detail">
+    <button class="backbtn" id="btnBack">← 返回列表</button>
+    <div class="dhead" style="margin-top:14px">
+      <div class="dcover"><img id="dCover" alt=""></div>
+      <div class="dinfo">
+        <h1 id="dTitle">—</h1>
+        <div id="dTags"></div>
+        <div class="sub" id="dSub" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="plwrap">
+      <video id="player" controls playsinline webkit-playsinline preload="metadata"></video>
+      <div class="pltip" id="plTip"><div class="big">▶</div><div>选择集数开始播放</div></div>
+    </div>
+    <div class="ddesc" id="dDesc"></div>
+    <div class="secttl">选集</div>
+    <div class="eps" id="dEps"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="hls.min.js"></script>
+<script src="hg-lz.js"></script>
+<script>
+(function(){
+'use strict';
+
+var LZ = window.HGLz;
+if (!LZ) { document.body.innerHTML = '<div class="empty">hg-lz.js 未加载</div>'; return; }
+
+// ---------- 状态 ----------
+var S = {
+  cat: '',        // 当前分类 id
+  kw: '',         // 搜索词
+  page: 1,
+  hasMore: false,
+  items: [],
+  busy: false,
+  cur: null,      // 当前详情
+  curEp: 0,
+  hls: null,
+};
+
+var $ = function (id) { return document.getElementById(id); };
+var toastT = 0;
+function toast(msg) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(function () { t.classList.remove('on'); }, 2200);
+}
+
+// ---------- 分类 ----------
+function renderTabs(cats) {
+  var box = $('tabs');
+  var html = '<div class="tab on" data-cat="">全部</div>';
+  cats.forEach(function (c) {
+    html += '<div class="tab" data-cat="' + c.code + '">' + c.name + '</div>';
+  });
+  box.innerHTML = html;
+  Array.prototype.forEach.call(box.querySelectorAll('.tab'), function (el) {
+    el.onclick = function () {
+      Array.prototype.forEach.call(box.querySelectorAll('.tab'), function (x) { x.classList.remove('on'); });
+      el.classList.add('on');
+      S.cat = el.getAttribute('data-cat') || '';
+      S.page = 1;
+      S.items = [];
+      $('grid').innerHTML = '';
+      loadList();
+    };
+  });
+}
+
+// ---------- 列表 ----------
+function renderCards(items, append) {
+  var grid = $('grid');
+  if (!append) grid.innerHTML = '';
+  items.forEach(function (it) {
+    var d = document.createElement('div');
+    d.className = 'item';
+    d.setAttribute('data-id', it.id);
+    var badge = it.epCount ? ('<div class="corner free">' + it.epCount + '集</div>') : '';
+    var img = it.cover
+      ? '<img loading="lazy" src="' + it.cover + '" alt="" onerror="this.style.display=\'none\'">'
+      : '';
+    d.innerHTML =
+      '<div class="thumb">' + img + '<div class="ph">🎬</div>' + badge + '</div>' +
+      '<div class="meta">' +
+        '<div class="ttl">' + esc(it.title) + '</div>' +
+        '<div class="sub">' +
+          (it.views ? '<span>' + esc(it.views) + '</span>' : '') +
+          (it.tags && it.tags.length ? '<span>' + esc(it.tags.slice(0, 2).join(' / ')) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+    d.onclick = function () { openDetail(it.id); };
+    grid.appendChild(d);
+  });
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function loadList() {
+  if (S.busy) return;
+  S.busy = true;
+  $('loading').style.display = 'block';
+  $('moreWrap').style.display = 'none';
+
+  LZ.list({ page: S.page, cat: S.cat, keyword: S.kw }).then(function (r) {
+    S.busy = false;
+    $('loading').style.display = 'none';
+    if (!r.items.length) {
+      if (S.page === 1) {
+        $('empty').style.display = 'block';
+        $('empty').textContent = S.kw ? ('没有搜到「' + S.kw + '」') : '没有内容';
+      }
+    } else {
+      $('empty').style.display = 'none';
+      S.items = S.items.concat(r.items);
+      renderCards(r.items, S.page > 1);
+    }
+    S.hasMore = !!r.hasMore;
+    $('moreWrap').style.display = S.hasMore ? 'block' : 'none';
+  }).catch(function (e) {
+    S.busy = false;
+    $('loading').style.display = 'none';
+    $('empty').style.display = 'block';
+    $('empty').textContent = '加载失败：' + (e && e.message || e);
+  });
+}
+
+// ---------- 详情 ----------
+function openDetail(id) {
+  $('home').style.display = 'none';
+  $('detail').classList.add('on');
+  $('dTitle').textContent = '载入中…';
+  $('dEps').innerHTML = '';
+  $('dDesc').textContent = '';
+  $('dTags').innerHTML = '';
+  $('dSub').innerHTML = '';
+  $('dCover').removeAttribute('src');
+  S.cur = null;
+  S.curEp = 0;
+  stopPlay();
+
+  LZ.detail(id).then(function (d) {
+    S.cur = d;
+    $('dTitle').textContent = d.title;
+    $('dCover').src = d.cover || '';
+    $('dDesc').textContent = d.desc || '';
+    var tags = (d.tags || []).map(function (t) { return '<span class="dtag">' + esc(t) + '</span>'; }).join('');
+    if (d.allFree) tags = '<span class="dtag free">全集免费</span>' + tags;
+    $('dTags').innerHTML = tags;
+    $('dSub').innerHTML =
+      (d.epTotal ? '<span>' + d.epTotal + ' 集</span>' : '') +
+      (d.views ? '<span>' + esc(d.views) + ' 播放</span>' : '') +
+      (d.cate ? '<span>' + esc(d.cate) + '</span>' : '');
+
+    var html = '';
+    d.eps.forEach(function (e) {
+      var cls = 'epbtn';
+      if (e.locked) cls += ' lk';
+      else if (!e.available) cls += ' dd';
+      html += '<div class="' + cls + '" data-ep="' + e.ep + '">' + e.ep + '</div>';
+    });
+    $('dEps').innerHTML = html;
+    Array.prototype.forEach.call($('dEps').querySelectorAll('.epbtn'), function (el) {
+      el.onclick = function () {
+        if (el.classList.contains('lk') || el.classList.contains('dd')) {
+          toast('该集不可播放');
+          return;
+        }
+        playEp(Number(el.getAttribute('data-ep')), el);
+      };
+    });
+
+    // 自动播第 1 集
+    var first = d.eps.filter(function (e) { return !e.locked && e.available; })[0];
+    if (first) {
+      var el = $('dEps').querySelector('.epbtn[data-ep="' + first.ep + '"]');
+      playEp(first.ep, el);
+    } else {
+      $('plTip').innerHTML = '<div class="big">🔒</div><div>这部剧暂无可播集</div>';
+      $('plTip').classList.remove('off');
+    }
+  }).catch(function (e) {
+    $('dTitle').textContent = '加载失败';
+    toast(String(e && e.message || e));
+  });
+}
+
+function stopPlay() {
+  var v = $('player');
+  try { v.pause(); } catch (e) {}
+  if (S.hls) { try { S.hls.destroy(); } catch (e) {} S.hls = null; }
+  v.removeAttribute('src');
+  try { v.load(); } catch (e) {}
+}
+
+function playEp(ep, el) {
+  if (!S.cur) return;
+  Array.prototype.forEach.call($('dEps').querySelectorAll('.epbtn'), function (x) { x.classList.remove('on'); });
+  if (el) el.classList.add('on');
+  S.curEp = ep;
+
+  var tip = $('plTip');
+  tip.innerHTML = '<div class="big">⋯</div><div>正在取播放地址…</div>';
+  tip.classList.remove('off');
+
+  LZ.play(S.cur.id, ep).then(function (r) {
+    if (!r.ok) {
+      tip.innerHTML = '<div class="big">🔒</div><div>' + (r.reason === 'login_required' ? '该集需要登录' : '取不到播放地址') + '</div>';
+      tip.classList.remove('off');
+      return;
+    }
+    startPlay(r.url);
+  }).catch(function (e) {
+    tip.innerHTML = '<div class="big">✕</div><div>' + esc(String(e && e.message || e)) + '</div>';
+    tip.classList.remove('off');
+  });
+}
+
+function startPlay(url) {
+  var v = $('player');
+  var tip = $('plTip');
+  stopPlay();
+
+  var done = function () { tip.classList.add('off'); };
+  var failed = function (msg) {
+    tip.innerHTML = '<div class="big">✕</div><div>' + esc(msg || '播放失败') + '</div>' +
+      '<button id="retryBtn">重试</button>';
+    tip.classList.remove('off');
+    var rb = $('retryBtn');
+    if (rb) rb.onclick = function () { playEp(S.curEp, null); };
+  };
+
+  if (/\.m3u8(\?|$)/i.test(url) && window.Hls && window.Hls.isSupported()) {
+    var hls = new window.Hls({
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+      enableWorker: true,
+      lowLatencyMode: false,
+    });
+    S.hls = hls;
+    hls.loadSource(url);
+    hls.attachMedia(v);
+    hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+      done();
+      v.play().catch(function () {});
+    });
+    hls.on(window.Hls.Events.ERROR, function (_, data) {
+      if (data && data.fatal) {
+        if (data.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+          try { hls.startLoad(); return; } catch (e) {}
+        }
+        failed('播放出错：' + (data.details || data.type));
+      }
+    });
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    // iOS Safari 原生 HLS
+    v.src = url;
+    v.addEventListener('loadedmetadata', done, { once: true });
+    v.play().catch(function () {});
+  } else {
+    v.src = url;
+    v.addEventListener('loadedmetadata', done, { once: true });
+    v.addEventListener('error', function () { failed(); }, { once: true });
+    v.play().catch(function () {});
+  }
+}
+
+// ---------- 路由 ----------
+function goHome() {
+  $('detail').classList.remove('on');
+  $('home').style.display = 'block';
+  stopPlay();
+  S.cur = null;
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+}
+
+$('btnBack').onclick = goHome;
+
+$('btnMore').onclick = function () {
+  S.page += 1;
+  loadList();
+};
+
+$('btnSearch').onclick = function () {
+  S.kw = ($('q').value || '').trim();
+  S.page = 1;
+  S.items = [];
+  $('grid').innerHTML = '';
+  goHome();
+  loadList();
+};
+$('q').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') $('btnSearch').click();
+});
+
+// 深链: /lz/#/drama/82
+function route() {
+  var m = (location.hash || '').match(/#\/drama\/([^/?#]+)/);
+  if (m) openDetail(decodeURIComponent(m[1]));
+}
+window.addEventListener('hashchange', route);
+
+// ---------- 启动 ----------
+$('loading').style.display = 'block';
+LZ.cats().then(renderTabs).catch(function () { renderTabs(LZ.CATS.map(function(c){return {code:c.id,name:c.name};})); });
+loadList();
+route();
+
+})();
+</script>
+</body>
+</html>
