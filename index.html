@@ -5613,9 +5613,28 @@ function fmtTime(sec) {
 /* ===================== 错误处理 ===================== */
 function showErr(e) {
   const msg = String(e && e.message || e);
+  /* ★ 2026-10-19 诊断信息
+   *   只显示一句"出错了"没法定位。这里把出错时的模块、阶段、最近一次
+   *   异常数据的形态一并附上，并给一个复制按钮 —— 用户截图就能定位。 */
+  const diag = [];
+  diag.push('模块: ' + SITE);
+  if (curVid) diag.push('详情: ' + curVid);
+  if (window.__HD_BAD_ITEMS) {
+    const b = window.__HD_BAD_ITEMS;
+    diag.push('异常数据: items 类型=' + b.type + (b.keys ? ' keys=' + b.keys.join(',') : ''));
+    diag.push('样本: ' + String(b.sample || '').slice(0, 120));
+  }
+  const diagHtml = diag.length
+    ? '<div style="margin-top:10px;font-size:11.5px;color:#8d8d97;line-height:1.6">' +
+      diag.map(function (x) { return esc(x); }).join('<br>') + '</div>'
+    : '';
   app().innerHTML = '<div class="err"><b>出错了</b><br>' + esc(msg) +
     '<br><br>可能原因：网络不通 / 服务暂时不可用 / 官方站换域名了。<br>' +
-    '稍后重试，或换个网络环境再试。</div>';
+    '稍后重试，或换个网络环境再试。' +
+    diagHtml +
+    '<div style="margin-top:12px"><button onclick="location.reload()" ' +
+    'style="background:#ff7a18;color:#fff;border:0;border-radius:9px;padding:8px 18px;' +
+    'font-size:13px;cursor:pointer;font-family:inherit">重新加载</button></div></div>';
 }
 function showNoApi() {
   app().innerHTML =
