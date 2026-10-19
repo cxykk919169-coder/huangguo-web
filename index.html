@@ -1705,6 +1705,38 @@ function hdNorm(list) {
  *   400「包含无效或重复的播放参数」—— 所以播放时不要再拼别的。
  */
 async function hdDetail(id) {
+  /* ★ 2026-10-19: 「魔改独有」分流。
+   *   id 带 "mg:" 前缀 → 走黄豆魔改 (hdmgdj) 那套协议, 集数是标称值,
+   *   封面/简介/分类从列表缓存取 (魔改详情接口只回单集地址, 不回元数据)。 */
+  if (String(id).indexOf('mg:') === 0) {
+    const rawId = String(id).slice(3);
+    const meta = hdMetaOf(id) || {};
+    /* 先取第 1 集确认这条还在, 顺便拿时长 */
+    const p1 = await fetch(API + "/api/hd2/play?id=" + encodeURIComponent(rawId) + "&seq=1", { method: "GET" })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return null; });
+    if (!p1 || !p1.ok) throw new Error((p1 && p1.error) || "魔改线路取不到这一部");
+    const n = parseInt(meta.ep || meta.epTotal || 1, 10) || 1;
+    const eps = {};
+    for (let i = 1; i <= n; i++) eps[String(i)] = "";
+    return {
+      id: String(id),
+      title: meta.title || "",
+      cover: meta.cover || "",
+      cat: meta.cat || "",
+      desc: meta.desc || "",
+      views: meta.views || "",
+      heatNum: parseInt(meta.views || "0", 10) || 0,
+      epTotal: n,
+      duration: (p1.data && p1.data.duration) || 0,
+      lines: [],
+      hlsKey: (p1.data && p1.data.hls_key) || "",
+      eps: eps,
+      _hd: 1,
+      _mg: 1,
+    };
+  }
+
   const r = await fetch(API + "/api/hd/video?id=" + encodeURIComponent(id), { method: "GET" });
   const j = await r.json().catch(function () { return null; });
   if (!j || !j.ok) throw new Error((j && j.error) || "黄豆详情取不到");
@@ -1744,6 +1776,33 @@ async function hdDetail(id) {
  * 返回 { ok, url, kind }  kind = 'mp4' | 'hls' */
 async function hdSrc(id, ep) {
   const E = String(ep || 1);
+
+  /* ★ 2026-10-19: 「魔改独有」分流。
+   *   魔改那套用 /api/hd2/play?id=<字符串id>&seq=<集号>, 回 3 条 m3u8 线路。
+   *   注意 id 必须用它自己的 (self_xxx / up_xxx / rp_xxx), 拿官方数字 id
+   *   去打只会得到 code 2001「请求数据错误」。 */
+  if (String(id).indexOf('mg:') === 0) {
+    const rawId = String(id).slice(3);
+    const r = await fetch(API + "/api/hd2/play?id=" + encodeURIComponent(rawId) + "&seq=" + encodeURIComponent(E));
+    const j = await r.json().catch(function () { return null; });
+    if (!j || !j.ok) {
+      const msg = String((j && j.error) || "取播放地址失败");
+      const err = new Error(/VIP|会员|专享/.test(msg) ? "这一集是 VIP 专享，前面几集可以看" : msg);
+      if (/VIP|会员|专享/.test(msg)) err.locked = true;
+      throw err;
+    }
+    const lines = ((j.data && j.data.lines) || []).filter(function (L) { return L && L.url; });
+    if (!lines.length) throw new Error("这一集暂无播放源");
+    return {
+      ok: true,
+      url: lines[0].url,
+      kind: /\.m3u8(\?|$)/i.test(lines[0].url) ? "hls" : "mp4",
+      lines: lines.map(function (L) { return { name: L.name, label: L.name, url: L.url }; }),
+      duration: (j.data && j.data.duration) || 0,
+      hlsKey: (j.data && j.data.hls_key) || "",
+    };
+  }
+
   /* 先拿 episodeId: 优先用详情缓存的 _hdEp, 没有就现查 /api/hd/ep */
   let episodeId = "";
   try {
@@ -1829,6 +1888,37 @@ function  hdApi(path, params) {
         from: 'hdmgdj-catalog',
       };
     }).catch(function () { throw new Error('目录不可用'); });
+  }
+
+  /* ★ 2026-10-19: 「魔改独有」分类 —— 走 Worker 的静态片库 /api/hd/exclusive。
+   *   这 54 部是黄豆魔改那套有、官方站没有的 (详见 worker.js 里 HD_MG_EXCLUSIVE)。
+   *   id 统一加 "mg:" 前缀, 后面 hdDetail / hdSrc 靠这个前缀分流到 hd2 协议。 */
+  if (WORKER_OK !== false && API && p && p.cat === 'mg-exclusive') {
+    return fetch(API + '/api/hd/exclusive', { method: 'GET' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) throw new Error((j && j.error) || '魔改片库取不到');
+        const items = (j.items || []).map(function (x) {
+          return Object.assign({}, x, {
+            id: 'mg:' + x.id,
+            cover: x.cover || '',
+            title: x.title || '',
+            ep: x.ep,
+            epTotal: x.ep,
+            desc: x.desc || '',
+            cat: x.cat || '',
+            views: x.views || '',
+            remarks: x.remarks || '',
+            badge: '魔改',
+            site: 'hd',
+            _mg: 1,
+          });
+        });
+        return { ok: true, items: items, total: items.length, hasMore: false, from: 'mg-exclusive' };
+      })
+      .catch(function (e) {
+        throw new Error('魔改片库取不到：' + String((e && e.message) || e));
+      });
   }
 
   // Worker 代理优先 (已验证 WORKER_OK===false 时跳过)
@@ -2589,6 +2679,11 @@ async function loadHdCats() {
     if (!cats || !cats.length) return;
     CATS_HD.length = 0;
     CATS_HD.push({ id: '', name: '全部' });
+    /* ★ 2026-10-19: 「魔改独有」单独一个分类。
+     *   官方站 1026 部之外, 黄豆魔改那套还有 54 部是官方站没有的,
+     *   数据由 Worker 的 /api/hd/exclusive 静态下发 (见 worker.js 里的说明)。
+     *   放在最前面, 因为这是本次"补回来"的那批, 好找。 */
+    CATS_HD.push({ id: 'mg-exclusive', name: '魔改独有' });
     cats.forEach(c => {
       CATS_HD.push({ id: c.slug, name: c.name, children: c.children || [] });
       (c.children || []).forEach(ch => CATS_HD.push({ id: ch.slug, name: c.name + '·' + ch.name }));
@@ -4428,11 +4523,17 @@ async function hdPlay2(vid, ep) {
   const s = await hdSrc(vid, ep);
   if (!s || !s.url) throw new Error('播放地址获取失败');
 
+  /* 魔改独有那批上游回 3 条线路 (free / line2 / line3), 全带出来给用户切;
+   * 官方站只有一条 MP4, 就单线路。 */
+  const lines = (s.lines && s.lines.length)
+    ? s.lines
+    : [{ name: '线路1', label: '线路1', url: s.url }];
+
   return {
-    lines: [{ name: '线路1', label: '线路1', url: s.url }],
+    lines: lines,
     playUrl: s.url,
-    duration: 0,
-    hlsKey: '',
+    duration: s.duration || 0,
+    hlsKey: s.hlsKey || '',
     preview: false,
     kind: s.kind,          // 'mp4' | 'hls'
   };
