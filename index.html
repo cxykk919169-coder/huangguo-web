@@ -3172,36 +3172,61 @@ function hitTitle(it, kw) {
  *   直连模式   → 前端自己拉若干页再本地过滤 (拉不了全站, 覆盖有限)
  */
 async function hdSearch(kw, pages) {
-  // 先试 Worker 侧的全站搜索 (它会把 985 条全拉下来过滤好, 最准)
-  try {
-    const j = await hdApi('/api/search', { q: kw });
-    if (j && Array.isArray(j.items) && j.items.length) return j.items;
-    if (j && j.poolSize) return [];          // Worker 搜过了, 确实没命中
-  } catch (e) { /* Worker 不通, 走下面的直连兜底 */ }
+  /* ★ 2026-10-19: 搜索要同时覆盖两个库。
+   *   官方站 1026 部 (hddj.zen-vip.com) + 魔改独有 54 部 (/api/hd/exclusive)。
+   *   以前只搜官方站, 那 54 部搜不出来 —— 比如搜「高三爱情故事」只能看到
+   *   前传/番外, 看不到魔改侧的 41 集合并版。
+   *   两边并行, 各自兜错, 结果按前缀区分 (mg: 前缀交给详情/播放分流)。 */
+  const grabOfficial = (async function () {
+    try {
+      const j = await hdApi('/api/search', { q: kw });
+      if (j && Array.isArray(j.items) && j.items.length) return j.items;
+      if (j && j.poolSize) return [];          // Worker 搜过了, 确实没命中
+    } catch (e) { /* Worker 不通, 走下面的直连兜底 */ }
 
-  // 兜底: 前端拉多页本地过滤
-  pages = pages || 6;
-  const shots = [];
-  for (let p = 1; p <= pages; p++) shots.push(p);
+    // 兜底: 前端拉多页本地过滤
+    pages = pages || 6;
+    const shots = [];
+    for (let p = 1; p <= pages; p++) shots.push(p);
 
-  const rs = await Promise.all(shots.map((p) =>
-    apiOf('hd', '/api/list', { page: p })
-      .then((j) => (j && j.items) || [])
-      .catch(() => [])
-  ));
+    const rs = await Promise.all(shots.map((p) =>
+      apiOf('hd', '/api/list', { page: p })
+        .then((j) => (j && j.items) || [])
+        .catch(() => [])
+    ));
 
-  const seen = {};
-  const out = [];
-  for (const arr of rs) {
-    for (const it of arr) {
-      if (!it || it.id == null) continue;
-      const k = String(it.id);
-      if (seen[k]) continue;
-      seen[k] = 1;
-      out.push(it);
+    const seen = {};
+    const out = [];
+    for (const arr of rs) {
+      for (const it of arr) {
+        if (!it || it.id == null) continue;
+        const k = String(it.id);
+        if (seen[k]) continue;
+        seen[k] = 1;
+        out.push(it);
+      }
     }
-  }
-  return out.filter((it) => hitTitle(it, kw));
+    return out.filter((it) => hitTitle(it, kw));
+  })().catch(function () { return []; });
+
+  const grabMg = (async function () {
+    if (WORKER_OK === false || !API) return [];
+    try {
+      const r = await fetch(API + '/api/hd/exclusive?q=' + encodeURIComponent(kw), { method: 'GET' });
+      const j = await r.json();
+      if (!j || !j.ok) return [];
+      return (j.items || []).map(function (x) {
+        return Object.assign({}, x, {
+          id: 'mg:' + x.id,
+          ep: x.ep, epTotal: x.ep,
+          badge: '魔改', site: 'hd', _mg: 1,
+        });
+      });
+    } catch (e) { return []; }
+  })();
+
+  const both = await Promise.all([grabOfficial, grabMg]);
+  return both[0].concat(both[1]);
 }
 
 async function doSearch() {
