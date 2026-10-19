@@ -4323,8 +4323,17 @@ function mgStep(d) {
 function renderHdVid(v) {
   const T = VIEW_TOKEN;              // 继承 openVid 的视图令牌
   const faved = isFav(v.id);
-  curEp = '1';
-  hisPut({ id: v.id, title: v.title, cover: v.cover, ep: '1', epTotal: v.epTotal });
+
+  /* ★ 2026-10-19 续播: 从历史里恢复上次看到第几集 + 播放位置。
+   *   原来这里写死 curEp='1' 并把历史覆盖成 ep:'1' —— 等于每次进详情页
+   *   都把"看到第几集"清掉，所以黄豆永远从第 1 集开始。
+   *   现在: 有历史就回到那一集，并把 pos 交给 hdLoadEp → initPlayer 续播。 */
+  const old = HIS[String(v.id)] || null;
+  const startEp = Math.max(1, parseInt(old && old.ep, 10) || 1);
+  HD_RESUME_POS = (old && old.ep && String(old.ep) === String(startEp)) ? (old.pos || 0) : 0;
+  HD_PLAYER_WIRED = false;
+  curEp = String(startEp);
+  hisPut({ id: v.id, title: v.title, cover: v.cover, ep: String(startEp), epTotal: v.epTotal });
 
   const h5 = v.h5 || (typeof HDHd !== 'undefined' ? HDHd.h5Url(v.id) : 'https://hddj30.cc/');
   const heat = v.heatNum ? (v.heatNum >= 10000 ? (v.heatNum / 10000).toFixed(1) + 'w' : String(v.heatNum)) : '';
@@ -4380,7 +4389,7 @@ function renderHdVid(v) {
         : '');
 
   window.scrollTo(0, 0);
-  hdLoadEp(v.id, 1, true, T);
+  hdLoadEp(v.id, startEp, true, T);
 }
 
 // 剧集按钮 (点击切集)
@@ -4396,6 +4405,10 @@ function hdEpList(v) {
 
 // 当前黄豆剧
 let HD_CUR = null;         // {id, epTotal, title, cover}
+/* 续播: 进入详情页时从历史取回的上次播放位置, 交给 initPlayer 恢复 */
+let HD_RESUME_POS = 0;
+/* 播放器事件只绑一次 (ended → 自动下一集), 防止切集重复绑定 */
+let HD_PLAYER_WIRED = false;
 let HD_LINES = [];         // 当前集的多线路
 let HD_LINE_I = 0;
 let HD_IS_PREVIEW = false; // 当前播的是不是付费集的试看片段
@@ -4495,6 +4508,24 @@ async function hdLoadEp(vid, ep, first, T) {
 
     hdSetSrc(HD_LINES[0] ? HD_LINES[0].url : r.playUrl);
     renderHdLines();
+
+    /* ★ 2026-10-19 接入续播（原来黄豆播放器完全没接）：
+     *   旧状态: renderHdVid 每次都把历史集数写成 '1'，且播放器从不调 initPlayer —
+     *   所以黄豆既不会"从上次位置继续"，也不保存播放进度，切集后进度归零。
+     *   现在: initPlayer 负责倍速 + 恢复进度 + 每5秒存进度 + pause/beforeunload 存进度，
+     *   自动下一集换成黄豆自己的 hdStep。 */
+    if (!HD_PLAYER_WIRED) {
+      HD_PLAYER_WIRED = true;
+      const pv = document.getElementById('pl');
+      if (pv) {
+        pv.addEventListener('ended', function () {
+          saveProgress(0, pv.duration);
+          hdStep(1);
+        });
+      }
+    }
+    const resumeAt = (first && HD_RESUME_POS > 5) ? HD_RESUME_POS : 0;
+    initPlayer(resumeAt);
   } catch (e) {
     if (stale(tok)) return;
     if (e && e.locked) {
@@ -4989,20 +5020,28 @@ function initPlayer(resumePos) {
   }, { once: true });
 
   // 播完自动下一集
-  v.addEventListener('ended', () => {
-    saveProgress(0, v.duration);
-    step(1);
-  });
+  // ★ 黄豆走自己的 hdStep（在 hdLoadEp 里单独绑），这里跳过，
+  //   否则黄豆也会调用到其它模块的 step() 造成双跳/串集。
+  if (curSrc !== 'hd') {
+    v.addEventListener('ended', () => {
+      saveProgress(0, v.duration);
+      step(1);
+    });
+  }
 }
 
 function saveProgress(pos, dur) {
   if (!curVid) return;
+  /* ★ 黄豆走 HD_CUR（curVid 在黄豆里也是详情对象，但兜一层以防切走时清空）。
+   *   集号以 curEp 为准 —— 黄豆切集只更新 curEp，不会重新走 openVid。 */
+  const vid = (curVid && curVid.id != null) ? curVid.id : (HD_CUR && HD_CUR.id);
+  if (vid == null) return;
   hisPut({
-    id: curVid.id,
-    title: curVid.title,
-    cover: curVid.cover,
+    id: vid,
+    title: (curVid && curVid.title) || (HD_CUR && HD_CUR.title) || '',
+    cover: (curVid && curVid.cover) || (HD_CUR && HD_CUR.cover) || '',
     ep: curEp,
-    epTotal: curVid.epTotal,
+    epTotal: (curVid && curVid.epTotal) || (HD_CUR && HD_CUR.epTotal) || '',
     pos: Math.floor(pos || 0),
     dur: Math.floor(dur || 0),
   });
