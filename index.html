@@ -1654,6 +1654,22 @@ function listCachePut(key, val) {
   try { sessionStorage.setItem('lc:' + key, JSON.stringify({ at, val })); } catch (e) {}
 }
 
+/** 清掉所有列表缓存 (某个来源出问题时用, 避免把坏结果继续喂给用户) */
+function listCacheClear(src) {
+  const prefix = (src ? src + '|' : '');
+  for (const k of Object.keys(LIST_CACHE_MEM)) {
+    if (!prefix || k.indexOf(prefix) === 0) delete LIST_CACHE_MEM[k];
+  }
+  try {
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.indexOf('lc:') === 0 && (!prefix || k.indexOf('lc:' + prefix) === 0)) keys.push(k);
+    }
+    keys.forEach(function (k) { sessionStorage.removeItem(k); });
+  } catch (e) { /* 不可用就算了 */ }
+}
+
 function apiOfCached(src, path, params) {
   if (!listCacheable(path)) return apiOf(src, path, params);
   const key = listCacheKey(src, path, params);
@@ -2056,7 +2072,18 @@ function  hdApi(path, params) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }).then(function (j) {
-        if (!j || j.ok === false) return j;
+        /* ★ 2026-10-19: Worker 明确报错时，别把裸 {ok:false} 丢给 goHome。
+         *   goHome 只认 j.items，拿不到就走"没有内容，稍后再试"，
+         *   用户完全看不出是上游限流 / 超时 / 还是换域名。
+         *   这里把 Worker 的 error 原文装进 notice，页面上直接显示原因。 */
+        if (j && j.ok === false) {
+          return {
+            ok: false,
+            items: [],
+            total: 0,
+            notice: '黄豆取数失败：' + (j.error || j.message || '上游未返回原因'),
+          };
+        }
 
         /* ★ 出参归一: /api/hd/* 回的是上游全名结构, 但页面各处的消费方
          *   还按老约定读 (列表要 items 里带 id/title/cover,
@@ -2080,13 +2107,21 @@ function  hdApi(path, params) {
 
         if (path === '/api/list' || path === '/api/search') {
           const items = hdNorm(Array.isArray(j.items) ? j.items : []);
-          return {
+          /* ★ 2026-10-19: 把 Worker 的池子字段原样带上去。
+           *   漏了这三个字段 → 排序条右边永远显示不出「后台补全中」，
+           *   用户以为「集数最多」就是全部 160 部。 */
+          const out = {
             ok: true,
             items: items,
             total: Number(j.total) || items.length,
             hasMore: j.hasMore !== false,
             from: 'hddj-live',
           };
+          if (j.poolSize !== undefined) out.poolSize = j.poolSize;
+          if (j.poolComplete !== undefined) out.poolComplete = j.poolComplete;
+          if (j.poolTotal !== undefined) out.poolTotal = j.poolTotal;
+          if (j.poolMissing !== undefined) out.poolMissing = j.poolMissing;
+          return out;
         }
 
         if (path === '/api/video') {
@@ -2890,15 +2925,43 @@ async function goHome() {
     if (SITE === 'es') { esWarmSnap(); if (!ES_CATS_LOADED) await loadMgCats(); }
     // 海角: 先 3s 探测定型 Worker 可用性 (探不到直接快照, 不干等超时)
     if (SITE === 'hjw' && WORKER_OK === null) await hjwProbe();
-    const j = await apiOfCached(SITE, '/api/list', (SITE === 'hd' && HD_SORT)
+    let j = await apiOfCached(SITE, '/api/list', (SITE === 'hd' && HD_SORT)
       ? { cat: curCat, page: 1, sort: HD_SORT }
       : { cat: curCat, page: 1 });
     if (stale(T)) return;                     // 期间用户已经切走/点进详情
+    let jRetryOk = false;                     // 直连补救是否成功
     if (!j.items || !j.items.length) {
-      // 品牌板块没内容时 j.notice 里写清了原因和官方入口 —— 别用一句"稍后再试"糊弄
-      const msg = j.notice ? esc(j.notice).replace(/\n/g, '<br>') : '没有内容，稍后再试';
-      app().innerHTML = '<div class="err">' + msg + '</div>';
-      return;
+      /* ★ 2026-10-19 黄豆空结果时自动补救
+       *   Worker 那条路可能因为上游限流/超时回 ok:false，
+       *   直接甩一句红字最没用。这里先清掉缓存、强制走直连再试一次，
+       *   实在没数据才报错 —— 报错也带上具体原因，方便定位。 */
+      if (SITE === 'hd') {
+        try {
+          listCacheClear();
+          /* 必须临时把 WORKER_OK 压成 false 才会真的走直连 ——
+           * apiOf 在 WORKER_OK !== false 时会再用一次 Worker，等于原路重试。 */
+          const keepOk = WORKER_OK;
+          WORKER_OK = false;
+          let j2 = null;
+          try {
+            j2 = await hdApi('/api/list',
+              (HD_SORT ? { cat: curCat, page: 1, sort: HD_SORT } : { cat: curCat, page: 1 }));
+          } finally {
+            WORKER_OK = keepOk;
+          }
+          if (stale(T)) return;
+          if (j2 && j2.items && j2.items.length) {
+            j = j2;              // 换掉坏结果，继续走下面的正常渲染
+            jRetryOk = true;
+          }
+        } catch (e2) { /* 直连也挂，往下走报错 */ }
+      }
+      if (!jRetryOk) {
+        // 品牌板块没内容时 j.notice 里写清了原因和官方入口 —— 别用一句"稍后再试"糊弄
+        const msg = j.notice ? esc(j.notice).replace(/\n/g, '<br>') : '没有内容，稍后再试';
+        app().innerHTML = '<div class="err">' + msg + '</div>';
+        return;
+      }
     }
     if (SITE === 'hg') applyCoverCache(j.items);
     /* ★ 2026-10-19 黄豆全站池补全进度提示
