@@ -3536,29 +3536,66 @@ async function doSearch() {
   const T = newView();
   app().innerHTML = '<div class="load"><span class="spin"></span>搜索中…</div>';
 
+  /* ★ 2026-10-19 统一搜索: 加总超时（第 10 项）
+   *   四个来源并行，任何一个慢都会拖住整页 —— 黄果上游在国内基本不可达，
+   *   每次都让用户干等好几秒才看到「黄果搜索暂时不可用」。
+   *   现在每个来源各带 3.5s 超时，超时的按"不可用"处理立刻出结果；
+   *   同时记住谁最近失败过（熔断 90 秒），期间直接跳过不再等。 */
+
+  /** 给 Promise 套超时；超时 resolve 成 fallback（不是 reject，不影响其它来源） */
+  const withTimeout = (pr, ms, fallback) => Promise.race([
+    pr.catch(() => fallback),
+    new Promise((res) => setTimeout(() => res(fallback), ms)),
+  ]);
+
+  /** 熔断表: src → 到期时间戳 */
+  const SEARCH_BREAK = (window.__hgSearchBreak = window.__hgSearchBreak || {});
+  const SEARCH_BREAK_MS = 90 * 1000;
+  const broken = (src) => (SEARCH_BREAK[src] || 0) > Date.now();
+  const markBroken = (src) => { SEARCH_BREAK[src] = Date.now() + SEARCH_BREAK_MS; };
+
+  const SRCH_TIMEOUT = 3500;
+  const brief = (src) => ({ src: src, items: [], err: true, skip: true });
+
   // 三边并行, 各自兜住异常
-  const grabHg = () =>
-    apiOf('hg', '/api/search', { q: kw })
-      .then((j) => ({ src: 'hg', items: (j && j.items) || [] }))
-      .catch(() => ({ src: 'hg', items: [], err: true }));
+  const grabHg = () => {
+    if (broken('hg')) return Promise.resolve(brief('hg'));
+    return withTimeout(
+      apiOf('hg', '/api/search', { q: kw }).then((j) => ({ src: 'hg', items: (j && j.items) || [] })),
+      SRCH_TIMEOUT,
+      { src: 'hg', items: [], err: true }
+    ).then((r) => { if (r.err) markBroken('hg'); return r; });
+  };
 
   // 黄豆走本地过滤 (上游 keyword 不可靠)
-  const grabHd = () =>
-    hdSearch(kw, 6)
-      .then((items) => ({ src: 'hd', items }))
-      .catch(() => ({ src: 'hd', items: [], err: true }));
+  const grabHd = () => {
+    if (broken('hd')) return Promise.resolve(brief('hd'));
+    return withTimeout(
+      hdSearch(kw, 6).then((items) => ({ src: 'hd', items })),
+      SRCH_TIMEOUT,
+      { src: 'hd', items: [], err: true }
+    ).then((r) => { if (r.err) markBroken('hd'); return r; });
+  };
 
   // EROSHORT 走 Worker 代理搜索
-  const grabMg = () =>
-    esApi('/api/list', { q: kw, pageSize: 12 })
-      .then((j) => ({ src: 'es', items: (j && j.items) || [] }))
-      .catch(() => ({ src: 'es', items: [], err: true }));
+  const grabMg = () => {
+    if (broken('es')) return Promise.resolve(brief('es'));
+    return withTimeout(
+      esApi('/api/list', { q: kw, pageSize: 12 }).then((j) => ({ src: 'es', items: (j && j.items) || [] })),
+      SRCH_TIMEOUT,
+      { src: 'es', items: [], err: true }
+    ).then((r) => { if (r.err) markBroken('es'); return r; });
+  };
 
   // 海角走浏览器直连搜索
-  const grabHjw = () =>
-    hjwSearch(kw)
-      .then((j) => ({ src: 'hjw', items: (j && j.items) || [] }))
-      .catch(() => ({ src: 'hjw', items: [], err: true }));
+  const grabHjw = () => {
+    if (broken('hjw')) return Promise.resolve(brief('hjw'));
+    return withTimeout(
+      hjwSearch(kw).then((j) => ({ src: 'hjw', items: (j && j.items) || [] })),
+      SRCH_TIMEOUT,
+      { src: 'hjw', items: [], err: true }
+    ).then((r) => { if (r.err) markBroken('hjw'); return r; });
+  };
 
   const [hgRes, hdRes, mgRes, hjwRes] = await Promise.all([grabHg(), grabHd(), grabMg(), grabHjw()]);
   if (stale(T)) return;
