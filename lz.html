@@ -82,12 +82,19 @@ main{max-width:1180px;margin:0 auto;padding:14px 12px}
 .empty{text-align:center;padding:50px 0;color:#4d4d58;font-size:13.5px}
 .toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%) translateY(14px);background:rgba(30,30,38,.97);color:#e8e8f0;font-size:13px;padding:11px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:.22s;z-index:200;border:1px solid #33333d;max-width:88vw;text-align:center}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* 返回总站按钮 —— 荔枝是独立页, 没有它进来就出不去了 */
+.back{flex:none;width:32px;height:32px;border-radius:9px;background:#1a1a22;border:1px solid #26262f;
+  color:#9a9aa7;font-size:15px;line-height:30px;text-align:center;text-decoration:none;
+  transition:.13s;margin-right:10px}
+.back:hover{background:#24242e;color:#e8e8f0;border-color:#3a3a46}
+.back:active{background:#2c2c38}
 </style>
 </head>
 <body>
 
 <header>
   <div class="bar">
+    <a class="back" id="backHome" href="./" title="返回短剧总站">←</a>
     <div class="logo">荔枝<b>短剧</b><i>独立站</i></div>
     <div class="search">
       <input id="q" type="search" placeholder="搜索剧名 / 标签" autocomplete="off">
@@ -139,6 +146,29 @@ main{max-width:1180px;margin:0 auto;padding:14px 12px}
 
 var LZ = window.HGLz;
 if (!LZ) { document.body.innerHTML = '<div class="empty">hg-lz.js 未加载</div>'; return; }
+
+/* 返回总站的真实地址:
+ *   Worker 域名 / 本地 → "/"          (Worker 托整站)
+ *   GitHub Pages       → "./index.html" (同目录, 自动带 /huangguo-web 前缀)
+ *   lz.html 本身在 /lz/ 下 → 上一级 */
+(function fixBack() {
+  var a = document.getElementById('backHome');
+  if (!a) return;
+  try {
+    var h = location.hostname || '';
+    var p = location.pathname || '/';
+    var onWorker = /workers\.dev$/i.test(h) ||
+                   /^(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/i.test(h);
+    if (onWorker) {
+      /* Worker 下 /lz 和 /lz/ 都映射到本页, 主页就是 / */
+      a.href = '/';
+    } else {
+      /* Pages: 去掉文件名, 回到同目录的 index.html */
+      var dir = p.replace(/[^/]*$/, '');
+      a.href = dir + 'index.html';
+    }
+  } catch (e) { a.href = './index.html'; }
+})();
 
 // ---------- 状态 ----------
 var S = {

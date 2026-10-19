@@ -5016,11 +5016,37 @@ function renderSiteBar() {
     return '<button class="sitebtn' + (SITE === k ? ' on' : '') + '" data-k="' + k + '" onclick="setSite(\'' + k + '\')">' +
       '<span class="dot"></span>' + s.short + '</button>';
   }).join('');
-  /* ★ 2026-10-19: 荔枝短剧是**独立站** (/lz/), 不并进这套模块体系。
+  /* ★ 2026-10-19: 荔枝短剧是**独立站**, 不并进这套模块体系。
    *   原因: 它全免费、集数多 (个别剧 42 集), 主站这套紧凑卡片布局放不下
    *   播放器和选集区。独立页能给它更大的播放面积。
-   *   这里只放一个跳转按钮, 不做数据接入 —— 点过去就是完整的一套页面。 */
-  html += '<a class="sitebtn" href="/lz/" onclick="if(location.hostname===\'127.0.0.1\'||location.hostname===\'localhost\'){this.href=\'./lz.html\'}" ' +
+   *   这里只放一个跳转按钮, 不做数据接入 —— 点过去就是完整的一套页面。
+   *
+   * ★ 2026-10-19 修「荔枝模块 404」:
+   *   原来写死 href="/lz/", 那是**根路径**。在 Worker 域名下没问题
+   *   (Worker 自己拦 /lz/ 返回 lz.html), 但在 GitHub Pages 上会跳到
+   *   cxykk919169-coder.github.io/lz/ —— 少了 /huangguo-web 这个仓库前缀,
+   *   于是 404。
+   *
+   *   现在按当前环境算真实地址:
+   *     · Worker 域名 / 本地   → /lz/   (Worker 有路由)
+   *     · GitHub Pages 子路径  → ./lz.html  (同目录静态页)
+   *     · 其它                 → ./lz.html  兜底
+   */
+  const lzHref = (function () {
+    try {
+      var h = location.hostname || '';
+      var onWorker = /workers\.dev$/i.test(h) ||
+                     /^(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/i.test(h);
+      if (onWorker) return '/lz/';
+      /* Pages: 用相对路径拼当前目录, 自动带上 /huangguo-web 前缀 */
+      var p = location.pathname || '/';
+      var dir = p.replace(/[^/]*$/, '');
+      return dir + 'lz.html';
+    } catch (e) {
+      return './lz.html';
+    }
+  })();
+  html += '<a class="sitebtn" href="' + lzHref + '" ' +
     'style="text-decoration:none;display:inline-flex;align-items:center;gap:7px"><span class="dot" style="background:#e8384f"></span>荔枝 ↗</a>';
   el.innerHTML = html;
   document.documentElement.setAttribute('data-site', SITE);
