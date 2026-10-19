@@ -3232,11 +3232,113 @@ function patchCard(id, cover) {
 
 // 豆腐块搜索关键字匹配: 标题优先, 其次简介/标签/年份
 // (直连上游时的兜底; Worker 在线时由 Worker 侧做全站过滤, 比这个准)
+/* ★ 2026-10-19 搜索容错（与 worker.js 的同名函数保持一致）
+ *   原来只做子串匹配，三个问题:
+ *     1) 多词搜索失效 —— 搜「高三 爱情」什么都搜不到
+ *     2) 空格/标点敏感 —— 搜「笼中 雀」匹配不到「笼中雀」
+ *     3) 拼音搜不了 —— 搜「lzq」找不到「笼中雀」
+ *   现在四级降级: 原文 → 归一化 → 多词全含 → 拼音首字母。 */
+function hdNorm(s) {
+  let t = String(s == null ? '' : s).toLowerCase();
+  t = t.replace(/[\uFF01-\uFF5E]/g, function (c) {
+    return String.fromCharCode(c.charCodeAt(0) - 0xFEE0);
+  }).replace(/\u3000/g, ' ');
+  t = t.replace(/[\s\-_·、,，。！!？?：:；;'"“”‘’()（）\[\]【】<>《》\/\\|~`@#$%^&*+=]/g, '');
+  return t;
+}
+
+const HD_PY_GROUPS = {
+  a: '阿啊爱安按暗岸案昂奥澳',
+  b: '八巴白百败拜班半办帮包宝保报抱北贝备背被本比笔必毕边变便标表别宾冰兵并病波播伯博补不布步部',
+  c: '才材财采彩菜参残仓藏操草册侧层叉查茶察差拆柴产昌长常场畅唱抄超朝潮吵车彻撤尘沉陈称城成承程吃池迟持尺齿赤冲重崇抽仇丑臭出初除楚础处触川穿传船窗床创吹春纯词慈此刺次从粗促村存寸错',
+  d: '搭达答打大呆代带待袋单担但当刀导倒到道得德的灯登等低敌底地弟第点电店殿刁雕吊调跌叠丁顶订定丢东冬懂动都斗豆督毒独读赌杜肚度渡端短段断堆队对多夺朵躲',
+  e: '俄额恶饿儿而耳二',
+  f: '发法凡反返犯饭方防房仿放飞非肥匪废费分纷粉份风封疯逢凤佛否夫扶服浮符福府俯父付负妇附复富腹覆',
+  g: '该改盖概干甘赶敢感刚钢港高搞告哥歌格隔个各给根跟更工公功攻供宫恭共沟狗构姑孤古谷股骨鼓固故顾刮挂乖怪关观官冠管惯光广归鬼贵滚国果过',
+  h: '哈还孩海害含寒喊汉汗行航毫好号喝合何和河核荷黑很恨横红宏洪后候呼狐胡湖互户护花华划化画怀坏欢环还幻换荒皇黄灰回会绘婚混活火或货',
+  j: '击机鸡积基激及吉级极即急集几己挤计记技季既济继加夹佳家甲价驾架嫁尖坚间肩艰监减剪见件健渐江将姜讲降交郊娇骄脚叫教阶接街节结姐解介戒借今金仅尽紧进近劲禁经惊晶精井警净竟敬静境镜究九久酒旧救就居局举巨句拒具剧据聚卷决绝军君俊',
+  k: '开看康扛抗考靠科咳可克刻客课肯空孔恐口扣哭苦库裤夸快宽狂况亏昆困扩',
+  l: '拉啦来赖兰蓝拦烂浪捞劳老乐雷泪类冷离梨礼李里理力立丽利例隶连怜联脸练恋良凉梁两亮量聊料列烈裂林临灵铃零领另令溜刘流留六龙笼楼露鲁陆录路乱论罗落',
+  m: '妈麻马码骂吗买麦卖满慢忙猫毛矛貌么没玫眉梅媒每美妹门闷们猛梦迷米秘密蜜面苗秒妙灭民敏名明命摸模摩磨魔末莫墨某母亩木目牧幕',
+  n: '拿哪那纳奶男南难脑闹呢内能妮你年念娘鸟您宁牛扭农弄奴努女暖虐挪诺',
+  o: '哦偶',
+  p: '爬怕拍排牌派盘判盼旁胖跑泡陪配佩喷朋碰批披皮脾匹偏片漂拼贫品平评瓶婆迫破扑铺朴普',
+  q: '七妻期欺其奇骑齐旗起气汽弃恰千迁牵前钱浅遣枪强抢悄敲桥巧俏切且亲秦勤青轻倾清情请穷秋求球区曲取去全权泉劝缺却群雀鹊',
+  r: '然燃染让绕惹热人仁忍认任日容荣柔肉如乳入软若弱',
+  s: '撒洒塞赛三散色森杀沙傻晒山闪善伤商赏上少绍蛇舍设社射涉谁身深神审甚生声胜省圣师失诗施十石时识实拾食使始士世市事试势视是收手守首受兽瘦书叔舒输熟属术束树数双水睡顺说硕司丝私思死四寺似松宋送搜苏俗素速酸算虽岁碎孙损缩所',
+  t: '他她它塔台抬太态谈弹汤唐堂躺逃桃讨特疼腾提题体替天添田甜填挑条跳贴铁听停通同童统痛偷头投透突图徒土吐兔团推腿退吞托拖脱',
+  w: '挖娃瓦外弯完玩晚万王网往忘望危威微为围唯维伟尾委卫未位味畏胃喂温文闻问我握卧无五午武舞物务误雾',
+  x: '西吸希息稀习席洗喜戏系细下夏仙先闲显险现线限相香想向像象消小笑效些歇协邪鞋写谢心辛新信兴星刑行形醒性姓兄凶胸雄休修羞秀需徐许序续宣悬选学雪血寻迅',
+  y: '压押鸭牙亚呀烟延严言颜眼演厌宴验央羊阳杨养样要腰邀摇咬药也页夜一衣医依仪已以意义议因阴音银引隐应英樱迎赢影硬哟用佣拥永勇优忧由油游有又右幼于余鱼娱与宇羽雨语玉育狱浴预遇元园原员圆远愿约会月越云运晕',
+  z: '杂灾再在咱攒赞脏早造则责怎增扎渣炸摘窄债占战张章长掌丈招找照者这真针珍争征整正证之支知直值职只指纸制治中忠终钟种众周州舟宙朱猪竹主住助注祝专转装壮状追准捉桌资子字自总走足族组祖嘴最罪尊昨左作坐座做',
+};
+const HD_PY_EXTRA = {
+  '雀':'q','鸳':'y','鸯':'y','娼':'c','妓':'j','淫':'y','奸':'j','婊':'b','骚':'s','贱':'j',
+  '荡':'d','裸':'l','乳':'r','臀':'t','舔':'t','插':'c','射':'s','穴':'x','茎':'j','勃':'b',
+  '瘾':'y','欲':'y','孕':'y','堕':'d','胎':'t','嫂':'s','婶':'s','姨':'y','侄':'z','甥':'s',
+  '媳':'x','婿':'x','霸':'b','宠':'c','娇':'j','媚':'m','妖':'y','娆':'r','艳':'y','魔':'m',
+  '仙':'x','侠':'x','鬼':'g','神':'s','佛':'f','龙':'l','凤':'f','凰':'h','麒':'q','麟':'l',
+  '鹤':'h','鹰':'y','狼':'l','豹':'b','虎':'h','狮':'s','熊':'x','狐':'h','猫':'m','狗':'g',
+  '猪':'z','兔':'t','鼠':'s','牛':'n','羊':'y','马':'m','鸭':'y','鹅':'e','蛇':'s','龟':'g',
+  '鱼':'y','虾':'x','蟹':'x','蚁':'y','蜂':'f','蝶':'d','蝉':'c','蛾':'e','蚊':'w',
+};
+function hdPyInitial(ch) {
+  if (HD_PY_EXTRA[ch]) return HD_PY_EXTRA[ch];
+  for (const k in HD_PY_GROUPS) {
+    if (HD_PY_GROUPS[k].indexOf(ch) >= 0) return k;
+  }
+  return '';
+}
+function hdPy(s) {
+  const t = hdNorm(s);
+  let out = '';
+  for (const ch of t) {
+    const c = ch.codePointAt(0);
+    if (c >= 0x4e00 && c <= 0x9fff) {
+      const p = hdPyInitial(ch);
+      if (p) out += p;
+    } else if (/[a-z0-9]/.test(ch)) {
+      out += ch;
+    }
+  }
+  return out;
+}
+
 function hitTitle(it, kw) {
-  const low = kw.toLowerCase();
-  const fields = [it.title, it.name, it.description, it.remarks, it.year];
-  if (Array.isArray(it.tags)) fields.push(it.tags.join(' '));
-  return fields.some((f) => f && String(f).toLowerCase().indexOf(low) >= 0);
+  const raw = String(kw == null ? '' : kw).trim();
+  if (!raw) return false;
+
+  const fields = [it.title, it.name, it.description, it.remarks, it.year, it.tags];
+  const hay = fields.filter(Boolean).join(' ');
+  if (!hay) return false;
+
+  // 1. 原文子串
+  if (hay.toLowerCase().indexOf(raw.toLowerCase()) >= 0) return true;
+
+  const nHay = hdNorm(hay);
+  const nKw = hdNorm(raw);
+  if (!nKw) return false;
+
+  // 2. 归一化子串（忽略空格/标点）
+  if (nHay.indexOf(nKw) >= 0) return true;
+
+  // 3. 多词全含
+  const words = raw.split(/\s+/).filter(Boolean);
+  if (words.length > 1) {
+    const ok = words.every(function (w) {
+      const nw = hdNorm(w);
+      return nw && (nHay.indexOf(nw) >= 0 || hdPy(hay).indexOf(hdPy(w)) >= 0);
+    });
+    if (ok) return true;
+  }
+
+  // 4. 拼音首字母（关键词纯字母时才启用）
+  if (/^[a-z]+$/i.test(raw)) {
+    const pTitle = hdPy(it.title || it.name || '');
+    if (pTitle && pTitle.indexOf(raw.toLowerCase()) >= 0) return true;
+  }
+
+  return false;
 }
 
 /**
