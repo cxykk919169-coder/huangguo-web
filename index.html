@@ -145,6 +145,8 @@ footer{text-align:center;color:#494951;font-size:11.5px;padding:28px 16px 12px;l
   font-size:12px;padding:5px 12px;border-radius:16px;cursor:pointer;font-family:inherit;
   transition:background .15s,color .15s,border-color .15s}
 .sbtn:hover{background:#1d1d26;color:#c8c8d4}
+/* 全站池补全进度提示（上游限流导致要跨几次请求才补齐） */
+.poolhint{margin-left:auto;font-size:11.5px;color:#7d7d8a;padding:0 4px;white-space:nowrap}
 .sbtn.on{background:#5fb2ff;border-color:#5fb2ff;color:#04101c;font-weight:600}.hdstat{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 0 12px;
   padding:9px 13px;border-radius:10px;background:#14141a;border:1px solid #202028;
   font-size:12.5px;color:#9a9aa7;line-height:1.5}
@@ -2759,7 +2761,7 @@ function renderTabs() {
     const sortBar = '<div class="sortbar">' + SORTS.map(s =>
       '<button class="sbtn' + (HD_SORT === s.id ? ' on' : '') +
       '" onclick="hdSetSort(\'' + s.id + '\')">' + s.name + '</button>'
-    ).join('') + '</div>';
+    ).join('') + '<span class="poolhint" id="poolhint"></span></div>';
     el.innerHTML = sortBar + CATS_HD.map(c =>
       '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
       esc(c.name) + (c.children && c.children.length ? '<i class="tabsup">' + c.children.length + '</i>' : '') + '</div>'
@@ -2899,6 +2901,23 @@ async function goHome() {
       return;
     }
     if (SITE === 'hg') applyCoverCache(j.items);
+    /* ★ 2026-10-19 黄豆全站池补全进度提示
+     *   上游限流导致全站池要跨几次请求才补齐（每次补 6 页）。
+     *   补齐前排序只能对已有数据做，这里如实把进度写在排序条右边，
+     *   不让用户以为"集数最多"就是这几部 —— 补完提示自动消失。 */
+    if (SITE === 'hd') {
+      const hint = document.getElementById('poolhint');
+      if (hint) {
+        if (j.poolComplete === false && j.poolSize) {
+          const pct = j.poolTotal ? Math.min(99, Math.round(j.poolSize / j.poolTotal * 100)) : 0;
+          hint.textContent = '排序覆盖 ' + j.poolSize + ' / ' + (j.poolTotal || '?') + ' 部 · ' + pct + '%（后台补全中）';
+          hint.title = '上游有请求频率限制，全站清单分几次才能拉齐；补齐后排序结果才覆盖全部';
+        } else {
+          hint.textContent = '';
+          hint.title = '';
+        }
+      }
+    }
     SEEN_IDS = new Set(j.items.map(x => String(x.id)));
     /* 黄豆详情接口不回封面, 从列表里捞 —— 存一份给 hdCoverOf 用 */
     if (SITE === 'hd') window.__HD_LIST = j.items;
