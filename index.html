@@ -113,6 +113,18 @@ footer{text-align:center;color:#494951;font-size:11.5px;padding:28px 16px 12px;l
 
 /* ===== 无限滚动哨兵 ===== */
 .sentinel{display:flex;align-items:center;justify-content:center;gap:9px;padding:26px 0 34px;color:#6e6e7a;font-size:13px}
+/* 黄豆数据状态条 —— 让人一眼看出数据是实时的、全免费 */
+.hdstat{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 0 12px;
+  padding:9px 13px;border-radius:10px;background:#14141a;border:1px solid #202028;
+  font-size:12.5px;color:#9a9aa7;line-height:1.5}
+.hdstat b{color:#e8e8f0;font-weight:700}
+.hdstat-n b{color:#5fb2ff}
+.hdstat-free{color:#4ed28a;font-weight:600}
+.hdstat-t{color:#8f8f9e}
+.hdstat-src{color:#7b7b88;font-size:11.5px;padding:1px 7px;border-radius:5px;
+  background:#1e1e26;border:1px solid #2a2a34}
+.hdstat-sep{color:#3a3a46}
+@media(max-width:420px){.hdstat{font-size:11.5px;padding:8px 11px;gap:5px}}
 .sentinel .spin{width:15px;height:15px;border-width:2px}
 
 /* ===== 回到顶部 ===== */
@@ -2670,7 +2682,35 @@ async function goHome() {
     }
 
     const gridCls = (SITE === 'hjw') ? 'grid hjwgrid' : 'grid';
+
+    /* ★ 2026-10-19 新增: 数据状态条
+     *   黄豆以前首页读静态快照 (2026-10-17 的 117 部), 上游天天更新页面却一直
+     *   不动 —— 用户以为"网站不更新"。换到实时接口后加这条, 一眼能看出数据是活的:
+     *   共多少部 / 全部免费 / 更新时间 / 数据来源。
+     *   只对黄豆显示, 其它模块布局不变。 */
+    let statBar = '';
+    if (SITE === 'hd') {
+      const tot = Number(j.total) || j.items.length;
+      /* 上游列表里的最新 updatedAt, 用来显示"更新到哪天" */
+      let newest = '';
+      j.items.forEach(function (x) {
+        const d = String(x.updatedAt || '').slice(0, 10);
+        if (d && d > newest) newest = d;
+      });
+      const live = (j.from === 'hddj-live');
+      statBar =
+        '<div class="hdstat">' +
+          '<span class="hdstat-n">共 <b>' + tot + '</b> 部</span>' +
+          '<span class="hdstat-sep">·</span>' +
+          '<span class="hdstat-free">全部免费</span>' +
+          (newest ? '<span class="hdstat-sep">·</span><span class="hdstat-t">更新到 ' + esc(newest) + '</span>' : '') +
+          '<span class="hdstat-sep">·</span>' +
+          '<span class="hdstat-src">' + (live ? '实时' : '快照') + '</span>' +
+        '</div>';
+    }
+
     app().innerHTML =
+      statBar +
       '<div class="' + gridCls + '" id="grid">' + j.items.map(cardHtml).join('') + '</div>' +
       '<div class="sentinel" id="sentinel"><span class="spin"></span><span id="sentineltxt">向下滚动加载更多</span></div>';
     if (SITE === 'hg') fillMissingCovers(j.items);
