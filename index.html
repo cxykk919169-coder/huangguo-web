@@ -1641,61 +1641,127 @@ function hdCatalogMap(cat, catCode) {
   return hit.length ? hit : items;      // 该分类暂无数据时退回全集, 不给空白页
 }
 
-/* ★ 黄豆的数据层一直用单字母缩写 (i=id, n=name, img=封面, e=集数, ...),
- *   但 cardHtml / openVid / 详情页读的是 id / title / cover —— 两边从来没对上,
- *   表现就是卡片能排出来但 data-id 为空、标题空白、封面不显示 (点进去必然失败)。
- *   这里在出口统一补齐全名字段, 缩写原样保留 (详情页还在用)。 */
+/* ★ 黄豆的数据层有**两套字段名**:
+ *     · hdmgdj 旧快照: 单字母缩写 (i=id, n=name, img=封面, e=集数, ...)
+ *     · hddj.zen-vip.com: 全名 (id, title, cover, episodeCount, category.name, ...)
+ *   而 cardHtml / openVid / 详情页读的是 id / title / cover —— 这里在出口统一补齐,
+ *   两套都认, 缩写原样保留 (老详情页还在用)。 */
 function hdNorm(list) {
   if (!Array.isArray(list)) return [];
   return list.map(function (x) {
     if (!x) return x;
-    const id = x.i || x.d || x.id || x.drama_id || "";
+    const id = x.id || x.i || x.d || x.drama_id || "";
+    const catObj = x.category && typeof x.category === 'object' ? x.category : null;
+    const catName = (catObj && catObj.name) || x.cat || x.c || "";
+    const epN = (x.episodeCount != null) ? x.episodeCount
+              : (x.ep != null ? x.ep : (x.e != null ? x.e : ""));
     return Object.assign({}, x, {
       id: id,
       title: x.title || x.n || x.name || "",
       cover: x.cover || x.img || x.img_y || "",
       coverX: x.img_x || "",
       coverY: x.img_y || "",
-      ep: x.ep != null ? x.ep : (x.e || ""),
+      ep: epN,
+      epTotal: parseInt(epN, 10) || 0,
       views: x.views || x.h || "",
       likes: x.likes || x.f || "",
-      cat: x.cat || x.c || "",
-      desc: x.desc || x.t || "",
+      cat: catName,
+      desc: x.desc || x.description || x.t || "",
       payType: x.payType || x.p || "",
       money: x.money != null ? x.money : x.m,
+      remarks: x.remarks || x.u || "",
+      tags: x.tags || "",
+      badge: x.badge || "",
       site: "hd",
     });
   });
 }
 
-/* 黄豆详情 —— 拉 /api/hd2/play 并归一成详情页通用结构 */
+/* 黄豆详情 —— 走 /api/hd/video (hddj.zen-vip.com 线路)
+ *
+ * ★ 2026-10-19 重写: 原来用 /api/hd2/play 当详情, 那套走 hdmgdj,
+ *   现在上游返回 {"ok":false,"code":2001,"error":"请求数据错误"},
+ *   详情页直接抛错 → 黄豆整块播不了。
+ *
+ *   而 /api/hd/video (hddj.zen-vip.com) 实测完全正常:
+ *     GET /api/hd/video?id=<id>
+ *     → { ok, item:{ id,title,cover,episodeCount,episodes:[{id,seq,title,
+ *                    lockKind,coinCost,fullPlayable,previewEnabled}] } }
+ *   episodes[].id 就是 episodeId, 交给 /api/hd/play?episodeId= 换播放地址。
+ *
+ *   注意: 上游 /play **只认 episodeId 一个参数**, 多传 videoId/seq 会回
+ *   400「包含无效或重复的播放参数」—— 所以播放时不要再拼别的。
+ */
 async function hdDetail(id) {
-  const r = await fetch(API + "/api/hd2/play?id=" + encodeURIComponent(id) + "&seq=1", { method: "GET" });
+  const r = await fetch(API + "/api/hd/video?id=" + encodeURIComponent(id), { method: "GET" });
   const j = await r.json().catch(function () { return null; });
-  if (!j || !j.ok || !j.data) throw new Error((j && j.error) || "黄豆详情取不到");
-  const d = j.data;
-  /* ★ /api/hd2/play 只回单集 (seq) 的地址, **不含总集数** —— 总集数只在列表的
-   *   episode_count 里。以前这里读 d.total 永远拿不到, 于是详情页只显示 1 集。
-   *   现在从列表缓存捞; 捞不到就按 1 集处理 (至少能播第 1 集)。 */
-  const meta = hdMetaOf(id);
-  const n = parseInt(meta.ep || d.total || d.episode_count || 1, 10) || 1;
+  if (!j || !j.ok) throw new Error((j && j.error) || "黄豆详情取不到");
+  const d = j.item || j.data || {};
+  const list = Array.isArray(d.episodes) ? d.episodes : [];
+
+  const meta = hdMetaOf(id);          // 列表缓存里的补充字段 (分类/简介等)
+  const n = list.length || parseInt(meta.ep || d.episodeCount || 1, 10) || 1;
+
+  /* eps: 集号 → 该集的 episodeId (播放时拿它换地址) */
   const eps = {};
-  for (let i = 1; i <= n; i++) eps[String(i)] = "";   // 地址按集现取 (带时效签名)
+  for (let i = 1; i <= n; i++) eps[String(i)] = "";
+  list.forEach(function (e2, idx) {
+    const seq = Number(e2.seq) || (idx + 1);
+    eps[String(seq)] = String(e2.id || "");
+  });
+
   return {
-    id: id,
-    title: meta.title || d.name || "",
-    cover: meta.cover || "",
-    cat: meta.cat || "",
-    desc: meta.desc || "",
+    id: String(id),
+    title: d.title || meta.title || "",
+    cover: d.cover || meta.cover || "",
+    cat: (d.category && d.category.name) || meta.cat || "",
+    desc: d.description || meta.desc || "",
     views: meta.views || "",
     heatNum: parseInt(meta.views || "0", 10) || 0,
     epTotal: n,
-    duration: d.duration || 0,
-    lines: d.lines || [],
-    hlsKey: d.hls_key || "",
+    duration: 0,
+    lines: [],
+    hlsKey: "",
     eps: eps,
     _hd: 1,
+    _hdEp: list,                      // 原始 episodes, 播放时查 lockKind
   };
+}
+
+/* 黄豆取某集的播放地址: episodeId → /api/hd/play
+ * 返回 { ok, url, kind }  kind = 'mp4' | 'hls' */
+async function hdSrc(id, ep) {
+  const E = String(ep || 1);
+  /* 先拿 episodeId: 优先用详情缓存的 _hdEp, 没有就现查 /api/hd/ep */
+  let episodeId = "";
+  try {
+    const cur = (typeof curVid !== 'undefined' && curVid && curVid._hdEp) ? curVid._hdEp : null;
+    if (cur && cur.length) {
+      const hit = cur.filter(function (x) {
+        return String(Number(x.seq)) === E;
+      })[0];
+      if (hit) episodeId = String(hit.id || "");
+    }
+  } catch (e) {}
+  if (!episodeId) {
+    const r1 = await fetch(API + "/api/hd/ep?videoId=" + encodeURIComponent(id) + "&seq=" + encodeURIComponent(E));
+    const j1 = await r1.json().catch(function () { return null; });
+    if (!j1 || !j1.ok) throw new Error((j1 && j1.error) || "取集信息失败");
+    const it = j1.item || j1.data || {};
+    if (it.fullPlayable === false) throw new Error("该集不可完整播放");
+    episodeId = String(it.episodeId || "");
+  }
+  if (!episodeId) throw new Error("这一集没有播放源");
+
+  /* ★ 只传 episodeId —— 多传任何参数上游都会 400 */
+  const r2 = await fetch(API + "/api/hd/play?episodeId=" + encodeURIComponent(episodeId));
+  const j2 = await r2.json().catch(function () { return null; });
+  if (!j2 || !j2.ok) throw new Error((j2 && j2.error) || "取播放地址失败");
+  const u = j2.playUrl || (j2.data && j2.data.playUrl) || "";
+  if (!u) throw new Error("该集暂无播放源");
+  /* 上游现在直接给 video/mp4 直链 (307 跳到 CDN), 不是 m3u8 */
+  const kind = /\.m3u8(\?|$)/i.test(u) ? "hls" : "mp4";
+  return { ok: true, url: u, kind: kind, episodeId: episodeId };
 }
 
 /* 从当前列表捞详情页缺的字段 (封面 / 总集数 / 简介 / 分类) —— 详情接口不回这些 */
@@ -1725,69 +1791,31 @@ function  hdApi(path, params) {
   //     快照里的 117 部全成了旧数据, 而 /api/hd2/list 明明能拿到 63 部新剧。
   //     现在反过来: 先打实时接口, 成功就用实时数据; 失败才退回快照。
   //     快照仍然保留 —— 上游 2001 / 断线时页面不会空白。
-  if (WORKER_OK !== false && API && (path === '/api/list' || path === '/api/categories'
-      || path === '/api/hd2/catalog' || path === '/api/hd2/nav' || path === '/api/hd2/list')) {
+  /* ★ 2026-10-19 重大改线: 黄豆主数据源从 hdmgdj 换成 hddj.zen-vip.com
+   *
+   *   【为什么换】
+   *     hdmgdj (/api/hd2/*) 现在返回 {"ok":false,"code":2001,"error":"请求数据错误"},
+   *     /api/hd2/list 也只剩空 list —— 整块黄豆"看不了"就是它。
+   *     而 hddj.zen-vip.com (/api/hd/*) 实测完全正常:
+   *       · 列表 1026 部 (旧快照只有 117 部), page 分页直接可用
+   *       · 详情带 episodes[] 全集, 每集有 lockKind / fullPlayable
+   *       · 抽样 10 部 62 集: lockKind 全是 none, 100% 免费
+   *       · /play?episodeId= 直接给 video/mp4 直链, 71~93MB, Range 206 可拖
+   *
+   *   【所以】/api/list 和 /api/categories 不再被 hd2 分支截走, 直接落到
+   *     下面 /api/hd/* 的实时映射。hd2 只保留 catalog / nav 做兜底快照。
+   */
+  if (WORKER_OK !== false && API && (path === '/api/hd2/catalog' || path === '/api/hd2/nav')) {
     const t = p && p.cat;
 
-    // 实时列表: /api/hd2/list 返回 { ok, data:{ list:[楼层] } },
-    // 每个楼层里有 items[] 才是剧集; 把所有楼层的 items 摊平去重。
-    const live = fetch(API + '/api/hd2/list?block=1&page=' + ((p && p.page) || 1), { method: 'GET' })
-      .then(r => r.ok ? r.json() : null)
-      .then(function (j) {
-        if (!j || !j.ok || !j.data || !Array.isArray(j.data.list)) return null;
-        const seen = Object.create(null);
-        const out = [];
-        for (const fl of j.data.list) {
-          for (const it of (fl.items || [])) {
-            const id = it && it.drama_id;
-            if (!id || seen[id]) continue;
-            seen[id] = 1;
-            out.push({
-              i: id,
-              d: id,
-              n: it.name || '',
-              c: it.category || '',
-              img: it.img || '',
-              img_x: it.img_x || '',
-              img_y: it.img_y || '',
-              e: String(it.episode_count || ''),
-              u: it.update_label || '',
-              h: String(it.hot_rate || ''),
-              f: String(it.favorite || ''),
-              s: it.source || '',
-              p: it.pay_type || '',
-              m: String(it.money || '0'),
-              t: it.description || '',
-              y: it.type || 'drama',
-              _live: 1,
-            });
-          }
-        }
-        return out.length ? out : null;
-      })
-      .catch(function () { return null; });
-
-    return live.then(function (liveItems) {
-      return hdCatalog(API).then(function (cat) {
-        const snap = cat || { channels: [], items: [] };
-        if (path === '/api/categories') {
-          return snap.channels.map(c => ({ slug: c.code, name: c.name }));
-        }
-        const items = liveItems || hdNorm(hdCatalogMap(snap, t));
-        const filtered = (liveItems && t && t !== 'all' && t !== '全部')
-          ? (function () {
-              const ch = (snap.channels || []).filter(c => c.code === t || c.name === t)[0];
-              const nm = ch ? ch.name : t;
-              const hit = items.filter(it => it.c === nm);
-              return hit.length ? hit : items;
-            })()
-          : items;
-        return {
-          items: hdNorm(filtered),
-          total: filtered.length,
-          from: liveItems ? 'hdmgdj-live' : 'hdmgdj-catalog',
-        };
-      });
+    return hdCatalog(API).then(function (cat) {
+      const snap = cat || { channels: [], items: [] };
+      const items = hdNorm(hdCatalogMap(snap, t));
+      return {
+        items: items,
+        total: items.length,
+        from: 'hdmgdj-catalog',
+      };
     }).catch(function () { throw new Error('目录不可用'); });
   }
 
@@ -1808,6 +1836,47 @@ function  hdApi(path, params) {
       return fetch(API + hp + qs, { method: 'GET' }).then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
+      }).then(function (j) {
+        if (!j || j.ok === false) return j;
+
+        /* ★ 出参归一: /api/hd/* 回的是上游全名结构, 但页面各处的消费方
+         *   还按老约定读 (列表要 items 里带 id/title/cover,
+         *   分类要**数组** [{slug,name}])。在这里统一转一次。 */
+        if (path === '/api/categories') {
+          const arr = Array.isArray(j.items) ? j.items : (Array.isArray(j) ? j : []);
+          /* 只保留顶层分类 (parentId 为空), 子分类挂在 children 上 */
+          const top = arr.filter(function (c) { return c && (c.parentId == null || c.parentId === ''); });
+          const base = top.length ? top : arr;
+          return base.map(function (c) {
+            return {
+              slug: c.slug || String(c.id || ''),
+              name: c.name || c.categoryName || '',
+              id: c.id,
+              children: (c.children || []).map(function (ch) {
+                return { slug: ch.slug || String(ch.id || ''), name: ch.name || ch.categoryName || '' };
+              }),
+            };
+          });
+        }
+
+        if (path === '/api/list' || path === '/api/search') {
+          const items = hdNorm(Array.isArray(j.items) ? j.items : []);
+          return {
+            ok: true,
+            items: items,
+            total: Number(j.total) || items.length,
+            hasMore: j.hasMore !== false,
+            from: 'hddj-live',
+          };
+        }
+
+        if (path === '/api/video') {
+          /* 详情: 上游回 {ok,item:{...,episodes:[]}} —— 交给 hdDetail 统一处理,
+           *   这里只保证 item 存在。 */
+          return j;
+        }
+
+        return j;
       }).catch(() => hdDirect(path, p));
     }
   }
@@ -3226,10 +3295,14 @@ async function openVid(id, from) {
         eps: v.m3u8 ? { '1': v.m3u8 } : {}
       };
     } else if (src === 'hd') {
-      /* ★ 黄豆详情: /api/video 与 /api/hd/video 指的都是老的 hddj 上游 (已死, 回 400/404)。
-       *   现行接口是 /api/hd2/play —— 它 200 并且直接带 lines[] (三条线路) + hls_key。
-       *   以前这里走通用 /api/video → 必 400 → 页面报「上游失败」, 剧点不进去。
-       *   现在拉 hd2/play 再归一成详情页要的字段 (eps 用集数序号, m3u8 稍后按集现取)。 */
+      /* ★ 黄豆详情 (2026-10-19 换线): 走 /api/hd/video → hddj.zen-vip.com。
+       *
+       *   历史: 先走 /api/video (老 hddj, 已死) → 改成 /api/hd2/play (hdmgdj)
+       *   → 现在 hdmgdj 也死了 (code 2001 请求数据错误)。
+       *
+       *   现行: /api/hd/video 回 {ok,item:{episodes:[{id,seq,lockKind,
+       *   fullPlayable}]}}。episodes[].id 就是 episodeId, 播放时拿它去
+       *   /api/hd/play?episodeId= 换直链。抽样 10 部 62 集 lockKind 全 none。 */
       v = await hdDetail(id);
     } else {
       v = src === SITE ? await api('/api/video', { id }) : await apiOf(src, '/api/video', { id });
@@ -4302,41 +4375,26 @@ async function hdPlay2(vid, ep) {
     e.fallback = true;
     throw e;
   }
-  const url = API + '/api/hd2/play?id=' + encodeURIComponent(vid) + '&seq=' + encodeURIComponent(ep);
-  let j = null;
-  try {
-    const r = await fetch(url, { method: 'GET' });
-    j = await r.json();
-  } catch (e) {
-    const err = new Error('播放接口不可达：' + String((e && e.message) || e));
-    err.fallback = true;
-    throw err;
-  }
-  if (!j || !j.ok) {
-    const err = new Error((j && j.error) || '播放地址获取失败');
-    err.code = j && j.code;
-    if (j && (j.code === 813005 || j.code === 813004 || j.code === 813103)) err.locked = true;
-    throw err;
-  }
-  const d = j.data || {};
-  const lines = (d.lines || []).filter(L => L && L.url)
-    .map(L => ({ name: L.name, label: L.name, url: L.url }));
-  if (!lines.length) throw new Error('上游未返回可用线路');
-
-  /* ★ 付费集策略 (2026-10-20)
-   *   上游对金币/VIP 集**不发签名 HLS**, 只发 is_preview:true + 试看 mp4。
-   *   签名按集算 (exp/sig/uid 绑死 seq), 换集复用第 1 集的签名实测 403,
-   *   私钥在服务端, 伪造不了 —— 所以"全部可看"做不到, 但"全部可点"可以:
-   *   付费集直接播上游给的试看片段, 并标注是试看, 不再弹"去官方解锁"卡住用户。
-   *   真免费集 (is_preview 不为 true) 走签名 HLS, 行为不变。
+  /* ★ 2026-10-19 换线路: 原来打 /api/hd2/play (hdmgdj), 那套现在返回
+   *   {"ok":false,"code":2001,"error":"请求数据错误"} —— 整块黄豆播不了。
+   *
+   *   改走 /api/hd 这条 (hddj.zen-vip.com), 实测全通:
+   *     /api/hd/ep?videoId=&seq=   → episodeId + fullPlayable + lockKind
+   *     /api/hd/play?episodeId=    → playUrl (上游 307 跳到 CDN, 是 video/mp4)
+   *
+   *   ★ 关键: 上游 /play **只认 episodeId 一个参数**。多传 videoId/seq
+   *     立刻 400「包含无效或重复的播放参数」—— 这是之前"取不到播放源"的真凶之一。
    */
-  const isPreview = d.is_preview === true || d.is_preview === 1 || d.is_preview === '1';
+  const s = await hdSrc(vid, ep);
+  if (!s || !s.url) throw new Error('播放地址获取失败');
+
   return {
-    lines: lines,
-    playUrl: lines[0].url,
-    duration: d.duration,
-    hlsKey: d.hls_key,
-    preview: isPreview,
+    lines: [{ name: '线路1', label: '线路1', url: s.url }],
+    playUrl: s.url,
+    duration: 0,
+    hlsKey: '',
+    preview: false,
+    kind: s.kind,          // 'mp4' | 'hls'
   };
 }
 
