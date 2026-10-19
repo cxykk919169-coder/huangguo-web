@@ -117,7 +117,14 @@ footer{text-align:center;color:#494951;font-size:11.5px;padding:28px 16px 12px;l
 /* ===== 无限滚动哨兵 ===== */
 .sentinel{display:flex;align-items:center;justify-content:center;gap:9px;padding:26px 0 34px;color:#6e6e7a;font-size:13px}
 /* 黄豆数据状态条 —— 让人一眼看出数据是实时的、全免费 */
-.hdstat{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 0 12px;
+/* 黄豆排序条 (默认/最新更新/集数最多/最热) */
+.sortbar{display:flex;gap:7px;padding:0 0 9px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sortbar::-webkit-scrollbar{display:none}
+.sbtn{flex:0 0 auto;background:#16161d;border:1px solid #26262f;color:#9a9aa7;
+  font-size:12px;padding:5px 12px;border-radius:16px;cursor:pointer;font-family:inherit;
+  transition:background .15s,color .15s,border-color .15s}
+.sbtn:hover{background:#1d1d26;color:#c8c8d4}
+.sbtn.on{background:#5fb2ff;border-color:#5fb2ff;color:#04101c;font-weight:600}.hdstat{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 0 12px;
   padding:9px 13px;border-radius:10px;background:#14141a;border:1px solid #202028;
   font-size:12.5px;color:#9a9aa7;line-height:1.5}
 .hdstat b{color:#e8e8f0;font-weight:700}
@@ -2643,7 +2650,20 @@ function renderTabs() {
 
   const el = document.getElementById('tabs');
   if (SITE === 'hd') {
-    el.innerHTML = CATS_HD.map(c =>
+    /* ★ 2026-10-19 排序条：上游不认 sort 参数（实测全部忽略），
+     *   Worker 用全站缓存 (/api/hd/list?sort=) 在本地排好再分页。
+     *   年份筛选不做 —— 上游 year 恒为 0，做了就是假功能。 */
+    const SORTS = [
+      { id: '', name: '默认' },
+      { id: 'latest', name: '最新更新' },
+      { id: 'ep', name: '集数最多' },
+      { id: 'hot', name: '最热' },
+    ];
+    const sortBar = '<div class="sortbar">' + SORTS.map(s =>
+      '<button class="sbtn' + (HD_SORT === s.id ? ' on' : '') +
+      '" onclick="hdSetSort(\'' + s.id + '\')">' + s.name + '</button>'
+    ).join('') + '</div>';
+    el.innerHTML = sortBar + CATS_HD.map(c =>
       '<div class="tab' + (curCat === String(c.id) ? ' on' : '') + '" onclick="pickCat(\'' + c.id + '\')">' +
       esc(c.name) + (c.children && c.children.length ? '<i class="tabsup">' + c.children.length + '</i>' : '') + '</div>'
     ).join('');
@@ -2680,6 +2700,22 @@ function renderTabs() {
     '<div class="tab' + (curCat === k ? ' on' : '') + '" onclick="pickCat(\'' + k + '\')">' + n + '</div>').join('');
 }
 function pickCat(k) { curCat = k; curPage = 1; renderTabs(); goHome(); }
+
+/* ★ 2026-10-19 黄豆排序
+ *   上游 /videos 完全不认 sort 参数（实测 sort=latest/hot/new、categoryId、year
+ *   全部被忽略，返回的永远是同一份热度榜），所以排序在 Worker 里做：
+ *   /api/hd/list?sort=latest|ep|hot 会拉全站缓存排好再按 page 切片。
+ *   '' = 默认（上游原序）。 */
+let HD_SORT = (function () {
+  try { return localStorage.getItem('hg_hd_sort') || ''; } catch (e) { return ''; }
+})();
+function hdSetSort(s) {
+  HD_SORT = s || '';
+  try { localStorage.setItem('hg_hd_sort', HD_SORT); } catch (e) {}
+  curPage = 1;
+  renderTabs();
+  goHome();
+}
 
 // 黄豆短剧分类懒加载 (只拉一次) —— 用 slug 做筛选键
 let HD_CATS_LOADED = false;
@@ -2755,7 +2791,9 @@ async function goHome() {
     if (SITE === 'es') { esWarmSnap(); if (!ES_CATS_LOADED) await loadMgCats(); }
     // 海角: 先 3s 探测定型 Worker 可用性 (探不到直接快照, 不干等超时)
     if (SITE === 'hjw' && WORKER_OK === null) await hjwProbe();
-    const j = await api('/api/list', { cat: curCat, page: 1 });
+    const j = await api('/api/list', (SITE === 'hd' && HD_SORT)
+      ? { cat: curCat, page: 1, sort: HD_SORT }
+      : { cat: curCat, page: 1 });
     if (stale(T)) return;                     // 期间用户已经切走/点进详情
     if (!j.items || !j.items.length) {
       // 品牌板块没内容时 j.notice 里写清了原因和官方入口 —— 别用一句"稍后再试"糊弄
@@ -2849,9 +2887,10 @@ async function loadMore() {
   try {
     const next = curPage + 1;
     // 黄豆短剧用 slug 筛选; 黄果用 cat
-    const j = await api('/api/list', (SITE === 'hd' && curCat !== '')
-      ? { cat: curCat, page: next }
-      : { cat: curCat, page: next });
+    // ★ 排序状态要跟着翻页走，否则第 2 页会掉回默认序（上游原序=热度榜）
+    const lp = { cat: curCat, page: next };
+    if (SITE === 'hd' && HD_SORT) lp.sort = HD_SORT;
+    const j = await api('/api/list', lp);
     const items = (j.items || []).filter(x => x && !SEEN_IDS.has(String(x.id)));
     if (!items.length) {
       // 这一页全是已见过的 (上游分页有重叠), 直接跳下一页继续试
