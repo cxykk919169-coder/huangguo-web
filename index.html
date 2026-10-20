@@ -4586,7 +4586,9 @@ async function mgPlay(ep) {
         u = r.url;
         curVid.eps[ep] = u;
       } else if (r && r.locked) {
-        mgLocked(ep, 0, r.reason);
+        esMarkAllLocked(r.reason);
+        /* 整排标完之后只弹一次说明, 之后点别的集不再重复弹窗 */
+        if (!curVid._lockShown) { curVid._lockShown = true; mgLocked(ep, 0, r.reason); }
         return;
       } else if (r && r.netError) {
         // 网络层故障 (上游 CF 拦截 / 中转限流 / Worker 不可达)
@@ -4795,6 +4797,37 @@ function stegoHlsLoad(video, srcs, Loader) {
 }
 
 /** EROSHORT: 点到付费集 —— 不请求, 直接提示 + 给原站跳转 */
+/* ★ 2026-10-20 ERO 整剧锁定一次标完。
+ *   实测 (2026-10-20): 上游的锁是**整部剧统一**的 —— 抽 6 部、每部前 3 集,
+ *   要么全可播 (秘密教学), 要么全 login_required/ENTITLEMENT_REQUIRED。
+ *   以前是点一集弹一次窗, 用户得挨个试才确认"整部都看不了"。
+ *   现在第 1 集判成锁, 立刻把整排集数标上锁, 并在标题里写清原因。 */
+function esMarkAllLocked(reason) {
+  const why = reason === 'login_required' ? '需上游账号登录'
+            : reason === 'vip_required'   ? '需上游 VIP'
+            : '上游不给播放凭证';
+  const bar = document.querySelector('.eps');
+  if (bar) {
+    Array.prototype.forEach.call(bar.querySelectorAll('.ep'), function (a) {
+      const ep = a.getAttribute('data-ep');
+      a.className = 'ep locked';
+      a.setAttribute('href', 'javascript:mgLocked(' + ep + ',0,\'' + (reason || '') + '\')');
+      if (!a.querySelector('.lockb')) {
+        const i = document.createElement('i');
+        i.className = 'lockb';
+        i.textContent = '锁';
+        a.appendChild(i);
+      }
+    });
+  }
+  const sec = document.querySelector('.sec');
+  if (sec && sec.textContent.indexOf('看不了') < 0) {
+    sec.textContent = sec.textContent.replace(/）\s*$/, ' · ' + why + '，整部看不了）');
+  }
+  const ce = document.getElementById('curep');
+  if (ce) ce.textContent = ce.textContent.replace(/（[^（）]*）\s*$/, '') + '（' + why + '）';
+}
+
 function mgLocked(ep, price, reason) {
   if (!curVid) return;
   const why = reason === 'login_required' ? '需要登录上游账号'
