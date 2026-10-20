@@ -524,6 +524,30 @@ const SITES = {
     desc: '完整可播 · 一万一千部 · 分片免解链',
     hasEps: true,
   },
+  mg: {
+    key: 'mg',
+    name: '芒果短剧',
+    short: '芒果',
+    color: '#fbbf24',
+    desc: 'mgdj.vip · 七个分类 · 每部首集免费, 其余金币集',
+    hasEps: true,
+  },
+  yg: {
+    key: 'yg',
+    name: '野果短剧',
+    short: '野果',
+    color: '#34d399',
+    desc: 'yeguodj.com · 818 部 · 完结/连载齐全',
+    hasEps: true,
+  },
+  sj: {
+    key: 'sj',
+    name: '91成人短剧',
+    short: '91',
+    color: '#f87171',
+    desc: '91crdjai.com · 双域名自动切换 · 全站可直接播放',
+    hasEps: true,
+  },
 };
 let SITE = localStorage.getItem('hg_site') || 'hg';
 if (!SITES[SITE]) SITE = 'hg';
@@ -629,6 +653,20 @@ function api(path, params) {
   // 必须走中继; 这边清单就在 hgmj1.com 站内, 分片在 cdn.djisajisj.top 无忌链,
   // 所以只代取清单, 分片浏览器直连。
   if (SITE === 'mj') return mjApi(path, params);
+
+  // ---- 芒果短剧分支 (全部经 Worker 的 /api/mg/*) ----
+  //   上游 mgdj.vip (规范域 mgmg10.com) 是 SSR 模板站, 不发 CORS 且带 Origin 就 403,
+  //   所以取数只能走 Worker。列表按分类分页 (/category/<slug>/page/N/)。
+  if (SITE === 'mg') return mgApi(path, params);
+
+  // ---- 野果短剧分支 (全部经 Worker 的 /api/yg/*) ----
+  //   上游 yeguodj.com 的 API 整体 AES-128-CBC 加密 (密钥硬编码在前端 bundle),
+  //   解密放在 Worker 里做, 前端只吃明文。
+  if (SITE === 'yg') return ygApi(path, params);
+
+  // ---- 91 成人短剧分支 (全部经 Worker 的 /api/sj/*) ----
+  //   上游 91crdjai.com 会整站 503 限流, Worker 里做了双域名切换 + 退避。
+  if (SITE === 'sj') return sjApi(path, params);
 
   // ---- 海角网分支 ----
   // 实测 (2026-10 runner): www.hjw01.com / hjw01.com **不发** Access-Control-Allow-Origin,
@@ -2659,6 +2697,166 @@ async function mjApi(path, params) {
   return { items: items, total: j.total || items.length, hasMore: !!j.hasMore, page: p.page || 1 };
 }
 
+/* ==================================================================
+ * 芒果短剧 (mgdj.vip / mgmg10.com) — 前端取数层
+ *   Worker: /api/mg/{categories,list,video,ep}
+ *   列表按分类分页: /api/mg/list?cat=<slug>&page=N  (上游 36 卡/页)
+ *   卡片字段: { id, title, cover, ep, epLabel, updating, tags }
+ *     epLabel = "全5集" / "更新至7集" —— 状态就藏在这串里
+ * ================================================================== */
+let MG_CATS2_LOADED = false;
+let MG_CATS2 = [];
+let MG_CAT = '';
+
+async function mgApi(path, params) {
+  const p = params || {};
+  if (path === '/api/list') {
+    if (!MG_CATS2_LOADED) await mgLoadCats();
+    const cat = p.cat || MG_CAT || (MG_CATS2[0] && MG_CATS2[0].slug) || '';
+    if (cat) MG_CAT = cat;
+    const j = await apiRaw('/api/mg/list?cat=' + encodeURIComponent(cat) +
+      '&page=' + (p.page || 1));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '芒果列表失败');
+    const items = (j.items || []).map(function (x) {
+      return {
+        id: x.id, title: x.title || '', cover: x.cover || '',
+        ep: x.ep || 0, epTotal: x.ep || 0,
+        epLabel: x.epLabel || '', updating: x.updating,
+        tags: x.tags || [], site: 'mg',
+      };
+    });
+    return { ok: true, items: items, total: items.length,
+      page: j.page || 1, hasMore: !!j.hasMore, lastPage: j.lastPage || 1 };
+  }
+  if (path === '/api/video') {
+    const j = await apiRaw('/api/mg/video?id=' + encodeURIComponent(p.id));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '芒果详情失败');
+    const meta = j.meta || {};
+    const eps = (j.eps || []).map(function (e) {
+      return { n: e.ep, ep: e.ep, title: '', locked: !!e.locked,
+               free: !!e.free, hasSource: true };
+    });
+    return { ok: true, item: {
+      id: meta.id || p.id, title: meta.title || '', cover: meta.cover || '',
+      desc: meta.description || '', tags: meta.tags || [],
+      epTotal: eps.length, episodes: eps, site: 'mg',
+    } };
+  }
+  if (path === '/api/ep') {
+    const j = await apiRaw('/api/mg/ep?id=' + encodeURIComponent(p.id) + '&ep=' + (p.ep || 1));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '芒果播放失败');
+    return { ok: true, url: j.url || '', ep: p.ep || 1, source: 'mg' };
+  }
+  throw new Error('mgApi 未知路径 ' + path);
+}
+
+async function mgLoadCats() {
+  if (MG_CATS2_LOADED) return MG_CATS2;
+  try {
+    const j = await apiRaw('/api/mg/categories');
+    if (j && j.ok && Array.isArray(j.items)) MG_CATS2 = j.items;
+  } catch (e) { /* 拿不到就用空表, 走首页 */ }
+  MG_CATS2_LOADED = true;
+  if (!MG_CAT && MG_CATS2.length) MG_CAT = MG_CATS2[0].slug;
+  return MG_CATS2;
+}
+
+/* ==================================================================
+ * 野果短剧 (yeguodj.com) — 前端取数层
+ *   Worker: /api/yg/{list,detail,play}
+ *   列表项自带 serial ("已完结"/"连载中"), 卡片就能判状态
+ *   播放接口每次返回带 auth_key 的新 m3u8, 有效期约 30 分钟 —— 不缓存
+ * ================================================================== */
+async function ygApi(path, params) {
+  const p = params || {};
+  if (path === '/api/list') {
+    const j = await apiRaw('/api/yg/list?page=' + (p.page || 1) + '&limit=24');
+    if (!j || j.ok === false) throw new Error((j && j.error) || '野果列表失败');
+    const items = (j.items || []).map(function (x) {
+      return {
+        id: x.id, title: x.title || '', cover: x.cover || '',
+        ep: x.ep || 0, epTotal: x.epTotal || 0,
+        serial: x.serial || '', updating: !!x.updating,
+        tags: x.tags || [], heat: x.playText || '', site: 'yg',
+      };
+    });
+    return { ok: true, items: items, total: j.total || items.length,
+      page: j.page || 1, hasMore: !!j.hasMore };
+  }
+  if (path === '/api/video') {
+    const j = await apiRaw('/api/yg/detail?id=' + encodeURIComponent(p.id));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '野果详情失败');
+    const d = j.item || {};
+    const eps = (d.episodes || []).map(function (e) {
+      return { n: e.ep, ep: e.ep, title: e.title || '',
+               locked: !!e.locked, hasSource: !!e.canPlay };
+    });
+    return { ok: true, item: {
+      id: d.id, title: d.title || '', cover: d.cover || '',
+      desc: d.desc || '', tags: d.tags || [], serial: d.serial || '',
+      epTotal: d.epTotal || eps.length, episodes: eps,
+      freeCount: d.freeCount, lockedCount: d.lockedCount, site: 'yg',
+    } };
+  }
+  if (path === '/api/ep') {
+    const j = await apiRaw('/api/yg/play?id=' + encodeURIComponent(p.id) + '&ep=' + (p.ep || 1));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '野果播放失败');
+    return { ok: true, url: j.url || '', ep: p.ep || 1, source: 'yg' };
+  }
+  throw new Error('ygApi 未知路径 ' + path);
+}
+
+/* ==================================================================
+ * 91 成人短剧 (91crdjai.com / 91djvip.com) — 前端取数层
+ *   Worker: /api/sj/{list,detail,play}
+ *   上游是单页卡片流 (首页 10 部), 没有分页
+ *   播放数据只在 <slug>/<集号>/ 页面里, 由 Worker 抠 playInitialData
+ * ================================================================== */
+async function sjApi(path, params) {
+  const p = params || {};
+  if (path === '/api/list') {
+    const j = await apiRaw('/api/sj/list');
+    if (!j || j.ok === false) throw new Error((j && j.error) || '91 列表失败');
+    const items = (j.items || []).map(function (x) {
+      return {
+        id: x.id, slug: x.slug, title: x.title || '', cover: x.cover || '',
+        ep: 0, epTotal: 0, epLabel: x.epLabel || '',
+        serial: x.serial || '', updating: !!x.updating,
+        tags: [], site: 'sj',
+      };
+    });
+    return { ok: true, items: items, total: items.length, page: 1, hasMore: false };
+  }
+  if (path === '/api/video') {
+    const j = await apiRaw('/api/sj/detail?slug=' + encodeURIComponent(p.slug || p.id));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '91 详情失败');
+    const d = j.item || {};
+    const eps = (d.episodes || []).map(function (e) {
+      return { n: e.ep, ep: e.ep, title: e.title || '',
+               locked: false, hasSource: true };
+    });
+    return { ok: true, item: {
+      id: d.id, slug: d.slug, title: d.title || '',
+      epTotal: d.epTotal || eps.length, episodes: eps, site: 'sj',
+    } };
+  }
+  if (path === '/api/ep') {
+    const j = await apiRaw('/api/sj/play?slug=' + encodeURIComponent(p.slug || p.id) +
+      '&ep=' + (p.ep || 1));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '91 播放失败');
+    return { ok: true, url: j.url || '', ep: p.ep || 1, source: 'sj' };
+  }
+  throw new Error('sjApi 未知路径 ' + path);
+}
+
+function mgPickCat(slug) {
+  MG_CAT = String(slug || '');
+  curCat = MG_CAT;
+  curPage = 1;
+  renderTabs();
+  goHome();
+}
+
 async function mjPickTab(tabId) {
   MJ_TAB = String(tabId);
   MJ_SEC = '';
@@ -2670,6 +2868,89 @@ async function mjPickTab(tabId) {
   curPage = 1;
   HAS_MORE = true;
   return goHome();
+}
+
+/* ==================================================================
+ * 芒果 / 野果 / 91 的通用详情页
+ *   三家上游字段不同, 但都有 { title, cover, tags, desc, episodes[] }
+ *   统一走 apiOf(src, '/api/video', {id}) → api() 里的源分支
+ *   ★ 集数只画上游明确说能播的, 其余灰掉标锁 —— 不许把不能播的集画成能播
+ * ================================================================== */
+async function openVidGeneric(id, src) {
+  const T = newView();
+  app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
+  try {
+    const j = await apiOf(src, '/api/video', { id: id, slug: id });
+    if (stale(T)) return;
+    if (!j || j.ok === false) {
+      showErr(new Error((j && j.error) || '详情取不到'));
+      return;
+    }
+    const d = j.item || {};
+    const eps = Array.isArray(d.episodes) ? d.episodes : [];
+    const playable = eps.filter(function (e) { return e.hasSource !== false && !e.locked; }).length;
+
+    /* 状态串: 三家的来源不同, 统一在这里取 */
+    let stStr = String(d.serial || '').trim();
+    if (!stStr && typeof d.epTotal === 'number' && d.epTotal > 0) {
+      stStr = (eps.length && playable >= eps.length) ? ('全' + d.epTotal + '集') : ('更新至' + d.epTotal + '集');
+    }
+
+    const tags = (d.tags || []).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('');
+    const coverHtml = d.cover
+      ? '<img src="' + esc(coverUrl(d.cover, src)) + '" alt="" onerror="this.style.display=\'none\'">'
+      : '';
+
+    const epHtml = eps.length
+      ? eps.map(function (e) {
+          const n = e.n || e.ep;
+          const lk = e.locked || e.hasSource === false;
+          return '<button class="epbtn' + (lk ? ' lk' : '') + '" data-ep="' + n + '"' +
+            (lk ? ' data-lk="1" title="该集上游未开放，看不了"' : '') +
+            '>第 ' + n + ' 集' + (lk ? ' 🔒' : '') + '</button>';
+        }).join('')
+      : '<div class="sub">上游未给集列表</div>';
+
+    app().innerHTML =
+      '<div class="mjd">' +
+        '<div class="top">' +
+          '<div class="cv">' + coverHtml + '</div>' +
+          '<div class="mt">' +
+            '<h1>' + esc(d.title || '') + '</h1>' +
+            '<div class="tgs">' + tags + '</div>' +
+            '<div class="sub">' +
+              (stStr ? '<b>' + esc(stStr) + '</b> · ' : '') +
+              (eps.length ? ('共 ' + eps.length + ' 集，可播 ' + playable + ' 集') : '') +
+            '</div>' +
+            (d.desc ? '<p class="desc">' + esc(d.desc) + '</p>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="eps">' + epHtml + '</div>' +
+      '</div>';
+
+    /* 归一成全局 curVid, playEp 就直接能用了 */
+    const epsMap = Object.create(null);
+    eps.forEach(function (e) {
+      const n = String(e.n || e.ep);
+      if (!e.locked && e.hasSource !== false) epsMap[n] = 1;   // 占位, 真地址按需拉
+    });
+    curVid = {
+      id: d.id || id,
+      slug: d.slug || id,
+      title: d.title || '',
+      cover: d.cover || '',
+      epTotal: eps.length,
+      eps: epsMap,
+      site: src,
+    };
+    curEp = '';
+
+    /* 点第一集能播的 */
+    const firstEp = eps.find(function (e) { return !e.locked && e.hasSource !== false; });
+    if (firstEp) setTimeout(function () { playEp(firstEp.n || firstEp.ep); }, 60);
+  } catch (e) {
+    if (!stale(T)) showErr(e);
+  }
 }
 
 async function openMj(id) {
@@ -2827,6 +3108,21 @@ function renderTabs() {
     el.innerHTML = MJ_TABS.map(c =>
       '<div class="tab' + (MJ_TAB === String(c.id) ? ' on' : '') + '" onclick="mjPickTab(\'' + c.id + '\')">' +
       esc(c.name) + '</div>').join('');
+    return;
+  }
+  if (SITE === 'mg') {
+    /* 芒果: tab 是 7 个分类 slug, 切了重拉列表 */
+    if (!MG_CATS2_LOADED) { mgLoadCats().then(function () { renderTabs(); goHome(); }); }
+    const listMg = MG_CATS2.length ? MG_CATS2 : [{ slug: '', name: '全部' }];
+    el.innerHTML = listMg.map(function (x) {
+      return '<div class="tab' + (MG_CAT === String(x.slug) ? ' on' : '') +
+        '" onclick="mgPickCat(\'' + esc(x.slug) + '\')">' + esc(x.name) + '</div>';
+    }).join('');
+    return;
+  }
+  if (SITE === 'yg' || SITE === 'sj') {
+    /* 野果 / 91: 上游没有可用的分类维度, 不画假 tab */
+    el.innerHTML = '<div class="tab on">全部</div>';
     return;
   }
   if (SITE === 'hjw') {
@@ -3294,6 +3590,33 @@ function cardStateOf(it, src) {
     const sr = String(it.serial || '').trim();
     if (sr === '已完结') out.state = 'done';
     else if (sr === '连载中') out.state = 'ongoing';
+    return out;
+  }
+  if (src === 'mg') {
+    /* 芒果 (/api/mg/list): epLabel 是 "全5集" / "更新至7集", updating 是布尔。
+     * 上游两套都给, 优先用 updating; 缺了再退回解析 epLabel。 */
+    const lbl = String(it.epLabel || '').trim();
+    out.total = out.ep = num(it.ep, it.epTotal, it.episodeCount);
+    if (it.updating === true) out.state = 'ongoing';
+    else if (it.updating === false) out.state = 'done';
+    else if (/^全\d+集$/.test(lbl)) out.state = 'done';
+    else if (/^更新至\d+集$/.test(lbl)) out.state = 'ongoing';
+    return out;
+  }
+  if (src === 'yg') {
+    /* 野果 (/api/yg/list): serial 直接是 "已完结" / "连载中" */
+    out.total = out.ep = num(it.epTotal, it.ep, it.episodeCount);
+    const sr = String(it.serial || '').trim();
+    if (/完结/.test(sr)) out.state = 'done';
+    else if (/连载/.test(sr)) out.state = 'ongoing';
+    return out;
+  }
+  if (src === 'sj') {
+    /* 91 (/api/sj/list): 卡片上只有 eps-flag「更新中 · ...」, 完结时写「已完结」 */
+    const lbl = String(it.epLabel || it.serial || '').trim();
+    out.total = out.ep = num(it.epTotal, it.ep);
+    if (/完结/.test(lbl) || /完结/.test(String(it.serial || ''))) out.state = 'done';
+    else if (/更新/.test(lbl) || it.updating === true) out.state = 'ongoing';
     return out;
   }
   // xd / my / dt: 上游不给完结状态, 只报标称集数
@@ -3932,6 +4255,9 @@ async function openVid(id, from) {
   const src = from || SITE;
   // 2048 板块走自己的详情/播放 (单剧单视频, 无选集)
   if (src === 'dt') { openDt(id); return; }
+  if (src === 'mg') { openVidGeneric(id, 'mg'); return; }
+  if (src === 'yg') { openVidGeneric(id, 'yg'); return; }
+  if (src === 'sj') { openVidGeneric(id, 'sj'); return; }
   if (src === 'mj') { openMj(id); return; }
   app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
   try {
