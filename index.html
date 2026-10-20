@@ -3736,9 +3736,11 @@ function cardHtml(it) {
   const skipState = (src === 'hd') && !!it._mg;
   const isFull = !skipState && st.state === 'done';
   const isUpdating = !skipState && st.state === 'ongoing';
+  /* ★ 状态角标: 完结写「已完结」, 连载写「更新至N集」(N 取真实集数, 拿不到就写「更新中」) */
+  const upTxt = realEp > 0 ? ('更新至' + realEp + '集') : '更新中';
   const stateBadge = skipState ? ''
     : (isFull ? '<div class="badge done">已完结</div>'
-      : isUpdating ? '<div class="badge ongo">更新中</div>'
+      : isUpdating ? '<div class="badge ongo">' + upTxt + '</div>'
         : (st.state === 'upcoming' ? '<div class="badge soon">待上线</div>' : ''));
 
   return '<div class="item" data-id="' + esc(it.id) + '" data-site="' + esc(src) + '"' +
@@ -3758,7 +3760,7 @@ function cardHtml(it) {
     '</div>' +
     '<div class="t">' + esc(it.title) + '</div>' +
     '<div class="e">' + (realEp ? realEp + ' 集' : '') +
-      (isFull ? ' · 完结' : (isUpdating ? ' · 更新中' : (st.state === 'upcoming' ? ' · 待上线' : ''))) + '</div>' +
+      (isFull ? ' · 已完结' : (isUpdating ? (realEp > 0 ? ' · ' + upTxt : ' · 更新中') : (st.state === 'upcoming' ? ' · 待上线' : ''))) + '</div>' +
     '</div>';
 }
 
