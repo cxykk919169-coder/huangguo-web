@@ -2736,9 +2736,14 @@ async function mgApi(path, params) {
       return { n: e.ep, ep: e.ep, title: '', locked: !!e.locked,
                free: !!e.free, hasSource: true };
     });
+    /* 芒果详情页没有完结字段 (状态只在列表卡片的 epLabel 上),
+     * 所以这里按集数推: 集全免费 = 已完结; 有锁集 = 连载中。
+     * 前端 openVidGeneric 会优先用 serial, 没有再按 epTotal 推。 */
+    const lockedN = eps.filter(function (e) { return e.locked; }).length;
     return { ok: true, item: {
       id: meta.id || p.id, title: meta.title || '', cover: meta.cover || '',
       desc: meta.description || '', tags: meta.tags || [],
+      serial: lockedN > 0 ? '连载中' : '已完结',
       epTotal: eps.length, episodes: eps, site: 'mg',
     } };
   }
@@ -2812,6 +2817,31 @@ async function ygApi(path, params) {
  *   上游是单页卡片流 (首页 10 部), 没有分页
  *   播放数据只在 <slug>/<集号>/ 页面里, 由 Worker 抠 playInitialData
  * ================================================================== */
+/* 91 的详情接口只从 playInitialData 取集列表, 里面没有剧名。
+ * 剧名在列表卡片的 alt 上 —— 从列表缓存里按 slug 反查。 */
+let SJ_TITLES = Object.create(null);
+let SJ_TITLES_AT = 0;
+
+function sjSlugOf(p) {
+  return String((p && (p.slug || p.id)) || '');
+}
+
+function sjTitleFromSlug(slug) {
+  const k = String(slug || '');
+  if (!k || !SJ_TITLES[k]) return k;
+  return SJ_TITLES[k];
+}
+
+/* 列表加载后把 slug → 标题记下来, 详情页就能显示真名 */
+function sjRememberTitles(items) {
+  const t = Date.now();
+  if (t - SJ_TITLES_AT > 10 * 60 * 1000) SJ_TITLES = Object.create(null);
+  SJ_TITLES_AT = t;
+  (items || []).forEach(function (x) {
+    if (x && x.slug && x.title) SJ_TITLES[x.slug] = x.title;
+  });
+}
+
 async function sjApi(path, params) {
   const p = params || {};
   if (path === '/api/list') {
@@ -2825,6 +2855,7 @@ async function sjApi(path, params) {
         tags: [], site: 'sj',
       };
     });
+    sjRememberTitles(items);
     return { ok: true, items: items, total: items.length, page: 1, hasMore: false };
   }
   if (path === '/api/video') {
@@ -2836,7 +2867,11 @@ async function sjApi(path, params) {
                locked: false, hasSource: true };
     });
     return { ok: true, item: {
-      id: d.id, slug: d.slug, title: d.title || '',
+      id: d.id, slug: d.slug,
+      /* 91 的 Worker 只从 playInitialData 取集列表, 里面没有剧名;
+       * 剧名在列表卡片的 alt 上, 所以先从列表缓存里找, 找不到再退回 slug。 */
+      title: d.title || sjTitleFromSlug(sjSlugOf(p)),
+      desc: d.desc || '',
       epTotal: d.epTotal || eps.length, episodes: eps, site: 'sj',
     } };
   }
