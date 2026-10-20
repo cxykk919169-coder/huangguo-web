@@ -548,6 +548,14 @@ const SITES = {
     desc: '91crdjai.com · 双域名自动切换 · 全站可直接播放',
     hasEps: true,
   },
+  xdcm: {
+    key: 'xdcm',
+    name: '心动传媒',
+    short: '心动',
+    color: '#ff2e97',
+    desc: 'xindongcm.com · 23 部 · 免费集可直接播放',
+    hasEps: true,
+  },
 };
 let SITE = localStorage.getItem('hg_site') || 'hg';
 if (!SITES[SITE]) SITE = 'hg';
@@ -667,6 +675,11 @@ function api(path, params) {
   // ---- 91 成人短剧分支 (全部经 Worker 的 /api/sj/*) ----
   //   上游 91crdjai.com 会整站 503 限流, Worker 里做了双域名切换 + 退避。
   if (SITE === 'sj') return sjApi(path, params);
+
+  // ---- 心动传媒分支 (全部经 Worker 的 /api/xdcm/*) ----
+  //   上游 api.xindongcm.com 是 FastAPI, 接口全公开;
+  //   付费集不下发 video_url, 前端按返回的 locked 如实标锁。
+  if (SITE === 'xdcm') return xdcmApi(path, params);
 
   // ---- 海角网分支 ----
   // 实测 (2026-10 runner): www.hjw01.com / hjw01.com **不发** Access-Control-Allow-Origin,
@@ -2884,6 +2897,60 @@ async function sjApi(path, params) {
   throw new Error('sjApi 未知路径 ' + path);
 }
 
+/* ==================================================================
+ * 心动传媒 (xindongcm.com) — 前端取数层
+ *   Worker: /api/xdcm/{list,detail,play}
+ *   全站 23 部 (都在「电视剧」分类下), 一次拉满, 不分页
+ *   ★ 付费集上游不下发 video_url, 只标锁 —— 不假装能播
+ * ================================================================== */
+async function xdcmApi(path, params) {
+  const p = params || {};
+  if (path === '/api/list') {
+    const j = await apiRaw('/api/xdcm/list?size=60');
+    if (!j || j.ok === false) throw new Error((j && j.error) || '心动列表失败');
+    const items = (j.items || []).map(function (x) {
+      return {
+        id: x.id, title: x.title || '', cover: x.cover || '',
+        ep: x.ep || 0, epTotal: x.epTotal || 0,
+        freeEp: x.freeEp || 0,
+        serial: x.serial || '', updating: !!x.updating,
+        tags: x.tags || [], site: 'xdcm',
+      };
+    });
+    return { ok: true, items: items, total: j.total || items.length,
+      page: 1, hasMore: false };
+  }
+  if (path === '/api/video') {
+    const j = await apiRaw('/api/xdcm/detail?id=' + encodeURIComponent(p.id));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '心动详情失败');
+    const d = j.item || {};
+    const eps = (d.episodes || []).map(function (e) {
+      return { n: e.ep, ep: e.ep, title: e.title || '',
+               locked: !!e.locked, hasSource: !!e.canPlay };
+    });
+    return { ok: true, item: {
+      id: d.id, title: d.title || '', cover: d.cover || '',
+      desc: d.desc || '', tags: d.tags || [],
+      serial: d.serial || '',
+      epTotal: d.epTotal || eps.length, episodes: eps,
+      freeCount: d.freeCount, lockedCount: d.lockedCount,
+      payJumpUrl: d.payJumpUrl || '',
+      site: 'xdcm',
+    } };
+  }
+  if (path === '/api/ep') {
+    const j = await apiRaw('/api/xdcm/play?id=' + encodeURIComponent(p.id) + '&ep=' + (p.ep || 1));
+    if (!j || j.ok === false) {
+      const err = new Error((j && j.error) || '心动播放失败');
+      err.locked = !!(j && j.locked);
+      err.payJumpUrl = (j && j.payJumpUrl) || '';
+      throw err;
+    }
+    return { ok: true, url: j.url || '', ep: p.ep || 1, source: 'xdcm' };
+  }
+  throw new Error('xdcmApi 未知路径 ' + path);
+}
+
 function mgPickCat(slug) {
   MG_CAT = String(slug || '');
   curCat = MG_CAT;
@@ -3155,7 +3222,7 @@ function renderTabs() {
     }).join('');
     return;
   }
-  if (SITE === 'yg' || SITE === 'sj') {
+  if (SITE === 'yg' || SITE === 'sj' || SITE === 'xdcm') {
     /* 野果 / 91: 上游没有可用的分类维度, 不画假 tab */
     el.innerHTML = '<div class="tab on">全部</div>';
     return;
@@ -3652,6 +3719,15 @@ function cardStateOf(it, src) {
     out.total = out.ep = num(it.epTotal, it.ep);
     if (/完结/.test(lbl) || /完结/.test(String(it.serial || ''))) out.state = 'done';
     else if (/更新/.test(lbl) || it.updating === true) out.state = 'ongoing';
+    return out;
+  }
+  if (src === 'xdcm') {
+    /* 心动传媒: serial 是我们按「免费集是否覆盖全集」推的已完结/连载中。
+     * 「已完结」= 所有集都有地址, 和上游的付费墙无关。 */
+    out.total = out.ep = num(it.epTotal, it.episodeCount, it.ep, it.epCount);
+    const sr = String(it.serial || '').trim();
+    if (/已完结/.test(sr)) out.state = 'done';
+    else if (/连载/.test(sr)) out.state = 'ongoing';
     return out;
   }
   // xd / my / dt: 上游不给完结状态, 只报标称集数
@@ -4295,6 +4371,7 @@ async function openVid(id, from) {
   if (src === 'mg') { openVidGeneric(id, 'mg'); return; }
   if (src === 'yg') { openVidGeneric(id, 'yg'); return; }
   if (src === 'sj') { openVidGeneric(id, 'sj'); return; }
+  if (src === 'xdcm') { openVidGeneric(id, 'xdcm'); return; }
   if (src === 'mj') { openMj(id); return; }
   app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
   try {
