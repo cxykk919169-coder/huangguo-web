@@ -77,17 +77,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907205613/6a9eb46de53e713f3c6fec33/cover.jpg",
-   "ep": "5",
-   "epLabel": "全5集",
-   "id": "6a9eb46de53e713f3c6fec33",
-   "title": "谎言",
-   "updating": false
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907210253/6a9eb5fde53e713f3c6fec45/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
@@ -2427,19 +2416,6 @@
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261015210932/6ad0d08cca57c75f779cb972/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6ad0d08cca57c75f779cb972",
-   "preview": "https://d12m928oe7qtlf.cloudfront.net/B20261015210932/6ad0d08cca57c75f779cb972/chapters/1/preview.mp4",
-   "tags": [
-    "大女主",
-    "都市"
-   ],
-   "title": "听干妈的话找个老实人嫁了",
-   "updating": true
-  },
-  {
    "cats": [
     "du-jia-shuang-ju"
    ],
@@ -2516,17 +2492,9 @@
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019125449/6ad5a29925db60e3c21810a9/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6ad5a29925db60e3c21810a9",
-   "title": "人妻猎人",
-   "updating": true
-  },
-  {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019125449/6ad5a29925db60e3c21810aa/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
+   "ep": "2",
+   "epLabel": "更新至2集",
    "id": "6ad5a29925db60e3c21810aa",
    "title": "女澡堂里的搓澡工",
    "updating": true
@@ -2650,6 +2618,23 @@
    "id": "6ad6cdd725db60e3c2181175",
    "title": "花容失色：取花点",
    "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju",
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020155207/6ad71da725db60e3c2181246/cover.jpg",
+   "ep": "5",
+   "epLabel": "全5集",
+   "id": "6ad71da725db60e3c2181246",
+   "preview": "https://d12m928oe7qtlf.cloudfront.net/B20261020155207/6ad71da725db60e3c2181246/chapters/1/preview.mp4",
+   "tags": [
+    "大女主",
+    "都市"
+   ],
+   "title": "听干妈的话找个老实人嫁了",
+   "updating": false
   }
  ]
 }
