@@ -3722,12 +3722,20 @@ function cardStateOf(it, src) {
     return out;
   }
   if (src === 'xdcm') {
-    /* 心动传媒: serial 是我们按「免费集是否覆盖全集」推的已完结/连载中。
-     * 「已完结」= 所有集都有地址, 和上游的付费墙无关。 */
-    out.total = out.ep = num(it.epTotal, it.episodeCount, it.ep, it.epCount);
+    /* 心动传媒: 状态按「免费集是否覆盖全集」推。
+     * ★ 角标不能写「更新至N集」—— 那是总集数, 会让人以为 N 集都能看;
+     *   这里显示「可播 M/N 集」, M 是真实有 video_url 的集数, 锁的一目了然。 */
+    out.total = num(it.epTotal, it.episodeCount, it.ep, it.epCount);
+    out.ep = out.total;
     const sr = String(it.serial || '').trim();
-    if (/已完结/.test(sr)) out.state = 'done';
-    else if (/连载/.test(sr)) out.state = 'ongoing';
+    const free = num(it.freeEp);
+    out.playable = free;
+    if (/已完结/.test(sr)) {
+      out.state = 'done';
+    } else {
+      out.state = 'ongoing';
+      out.ongoLabel = free > 0 ? ('可播' + free + '/' + out.total + '集') : '';
+    }
     return out;
   }
   // xd / my / dt: 上游不给完结状态, 只报标称集数
@@ -3813,7 +3821,7 @@ function cardHtml(it) {
   const isFull = !skipState && st.state === 'done';
   const isUpdating = !skipState && st.state === 'ongoing';
   /* ★ 状态角标: 完结写「已完结」, 连载写「更新至N集」(N 取真实集数, 拿不到就写「更新中」) */
-  const upTxt = realEp > 0 ? ('更新至' + realEp + '集') : '更新中';
+  const upTxt = st.ongoLabel || (realEp > 0 ? ('更新至' + realEp + '集') : '更新中');
   const stateBadge = skipState ? ''
     : (isFull ? '<div class="badge done">已完结</div>'
       : isUpdating ? '<div class="badge ongo">' + upTxt + '</div>'
