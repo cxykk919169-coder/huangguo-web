@@ -2989,67 +2989,106 @@ async function openVidGeneric(id, src) {
       return;
     }
     const d = j.item || {};
-    const eps = Array.isArray(d.episodes) ? d.episodes : [];
-    const playable = eps.filter(function (e) { return e.hasSource !== false && !e.locked; }).length;
-
-    /* 状态串: 三家的来源不同, 统一在这里取 */
-    let stStr = String(d.serial || '').trim();
-    if (!stStr && typeof d.epTotal === 'number' && d.epTotal > 0) {
-      stStr = (eps.length && playable >= eps.length) ? ('全' + d.epTotal + '集') : ('更新至' + d.epTotal + '集');
-    }
-
-    const tags = (d.tags || []).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('');
-    const coverHtml = d.cover
-      ? '<img src="' + esc(coverUrl(d.cover, src)) + '" alt="" onerror="this.style.display=\'none\'">'
-      : '';
-
-    const epHtml = eps.length
-      ? eps.map(function (e) {
-          const n = e.n || e.ep;
-          const lk = e.locked || e.hasSource === false;
-          return '<button class="epbtn' + (lk ? ' lk' : '') + '" data-ep="' + n + '"' +
-            (lk ? ' data-lk="1" title="该集上游未开放，看不了"' : '') +
-            '>第 ' + n + ' 集' + (lk ? ' 🔒' : '') + '</button>';
-        }).join('')
-      : '<div class="sub">上游未给集列表</div>';
-
-    app().innerHTML =
-      '<div class="mjd">' +
-        '<div class="top">' +
-          '<div class="cv">' + coverHtml + '</div>' +
-          '<div class="mt">' +
-            '<h1>' + esc(d.title || '') + '</h1>' +
-            '<div class="tgs">' + tags + '</div>' +
-            '<div class="sub">' +
-              (stStr ? '<b>' + esc(stStr) + '</b> · ' : '') +
-              (eps.length ? ('共 ' + eps.length + ' 集，可播 ' + playable + ' 集') : '') +
-            '</div>' +
-            (d.desc ? '<p class="desc">' + esc(d.desc) + '</p>' : '') +
-          '</div>' +
-        '</div>' +
-        '<div class="eps">' + epHtml + '</div>' +
-      '</div>';
-
-    /* 归一成全局 curVid, playEp 就直接能用了 */
-    const epsMap = Object.create(null);
-    eps.forEach(function (e) {
-      const n = String(e.n || e.ep);
-      if (!e.locked && e.hasSource !== false) epsMap[n] = 1;   // 占位, 真地址按需拉
+    const rawEps = Array.isArray(d.episodes) ? d.episodes : [];
+    const playSet = Object.create(null);
+    let playN = 0;
+    rawEps.forEach(function (e) {
+      const n = String(e.n || e.ep || 0);
+      if (n && e.hasSource !== false && !e.locked) { playSet[n] = 1; playN++; }
     });
-    curVid = {
+
+    /* 归一成标准详情页认的 v (playEp / epPlaySet / initPlayer 全靠这套字段) */
+    const v = {
       id: d.id || id,
       slug: d.slug || id,
       title: d.title || '',
       cover: d.cover || '',
-      epTotal: eps.length,
-      eps: epsMap,
+      description: d.desc || '',
+      tags: d.tags || [],
+      epTotal: Number(d.epTotal || rawEps.length || 0),
+      episodes: rawEps.map(function (e) {
+        const n = Number(e.n || e.ep || 0);
+        return { n: n, hasSource: e.hasSource !== false && !e.locked };
+      }),
+      /* ★ eps 留空 —— 地址按需现取 (上游 m3u8 带 auth_key 时效签名,
+       *   提前取回来放着, 用户点开时可能已作废)。
+       *   playEp 里 u 为空就去 apiOf(src,'/api/ep') 拉, 与其它板块同一条路。 */
+      eps: Object.create(null),
       site: src,
     };
-    curEp = '';
+    curVid = v;
+    curSrc = src;
 
-    /* 点第一集能播的 */
-    const firstEp = eps.find(function (e) { return !e.locked && e.hasSource !== false; });
-    if (firstEp) setTimeout(function () { playEp(firstEp.n || firstEp.ep); }, 60);
+    const epsKeys = v.episodes.filter(function (e) { return e.hasSource; })
+      .map(function (e) { return String(e.n); }).sort(function (a, b) { return +a - +b; });
+
+    const old = HIS[String(v.id)];
+    let startEp = epsKeys.length ? epsKeys[0] : '1';
+    let startPos = 0;
+    if (old && old.ep && playSet[String(old.ep)]) {
+      startEp = String(old.ep);
+      startPos = old.pos || 0;
+    }
+    curEp = startEp;
+    hisPut({ id: v.id, title: v.title, cover: v.cover, ep: startEp, epTotal: v.epTotal });
+
+    const faved = isFav(v.id);
+    /* 只要有集数就把播放器摆出来 (即使一集都不可播, 也要有容器让用户看到实话) */
+    const playable = v.epTotal > 0;
+    const known = rawEps.length > 0;
+    const stStr = String(d.serial || '').trim();
+
+    const epBtns = Array.from({ length: v.epTotal }, function (_, k) {
+      const e = String(k + 1);
+      if (known && !playSet[e]) {
+        return '<a class="ep locked" data-ep="' + e + '" data-lk="1" href="javascript:epLocked(\'' + e + '\')">第' + e + '集<i class="lockb">未开放</i></a>';
+      }
+      return '<a class="ep' + (e === startEp ? ' on' : '') + '" data-ep="' + e + '" href="javascript:playEp(\'' + e + '\')">第' + e + '集</a>';
+    }).join('');
+
+    app().innerHTML =
+      '<button class="back" onclick="goBack()">‹ 返回列表</button>' +
+      '<div class="card">' +
+        '<div class="dhead">' +
+          (v.cover ? '<img class="dcover" src="' + esc(coverUrl(v.cover, src)) + '" data-raw="' + esc(v.cover) + '" data-site="' + esc(src) + '" data-fb="0" onerror="hgImgFallback(this)">' : '') +
+          '<div class="dinfo">' +
+            '<div class="dtitle">' + esc(v.title) +
+              '<button class="favbtn' + (faved ? ' on' : '') + '" id="favbtn" onclick="onFav()">' +
+              (faved ? '♥ 已收藏' : '♡ 收藏') + '</button>' +
+            '</div>' +
+            '<div class="dmeta">' +
+              (v.epTotal ? '共 <em>' + v.epTotal + '</em> 集' : '') +
+              (known ? ' · 可播 <em>' + playN + '</em> 集' : '') +
+              (stStr ? ' · ' + esc(stStr) : '') +
+            '</div>' +
+            '<div>' + (v.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>' +
+          '</div>' +
+        '</div>' +
+        (v.description ? '<div class="ddesc">' + esc(v.description).slice(0, 300) + (v.description.length > 300 ? '…' : '') + '</div>' : '') +
+        (playable ?
+          '<div class="vwrap"><video id="pl" controls playsinline preload="metadata" poster="' + esc(coverUrl(v.cover, src)) + '"></video>' +
+          '<div class="playbar">' +
+            '<span class="curep" id="curep">第 ' + startEp + ' 集</span>' +
+            '<button class="gh" onclick="step(-1)">上一集</button>' +
+            '<button class="gh" onclick="step(1)">下一集</button>' +
+            '<span class="spdwrap" id="spdwrap"></span>' +
+          '</div>' +
+          '<div class="hdpv" id="hdpv" style="display:none"></div>' +
+          '<div class="resume" id="resume" style="display:none"></div>' +
+          '</div>' : '') +
+        (v.epTotal
+          ? '<div class="sec">剧集列表（共 ' + v.epTotal + ' 集' +
+            (known && playN < v.epTotal ? ' · 可播 ' + playN + ' 集' : '') + '）</div>' +
+            '<div class="eps">' + epBtns + '</div>'
+          : '<div class="err">未解析到剧集信息</div>') +
+      '</div>';
+    window.scrollTo(0, 0);
+    pushDetailState();
+
+    if (playable) {
+      initPlayer(startPos);
+      if (epsKeys.length) playEp(startEp);
+    }
   } catch (e) {
     if (!stale(T)) showErr(e);
   }
@@ -6083,7 +6122,10 @@ async function playEp(ep) {
   let epErr = '';
   if (!u) {
     try {
-      const j = await api('/api/ep', { id: curVid.id, ep: ep });
+      /* ★ 按 curSrc 取源, 不用 api() —— api() 跟的是当前板块 SITE,
+       *   从历史/收藏点进来的跨板块详情会取错源。 */
+      const j = await apiOf(curSrc || SITE, '/api/ep',
+        { id: curVid.id, ep: ep, slug: curVid.slug || curVid.id });
       u = j && j.url;
       if (u) curVid.eps[ep] = u;
       else epErr = (j && (j.error || j.message)) || '';
