@@ -330,17 +330,6 @@
    "cats": [
     "er-ci-yuan"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909182700/6aa134747c68f1b88c2a9036/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa134747c68f1b88c2a9036",
-   "title": "复仇催眠",
-   "updating": true
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909190346/6aa13d127c68f1b88c2a90af/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -1825,6 +1814,17 @@
    "epLabel": "全100集",
    "id": "6ab4818fca57c75f779bc8be",
    "title": "九指拳王",
+   "updating": false
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260924094903/6ab4818fca57c75f779bc8c5/cover.jpg",
+   "ep": "2",
+   "epLabel": "全2集",
+   "id": "6ab4818fca57c75f779bc8c5",
+   "title": "今天我会把戒指摘下来",
    "updating": false
   },
   {
