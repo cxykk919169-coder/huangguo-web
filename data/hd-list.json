@@ -5474,7 +5474,7 @@
   },
   {
    "category": "黄豆原创",
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/58d4f5d77c801a5f.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/dfa03/upload/202610/3224886abe4a5b85.jpg",
    "desc": "",
    "ep": "6",
    "id": "4401",
@@ -6860,7 +6860,7 @@
    "category": "黄豆原创",
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261012193155/6accc52bca57c75f779c7a63/cover.jpg",
    "desc": "",
-   "ep": "5",
+   "ep": "6",
    "id": "5366",
    "title": "时停手表"
   },
@@ -7031,6 +7031,22 @@
    "ep": "1",
    "id": "5387",
    "title": "我让儿子操他妈"
+  },
+  {
+   "category": "大神精选",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261016205234/6ad21e12ca57c75f779cba78/cover.jpg.jpg",
+   "desc": "",
+   "ep": "2",
+   "id": "5388",
+   "title": "榻下长安"
+  },
+  {
+   "category": "大神精选",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017124847/6ad2fe2fca57c75f779cbb1a/cover.jpg",
+   "desc": "",
+   "ep": "9",
+   "id": "5389",
+   "title": "舞蹈系学妹的零距离接触"
   },
   {
    "category": "大神精选",
@@ -8337,5 +8353,5 @@
    "title": "夫人她专治不服4"
   }
  ],
- "total": 1042
+ "total": 1044
 }
