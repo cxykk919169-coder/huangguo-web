@@ -2955,16 +2955,16 @@ async function hkApi(path, params) {
     const eps = (j.episodes || []).map(function (e) {
       return { n: e.n, hasSource: !e.locked, locked: !!e.locked, costCoins: e.costCoins || 0 };
     });
-    return {
-      ok: true,
-      id: j.id, title: j.title || '', cover: j.cover || '',
+    return { ok: true, item: {
+      id: j.id, slug: j.slug || j.id,
+      title: j.title || '', cover: j.cover || '',
       desc: j.desc || '', tags: j.tags || [],
       epTotal: j.epTotal || eps.length,
       serial: j.serial || '', at: j.createdAt || '',
       episodes: eps,
       freeEp: j.freeCount || 0,
       site: 'hk',
-    };
+    } };
   }
 
   if (path === '/api/ep') {
