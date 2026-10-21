@@ -264,17 +264,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f71/cover.jpg",
-   "ep": "30",
-   "epLabel": "更新至30集",
-   "id": "6aa1064a7c68f1b88c2a8f71",
-   "title": "交换游戏",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f72/cover.jpg",
    "ep": "15",
    "epLabel": "更新至15集",
@@ -2161,6 +2150,17 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261005161439/6ac35c6fca57c75f779c7064/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6ac35c6fca57c75f779c7064",
+   "title": "办公室风情",
+   "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261005161439/6ac35c6fca57c75f779c706e/cover.jpg",
    "ep": "5",
    "epLabel": "更新至5集",
@@ -2262,8 +2262,8 @@
     "ai-comic-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c77ff/cover.jpg",
-   "ep": "5",
-   "epLabel": "更新至5集",
+   "ep": "6",
+   "epLabel": "更新至6集",
    "id": "6ac8c6ffca57c75f779c77ff",
    "title": "夜神月vs富江",
    "updating": true
@@ -2428,17 +2428,6 @@
   },
   {
    "cats": [
-    "du-jia-shuang-ju"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261016183734/6ad1fe6eca57c75f779cba3c/cover.jpg",
-   "ep": "9",
-   "epLabel": "更新至9集",
-   "id": "6ad1fe6eca57c75f779cba3c",
-   "title": "驱鬼者",
-   "updating": true
-  },
-  {
-   "cats": [
     "ai-comic-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae5/cover.jpg",
@@ -2460,27 +2449,11 @@
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019173732/6ad5e4dc25db60e3c218110a/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6ad5e4dc25db60e3c218110a",
-   "title": "荒岛共生",
-   "updating": true
-  },
-  {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020152327/6ad716ef25db60e3c2181214/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
    "id": "6ad716ef25db60e3c2181214",
    "title": "借种人生",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020152327/6ad716ef25db60e3c2181215/cover.jpg",
-   "ep": "9",
-   "epLabel": "更新至9集",
-   "id": "6ad716ef25db60e3c2181215",
-   "title": "卧底七星海",
    "updating": true
   },
   {
@@ -2524,6 +2497,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020180131/6ad73bfb25db60e3c2181260/cover.jpg",
    "ep": "7",
    "epLabel": "更新至7集",
@@ -2557,8 +2533,8 @@
   },
   {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020204156/6ad7619425db60e3c21812ac/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
+   "ep": "2",
+   "epLabel": "更新至2集",
    "id": "6ad7619425db60e3c21812ac",
    "title": "女神堕落系统",
    "updating": true
@@ -2584,8 +2560,8 @@
     "remixed-short-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020220024/6ad773f825db60e3c21812c4/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
+   "ep": "6",
+   "epLabel": "更新至6集",
    "id": "6ad773f825db60e3c21812c4",
    "title": "我与三个美女的同居史",
    "updating": true
@@ -2621,6 +2597,28 @@
    "epLabel": "更新至1集",
    "id": "6ad82ecaf960a9899b4b1d90",
    "title": "尤物讨妖队",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261021184113/6ad896c9a709bc0dacd66910/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6ad896c9a709bc0dacd66910",
+   "title": "乡村乱情",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261021184113/6ad896c9a709bc0dacd66911/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6ad896c9a709bc0dacd66911",
+   "title": "禁忌之触",
    "updating": true
   }
  ]
