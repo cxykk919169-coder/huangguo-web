@@ -2915,7 +2915,6 @@ async function sjApi(path, params) {
  *   全站 23 部 (都在「电视剧」分类下), 一次拉满, 不分页
  *   ★ 付费集上游不下发 video_url, 只标锁 —— 不假装能播
  * ================================================================== */
-async function xdcmApi(path, params) {
 /* ===================== 花魁短剧 huakui7.com =====================
  *   上游: huakui.com (dxucg.com / dseoq.com 同源镜像)
  *   接口: /api/hk/list?page=&size=      → { items, total, pages, hasMore }
@@ -2981,6 +2980,7 @@ async function hkApi(path, params) {
   throw new Error('花魁未知接口: ' + path);
 }
 
+async function xdcmApi(path, params) {
   const p = params || {};
   if (path === '/api/list') {
     const j = await apiRaw('/api/xdcm/list?size=60');
