@@ -2460,9 +2460,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019173732/6ad5e4dc25db60e3c218110a/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2471,9 +2468,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019173732/6ad5e4dc25db60e3c218110b/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2482,9 +2476,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019200605/6ad607ad25db60e3c218112d/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2493,9 +2484,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019200605/6ad607ad25db60e3c218112e/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2504,9 +2492,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019200605/6ad607ad25db60e3c218112f/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2515,42 +2500,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020101135/6ad6cdd725db60e3c2181173/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6ad6cdd725db60e3c2181173",
-   "title": "我的美艳岳母",
-   "updating": true
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020101135/6ad6cdd725db60e3c2181174/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6ad6cdd725db60e3c2181174",
-   "title": "探花郎童锦程",
-   "updating": true
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020101135/6ad6cdd725db60e3c2181175/cover.jpg",
-   "ep": "10",
-   "epLabel": "更新至10集",
-   "id": "6ad6cdd725db60e3c2181175",
-   "title": "花容失色：取花点",
-   "updating": true
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020152327/6ad716ef25db60e3c2181214/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2559,9 +2508,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020152327/6ad716ef25db60e3c2181215/cover.jpg",
    "ep": "9",
    "epLabel": "更新至9集",
@@ -2570,9 +2516,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020152327/6ad716ef25db60e3c2181216/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2581,9 +2524,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020152327/6ad716ef25db60e3c2181217/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2593,8 +2533,7 @@
   },
   {
    "cats": [
-    "du-jia-shuang-ju",
-    "remixed-short-drama"
+    "du-jia-shuang-ju"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020155207/6ad71da725db60e3c2181246/cover.jpg",
    "ep": "5",
@@ -2609,9 +2548,6 @@
    "updating": false
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020180131/6ad73bfb25db60e3c218125f/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2620,9 +2556,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020180131/6ad73bfb25db60e3c2181260/cover.jpg",
    "ep": "7",
    "epLabel": "更新至7集",
@@ -2631,9 +2564,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020180131/6ad73bfb25db60e3c2181261/cover.jpg",
    "ep": "6",
    "epLabel": "更新至6集",
@@ -2642,9 +2572,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020180131/6ad73bfb25db60e3c2181262/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2653,9 +2580,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020204156/6ad7619425db60e3c21812ab/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2664,9 +2588,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020204156/6ad7619425db60e3c21812ac/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2675,9 +2596,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020204156/6ad7619425db60e3c21812ad/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -2686,9 +2604,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020204156/6ad7619425db60e3c21812ae/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
