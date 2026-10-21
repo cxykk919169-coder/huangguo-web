@@ -556,6 +556,14 @@ const SITES = {
     desc: 'xindongcm.com · 23 部 · 免费集可直接播放',
     hasEps: true,
   },
+  hk: {
+    key: 'hk',
+    name: '花魁短剧',
+    short: '花魁',
+    color: '#d946ef',
+    desc: 'huakui7.com · 163 部 · 第 1 集免费, 其余金币集',
+    hasEps: true,
+  },
 };
 let SITE = localStorage.getItem('hg_site') || 'hg';
 if (!SITES[SITE]) SITE = 'hg';
@@ -680,6 +688,10 @@ function api(path, params) {
   //   上游 api.xindongcm.com 是 FastAPI, 接口全公开;
   //   付费集不下发 video_url, 前端按返回的 locked 如实标锁。
   if (SITE === 'xdcm') return xdcmApi(path, params);
+
+  // ---- 花魁短剧分支 (全部经 Worker 的 /api/hk/*) ----
+  //   上游 huakui.com 第 2 集起不下发 videoUrl, 付费集如实标锁。
+  if (SITE === 'hk') return hkApi(path, params);
 
   // ---- 海角网分支 ----
   // 实测 (2026-10 runner): www.hjw01.com / hjw01.com **不发** Access-Control-Allow-Origin,
@@ -2904,6 +2916,71 @@ async function sjApi(path, params) {
  *   ★ 付费集上游不下发 video_url, 只标锁 —— 不假装能播
  * ================================================================== */
 async function xdcmApi(path, params) {
+/* ===================== 花魁短剧 huakui7.com =====================
+ *   上游: huakui.com (dxucg.com / dseoq.com 同源镜像)
+ *   接口: /api/hk/list?page=&size=      → { items, total, pages, hasMore }
+ *         /api/hk/detail?id=<slug>      → { epTotal, episodes[], freeCount }
+ *         /api/hk/play?id=<slug>&ep=N   → { url } 或 { locked:true }
+ *
+ *   ★ 付费集如实报锁: 上游 playletChapterInfo 里第 2 集起 canWatch=false
+ *     且 videoUrl 是空串 —— 地址根本不下发, 不是隐藏。不伪造、不猜。
+ */
+async function hkApi(path, params) {
+  const p = params || {};
+  if (path === '/api/list') {
+    const pg = p.page || 1;
+    const sz = p.size || 24;
+    let url = '/api/hk/list?page=' + pg + '&size=' + sz;
+    if (p.q) url += '&q=' + encodeURIComponent(p.q);
+    const j = await apiRaw(url);
+    if (!j || j.ok === false) throw new Error((j && j.error) || '花魁列表失败');
+    const items = (j.items || []).map(function (x) {
+      return {
+        id: x.id, title: x.title || '', cover: x.cover || '',
+        ep: x.epTotal || 0, epTotal: x.epTotal || 0,
+        freeEp: x.freeEp || 0,
+        serial: x.serial || '', at: x.at || '',
+        tags: x.tags || [], site: 'hk',
+      };
+    });
+    return {
+      ok: true, items: items, total: j.total || items.length,
+      page: j.page || pg, pages: j.pages || 1, hasMore: !!j.hasMore,
+    };
+  }
+
+  if (path === '/api/video') {
+    const j = await apiRaw('/api/hk/detail?id=' + encodeURIComponent(p.id));
+    if (!j || j.ok === false) throw new Error((j && j.error) || '花魁详情失败');
+    /* 归一成前端播放器认识的形状: episodes[].n + hasSource */
+    const eps = (j.episodes || []).map(function (e) {
+      return { n: e.n, hasSource: !e.locked, locked: !!e.locked, costCoins: e.costCoins || 0 };
+    });
+    return {
+      ok: true,
+      id: j.id, title: j.title || '', cover: j.cover || '',
+      desc: j.desc || '', tags: j.tags || [],
+      epTotal: j.epTotal || eps.length,
+      serial: j.serial || '', at: j.createdAt || '',
+      episodes: eps,
+      freeEp: j.freeCount || 0,
+      site: 'hk',
+    };
+  }
+
+  if (path === '/api/ep') {
+    const j = await apiRaw('/api/hk/play?id=' + encodeURIComponent(p.id) + '&ep=' + encodeURIComponent(p.ep));
+    if (!j || j.ok === false) {
+      const err = new Error((j && j.error) || '花魁取源失败');
+      if (j && j.locked) { err.locked = true; err.costCoins = j.costCoins || 0; }
+      throw err;
+    }
+    return { ok: true, url: j.url, ep: j.ep, title: j.title };
+  }
+
+  throw new Error('花魁未知接口: ' + path);
+}
+
   const p = params || {};
   if (path === '/api/list') {
     const j = await apiRaw('/api/xdcm/list?size=60');
@@ -3261,7 +3338,7 @@ function renderTabs() {
     }).join('');
     return;
   }
-  if (SITE === 'yg' || SITE === 'sj' || SITE === 'xdcm') {
+  if (SITE === 'yg' || SITE === 'sj' || SITE === 'xdcm' || SITE === 'hk') {
     /* 野果 / 91: 上游没有可用的分类维度, 不画假 tab */
     el.innerHTML = '<div class="tab on">全部</div>';
     return;
@@ -3770,6 +3847,23 @@ function cardStateOf(it, src) {
     const free = num(it.freeEp);
     out.playable = free;
     if (/已完结/.test(sr)) {
+      out.state = 'done';
+    } else {
+      out.state = 'ongoing';
+      out.ongoLabel = free > 0 ? ('可播' + free + '/' + out.total + '集') : '';
+    }
+    return out;
+  }
+  if (src === 'hk') {
+    /* 花魁: 上游卡片给 "全 N 集" 或 "连载中", 真集数在 epTotal。
+     * ★ 不写「更新至N集」—— 花魁第 1 集免费、其余要币, 写总集数会误导;
+     *   这里只报真实可播集数 (freeEp, 由 worker 的 detail 算出来)。 */
+    out.total = num(it.epTotal, it.episodeCount, it.ep, it.epCount);
+    out.ep = out.total;
+    const sr = String(it.serial || '').trim();
+    const free = num(it.freeEp);
+    out.playable = free;
+    if (/已完结/.test(sr) && free >= out.total && out.total > 0) {
       out.state = 'done';
     } else {
       out.state = 'ongoing';
@@ -4419,6 +4513,7 @@ async function openVid(id, from) {
   if (src === 'yg') { openVidGeneric(id, 'yg'); return; }
   if (src === 'sj') { openVidGeneric(id, 'sj'); return; }
   if (src === 'xdcm') { openVidGeneric(id, 'xdcm'); return; }
+  if (src === 'hk') { openVidGeneric(id, 'hk'); return; }
   if (src === 'mj') { openMj(id); return; }
   app().innerHTML = '<div class="load"><span class="spin"></span>加载剧集…</div>';
   try {
