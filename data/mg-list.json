@@ -46,8 +46,8 @@
     "du-jia-shuang-ju"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907201430/6a9eaaa6e53e713f3c6feb8d/cover.jpg",
-   "ep": "31",
-   "epLabel": "更新至31集",
+   "ep": "32",
+   "epLabel": "更新至32集",
    "id": "6a9eaaa6e53e713f3c6feb8d",
    "preview": "https://d12m928oe7qtlf.cloudfront.net/B20260907201430/6a9eaaa6e53e713f3c6feb8d/chapters/1/preview.mp4",
    "tags": [
@@ -330,6 +330,17 @@
    "cats": [
     "er-ci-yuan"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909182700/6aa134747c68f1b88c2a9036/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6aa134747c68f1b88c2a9036",
+   "title": "复仇催眠",
+   "updating": true
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909190346/6aa13d127c68f1b88c2a90af/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -588,17 +599,6 @@
    "epLabel": "更新至2集",
    "id": "6aa281a47c68f1b88c2a942d",
    "title": "无人车站",
-   "updating": true
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910180839/6aa281a77c68f1b88c2a942f/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa281a77c68f1b88c2a942f",
-   "title": "性瘾波涛胸涌",
    "updating": true
   },
   {
@@ -2202,8 +2202,8 @@
   },
   {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009120348/6ac867a4ca57c75f779c7701/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
+   "ep": "4",
+   "epLabel": "更新至4集",
    "id": "6ac867a4ca57c75f779c7701",
    "preview": "https://d12m928oe7qtlf.cloudfront.net/B20261009120348/6ac867a4ca57c75f779c7701/chapters/1/preview.mp4",
    "tags": [
@@ -2468,38 +2468,6 @@
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019173732/6ad5e4dc25db60e3c218110b/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6ad5e4dc25db60e3c218110b",
-   "title": "超级公务员",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019200605/6ad607ad25db60e3c218112d/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6ad607ad25db60e3c218112d",
-   "title": "妈妈的祖传秘方",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019200605/6ad607ad25db60e3c218112e/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6ad607ad25db60e3c218112e",
-   "title": "最后一堂课",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019200605/6ad607ad25db60e3c218112f/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6ad607ad25db60e3c218112f",
-   "title": "镜中欲",
-   "updating": true
-  },
-  {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020152327/6ad716ef25db60e3c2181214/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2609,6 +2577,50 @@
    "epLabel": "更新至4集",
    "id": "6ad7619425db60e3c21812ae",
    "title": "王思聪伦敦留学时的私密日记",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020220024/6ad773f825db60e3c21812c4/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6ad773f825db60e3c21812c4",
+   "title": "我与三个美女的同居史",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020220024/6ad773f825db60e3c21812c5/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6ad773f825db60e3c21812c5",
+   "title": "浩浩妈妈の私教课",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261021132427/6ad82ecaf960a9899b4b1d8f/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6ad82ecaf960a9899b4b1d8f",
+   "title": "天魔种",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261021120745/6ad82ecaf960a9899b4b1d90/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6ad82ecaf960a9899b4b1d90",
+   "title": "尤物讨妖队",
    "updating": true
   }
  ]
