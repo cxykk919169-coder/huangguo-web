@@ -1,29 +1,27 @@
 {
- "generatedAt": "2026-10-23T11:03:39Z",
+ "generatedAt": "2026-10-23T15:49:47Z",
  "sources": {
   "hd": {
    "count": 1067,
-   "elapsed": 22.2,
+   "elapsed": 26.5,
    "errors": [],
    "ok": true
   },
   "hg": {
-   "count": 186,
+   "count": 184,
    "elapsed": 4.3,
-   "errors": [
-    "https://58d2.l9r9ikli.cc -> HTTP 0"
-   ],
+   "errors": [],
    "ok": true
   },
   "hjw": {
-   "count": 209,
-   "elapsed": 67.0,
+   "count": 210,
+   "elapsed": 64.0,
    "errors": [],
    "ok": true
   },
   "mg": {
-   "count": 255,
-   "elapsed": 6.0,
+   "count": 257,
+   "elapsed": 5.9,
    "errors": [],
    "ok": true
   }

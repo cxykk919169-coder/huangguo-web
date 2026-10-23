@@ -2718,14 +2718,6 @@
    "updating": false
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023160408/6adb14f863861f02aa6b82b8/cover.jpg",
-   "ep": "6",
-   "epLabel": "更新至6集",
-   "id": "6adb14f863861f02aa6b82b8",
-   "title": "误操双胞胎小姨子后",
-   "updating": true
-  },
-  {
    "cats": [
     "remixed-short-drama"
    ],
@@ -2844,9 +2836,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023171814/6adb265663861f02aa6b8310/cover.jpg",
    "ep": "9",
    "epLabel": "全9集",
@@ -2855,9 +2844,6 @@
    "updating": false
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023171814/6adb265663861f02aa6b8311/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2866,9 +2852,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023173203/6adb299363861f02aa6b8347/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
@@ -2882,6 +2865,39 @@
    "epLabel": "更新至1集",
    "id": "6adb299363861f02aa6b8348",
    "title": "艺术学校得淫乱生活",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023204137/6adb560163861f02aa6b838c/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6adb560163861f02aa6b838c",
+   "title": "交换游戏第二季",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023204137/6adb560163861f02aa6b838d/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6adb560163861f02aa6b838d",
+   "title": "风流医生",
+   "updating": true
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023204400/6adb569063861f02aa6b8394/cover.jpg",
+   "ep": "3",
+   "epLabel": "更新至3集",
+   "id": "6adb569063861f02aa6b8394",
+   "title": "甄嬛外传",
    "updating": true
   }
  ]
