@@ -1364,17 +1364,6 @@
    "cats": [
     "adult-short-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260918214612/6aad40a5ca57c75f779aef06/cover.jpg",
-   "ep": "44",
-   "epLabel": "更新至44集",
-   "id": "6aad40a5ca57c75f779aef06",
-   "title": "许小姐 高调辞职了",
-   "updating": true
-  },
-  {
-   "cats": [
-    "adult-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260919152147/6aae380cca57c75f779b23e5/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
@@ -1403,6 +1392,17 @@
    "id": "6aae380cca57c75f779b23ec",
    "title": "天黑了，可爸爸还在",
    "updating": true
+  },
+  {
+   "cats": [
+    "adult-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260919152147/6aae380fca57c75f779b240b/cover.jpg",
+   "ep": "78",
+   "epLabel": "全78集",
+   "id": "6aae380fca57c75f779b240b",
+   "title": "逃荒被换粮，她大鱼大肉逆袭翻身",
+   "updating": false
   },
   {
    "cats": [
@@ -2516,9 +2516,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022102210/6ad97352af9c62bc1a174642/cover.jpg",
    "ep": "5",
    "epLabel": "更新至5集",
@@ -2527,9 +2524,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022102210/6ad97352af9c62bc1a174643/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2538,9 +2532,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022102210/6ad97352af9c62bc1a174644/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2549,9 +2540,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022102210/6ad97352af9c62bc1a174645/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2560,9 +2548,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022114753/6ad98769af9c62bc1a1746a7/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2571,9 +2556,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022114753/6ad98769af9c62bc1a1746a8/cover.jpg",
    "ep": "9",
    "epLabel": "更新至9集",
@@ -2582,9 +2564,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022114753/6ad98769af9c62bc1a1746a9/cover.jpg",
    "ep": "8",
    "epLabel": "更新至8集",
@@ -2593,9 +2572,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022114753/6ad98769af9c62bc1a1746aa/cover.jpg",
    "ep": "7",
    "epLabel": "更新至7集",
@@ -2604,9 +2580,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022114753/6ad98769af9c62bc1a1746ab/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -2615,9 +2588,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022114753/6ad98769af9c62bc1a1746ac/cover.jpg",
    "ep": "12",
    "epLabel": "更新至12集",
@@ -2626,9 +2596,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022150928/6ad9b6a8af9c62bc1a1746be/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2637,9 +2604,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022150928/6ad9b6a8af9c62bc1a1746bf/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
@@ -2648,9 +2612,6 @@
    "updating": true
   },
   {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022173518/6ad9d8d6af9c62bc1a174711/cover-r1792666537.jpg",
    "ep": "6",
    "epLabel": "更新至6集",
