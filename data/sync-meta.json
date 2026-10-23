@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-23T15:49:47Z",
+ "generatedAt": "2026-10-23T19:47:45Z",
  "sources": {
   "hd": {
    "count": 1067,
@@ -8,27 +8,26 @@
    "ok": true
   },
   "hg": {
-   "count": 184,
-   "elapsed": 4.3,
+   "count": 183,
+   "elapsed": 4.1,
    "errors": [],
    "ok": true
   },
   "hjw": {
    "count": 210,
-   "elapsed": 64.0,
+   "elapsed": 65.4,
    "errors": [],
    "ok": true
   },
   "mg": {
-   "count": 257,
-   "elapsed": 5.9,
+   "count": 254,
+   "elapsed": 6.7,
    "errors": [],
    "ok": true
   }
  },
  "written": [
   "mg-list.json",
-  "hd-list.json",
   "hg-lock.json",
   "hg-list.json",
   "hjw-catmap.json",

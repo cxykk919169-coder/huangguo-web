@@ -177,17 +177,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8dfa/cover.jpg",
-   "ep": "8",
-   "epLabel": "更新至8集",
-   "id": "6a9ffae47c68f1b88c2a8dfa",
-   "title": "爸爸不在家",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8e02/cover.jpg",
    "ep": "22",
    "epLabel": "更新至22集",
@@ -1072,17 +1061,6 @@
    "epLabel": "更新至4集",
    "id": "6aabb4eaca57c75f779ac6ab",
    "title": "斗破苍穹之我请凤清儿喝奶茶",
-   "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6ad/cover.jpg",
-   "ep": "4",
-   "epLabel": "更新至4集",
-   "id": "6aabb4eaca57c75f779ac6ad",
-   "title": "斗破苍穹之熏儿帮我控妖火",
    "updating": true
   },
   {
@@ -2305,17 +2283,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7800/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6ac8c6ffca57c75f779c7800",
-   "title": "家族秘事",
-   "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7801/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
@@ -2477,6 +2444,7 @@
   },
   {
    "cats": [
+    "du-jia-shuang-ju",
     "remixed-short-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023101856/6adac41032f2be7ce65a07e4/cover.jpg",
@@ -2836,6 +2804,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023171814/6adb265663861f02aa6b8310/cover.jpg",
    "ep": "9",
    "epLabel": "全9集",
@@ -2852,6 +2823,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023173203/6adb299363861f02aa6b8347/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
