@@ -1067,6 +1067,17 @@
    "cats": [
     "ai-comic-drama"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6ad/cover.jpg",
+   "ep": "4",
+   "epLabel": "更新至4集",
+   "id": "6aabb4eaca57c75f779ac6ad",
+   "title": "斗破苍穹之熏儿帮我控妖火",
+   "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6af/cover.jpg",
    "ep": "6",
    "epLabel": "更新至6集",
@@ -2283,6 +2294,17 @@
    "cats": [
     "ai-comic-drama"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7800/cover.jpg",
+   "ep": "3",
+   "epLabel": "更新至3集",
+   "id": "6ac8c6ffca57c75f779c7800",
+   "title": "家族秘事",
+   "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261009185039/6ac8c6ffca57c75f779c7801/cover.jpg",
    "ep": "10",
    "epLabel": "更新至10集",
@@ -2359,39 +2381,6 @@
    "id": "6ad0d08cca57c75f779cb974",
    "title": "现代韦小宝：大学里的七个女室友",
    "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae4/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6ad2f7bbca57c75f779cbae4",
-   "title": "Malfoid（马尔福（芙））",
-   "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae5/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6ad2f7bbca57c75f779cbae5",
-   "title": "光阴之外",
-   "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261017122115/6ad2f7bbca57c75f779cbae8/cover.jpg",
-   "ep": "5",
-   "epLabel": "更新至5集",
-   "id": "6ad2f7bbca57c75f779cbae8",
-   "title": "慕兰圣女的修炼秘法",
-   "updating": true
   },
   {
    "cats": [
@@ -2784,14 +2773,6 @@
    "updating": false
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023171814/6adb265663861f02aa6b830f/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6adb265663861f02aa6b830f",
-   "title": "ceo驯服指南",
-   "updating": true
-  },
-  {
    "cats": [
     "ai-comic-drama"
    ],
@@ -2803,6 +2784,9 @@
    "updating": false
   },
   {
+   "cats": [
+    "ai-comic-drama"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023171814/6adb265663861f02aa6b8311/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
@@ -2816,42 +2800,169 @@
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023173203/6adb299363861f02aa6b8347/cover.jpg",
    "ep": "10",
-   "epLabel": "更新至10集",
+   "epLabel": "全10集",
    "id": "6adb299363861f02aa6b8347",
    "title": "最强显示器2：原神",
-   "updating": true
+   "updating": false
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023173203/6adb299363861f02aa6b8348/cover.jpg",
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23078f608cee1b9c88eb/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23078f608cee1b9c88eb",
+   "title": "AI魔改 乘风破浪的姐姐",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23078f608cee1b9c88ec/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23078f608cee1b9c88ec",
+   "title": "AI魔改 从你的蜜穴上路过",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88ed/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88ed",
+   "title": "AI魔改 催眠手机 骚妇杨颖给你手交",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88ee/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88ee",
+   "title": "AI魔改 大厨小婿",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88ef/cover.jpg",
    "ep": "1",
    "epLabel": "更新至1集",
-   "id": "6adb299363861f02aa6b8348",
-   "title": "艺术学校得淫乱生活",
+   "id": "6adc23088f608cee1b9c88ef",
+   "title": "AI魔改 崔智秀 黄礼志 申有娜 当ITZY女团成员们成为你的宠儿 你想怎么对待她们呢",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023204137/6adb560163861f02aa6b838c/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6adb560163861f02aa6b838c",
-   "title": "交换游戏第二季",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f0/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f0",
+   "title": "AI魔改 成人SPA馆",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f1/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6adc23088f608cee1b9c88f1",
+   "title": "AI魔改 程潇 单依纯 迪丽热巴 赵露思 女明星与大佬们不为人知的商务宴",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023204137/6adb560163861f02aa6b838d/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6adb560163861f02aa6b838d",
-   "title": "风流医生",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f2/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f2",
+   "title": "AI魔改 程潇 归国带着韩国进修后的床上技术 尽心的服侍金主爸爸们",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f3/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f3",
+   "title": "AI魔改 程潇 胡连馨 黄奕 田曦薇 周也",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f4/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f4",
+   "title": "AI魔改 赤裸羔羊",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f5/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f5",
+   "title": "AI魔改 陈妍希 离婚后彻底放飞 自述红毯上与粉丝激情性爱的快活经历",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f6/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f6",
+   "title": "AI魔改 陈宛俞 海边美乳露出身材自然诱人",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f7/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f7",
+   "title": "AI魔改 陈昊宇 红毯上偶遇前夫哥 两人一拍即合决定当场来一炮",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f8/cover.jpg",
+   "ep": "1",
+   "epLabel": "更新至1集",
+   "id": "6adc23088f608cee1b9c88f8",
+   "title": "AI魔改 陈昊宇拍广告不穿内裤被摄影师干得死去活来本人原声配音",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023204400/6adb569063861f02aa6b8394/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6adb569063861f02aa6b8394",
-   "title": "甄嬛外传",
-   "updating": true
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88f9/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88f9",
+   "title": "AI魔改 陈瑶 当光溜溜的瑶妹出现在你面前 这很难不爱吧",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88fa/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88fa",
+   "title": "AI魔改 陈翔六点半",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88fb/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88fb",
+   "title": "AI魔改 陈都灵 万年女二的嘟嘟逆袭当红大女主只差一个契机",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024111623/6adc23088f608cee1b9c88fc/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adc23088f608cee1b9c88fc",
+   "title": "AI魔改 陈钰琪活动现场被粉丝疯狂围观原声配音",
+   "updating": false
   }
  ]
 }
