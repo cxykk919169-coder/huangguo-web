@@ -78,6 +78,7 @@ video{width:100%;display:block;background:#000;max-height:74vh}
 .ep{padding:9px 14px;border-radius:9px;background:#1e1e25;color:#8fb4ff;font-size:14px;border:1px solid #2a2a33;cursor:pointer;transition:.12s;text-decoration:none;display:inline-block;font-family:inherit}
 .ep:active,.ep.on{background:#ff7a18;color:#fff;border-color:#ff7a18}
 .ep.on{font-weight:700}
+/* ★ 2026-10-25 UI-LABEL-PATCH v1 */
 /* ★ 2026-10-19 补: .epbtn 从来没定义过样式 ——
  *   黄果漫剧的选集按钮一直在裸奔 (浏览器默认灰按钮), 2048 重写后同样。
  *   这里把 .epbtn 对齐到已有的 .ep 视觉, 一处修复两个板块。 */
@@ -87,7 +88,17 @@ video{width:100%;display:block;background:#000;max-height:74vh}
 /* ★ 2026-10-20: 漫剧锁集 (上游 wallType=vip, 第2集起不返回播放地址)。
  *   视觉对齐上面 EROSHORT 的 .ep.locked, 让两个板块的"锁"长得一样。 */
 .epbtn.lk{background:#221a12;color:#a07a3a;border-color:#3a2c18}
-.epbtn.lk:active,.epbtn.lk.on{background:#3a2c18;color:#ffb02e;border-color:#5a4525}
+
+/* ★ 2026-10-25 UI-LABEL-PATCH v1 —— 模块可用性标签 + 取源重试按钮 */
+.sitesub{padding:7px 14px 2px;font-size:12.5px;line-height:1.5;color:#9aa0ac}
+.sitesub .ns{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:8px;border:1px solid transparent}
+.sitesub .ns::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.9}
+.sitesub .ns.ok{background:#0f2a20;border-color:#1d4a37;color:#5ad1a0}
+.sitesub .ns.mix{background:#2a2110;border-color:#4a3a12;color:#ffc46b}
+.sitesub .ns.warn{background:#2a1414;border-color:#4a1f1f;color:#ff8a8a}
+#epretry{margin-left:8px;padding:2px 10px;border-radius:7px;border:1px solid #4a3a12;background:#2a2110;color:#ffc46b;font-size:12px;cursor:pointer;font-family:inherit}
+#epretry:active{background:#3a2c18}
+
 /* EROSHORT: 付费集样式 */
 .ep.locked{background:#221a12;color:#a07a3a;border-color:#3a2c18;position:relative}
 .ep.locked .lockb{display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;background:#ffb02e;color:#231a08;font-size:10px;font-style:normal;font-weight:700;vertical-align:1px}
@@ -6193,6 +6204,53 @@ function setSpeed(s) {
   renderSpeedBar();
 }
 
+/* ★ 2026-10-25 UI-LABEL-PATCH v1 ——————————————————————————————
+ *  「能看 / 不能看」说明
+ *  ------------------------------------------------------------------
+ *  各模块实测结论 (2026-10-25, 逐模块抽样打接口):
+ *    hg  黄果     120/120 全集免费, 但清单要走中继, 上游偶发 429/403 限流
+ *    hd  黄豆     抽样 lockKind 全 none, 会员/金币集会带锁标记
+ *    es  EROSHORT 部分集付费 (eps[].locked)
+ *    hjw 海角     免费, 个别帖子 m3u8 为空 (有「重新取源」按钮)
+ *    xd  心动     免费, /api/xd/ep 正常
+ *    my  蜜月     免费, /api/my/ep 正常
+ *    dt  2048     免费, 清单走本站代理
+ *    mj  漫剧     第 2 集起多为会员集 (wallType=vip)
+ *    mg  芒果     首集免费, 其余金币集
+ *    yg  野果     免费
+ *    sj  91       免费
+ *    xdcm 心动新  免费集可直接播, 付费集带锁
+ *    hk  花魁     第 1 集免费, 其余金币集 (需 98 币)
+ *  ------------------------------------------------------------------
+ */
+const MOD_NOTE = {
+  hg:   { k: 'ok',   t: '全集免费 · 上游偶发限流, 取不到会自动重试' },
+  hd:   { k: 'ok',   t: '免费可直接播 · 会员/金币集标「锁」' },
+  es:   { k: 'mix',  t: '部分集需付费, 标「锁」的看不了' },
+  hjw:  { k: 'ok',   t: '免费 · 个别帖子上游无源, 可点「重新取源」' },
+  xd:   { k: 'ok',   t: '免费可直接播' },
+  my:   { k: 'ok',   t: '免费可直接播' },
+  dt:   { k: 'ok',   t: '全集免费 · 清单走本站代理' },
+  mj:   { k: 'mix',  t: '第 2 集起多为会员集, 标「锁」的看不了' },
+  mg:   { k: 'mix',  t: '首集免费, 其余金币集' },
+  yg:   { k: 'ok',   t: '全集免费可直接播' },
+  sj:   { k: 'ok',   t: '全集免费 · 双域名自动切换' },
+  xdcm: { k: 'mix',  t: '免费集可直接播, 付费集标「锁」' },
+  hk:   { k: 'mix',  t: '第 1 集免费, 其余金币集 (需 98 币)' },
+};
+
+/* 把上游的技术错误翻成人能看懂的一句话 */
+function epErrHuman(s) {
+  s = String(s || '');
+  if (!s) return '暂时取不到片源, 点「重试」再试一次';
+  if (/429|too many|rate.?limit|限流/i.test(s)) return '上游限流, 稍等几秒点「重试」';
+  if (/403|拦截|blocked|CDN 拒绝/i.test(s)) return '上游暂时拒绝, 点「重试」再试一次';
+  if (/timeout|超时|ETIMEDOUT|AbortError/i.test(s)) return '上游响应超时, 点「重试」';
+  if (/404|not found|没有|未开放/i.test(s)) return '这一集上游还没有片源';
+  if (/locked|付费|金币|未解锁/i.test(s)) return '这一集需要上游解锁才能看';
+  return '暂时取不到片源, 点「重试」再试一次';
+}
+
 async function playEp(ep) {
   if (!curVid) return;
   const v = document.getElementById('pl');
@@ -6228,10 +6286,46 @@ async function playEp(ep) {
       epErr = (e && e.message) || '';
     }
   }
+  /* ★ 2026-10-25 UI-LABEL-PATCH v1 —— 取源自动重试
+   *   黄果/91 这类走中继的板块, 上游偶发 429/403 (限流), 隔几秒重取通常就通。
+   *   以前直接把 "Worker 出口被 CDN 拒绝 (status 403)" 甩给访客, 没人看得懂,
+   *   而且只能刷新整页。现在: 静默重试 3 次 -> 人话提示 -> 给一个「重试」按钮。 */
   if (!u) {
+    const ce0 = document.getElementById('curep');
+    if (ce0) ce0.textContent = '第 ' + ep + ' 集（取源中…）';
+    const RETRY_GAP = [2500, 5000, 9000];
+    for (let k = 0; k < RETRY_GAP.length && !u; k++) {
+      await new Promise(function (r) { setTimeout(r, RETRY_GAP[k]); });
+      if (String(curEp) !== String(ep)) return;          // 用户已经切走, 别再打扰
+      if (ce0) ce0.textContent = '第 ' + ep + ' 集（重试 ' + (k + 1) + '/' + RETRY_GAP.length + '…）';
+      try {
+        const j2 = await apiOf(curSrc || SITE, '/api/ep',
+          { id: curVid.id, ep: ep, slug: curVid.slug || curVid.id });
+        u = j2 && j2.url;
+        if (u) curVid.eps[ep] = u;
+        else epErr = (j2 && (j2.error || j2.message)) || epErr;
+      } catch (e2) { epErr = (e2 && e2.message) || epErr; }
+    }
+  }
+  if (!u) {
+    const human = epErrHuman(epErr);
     const ce = document.getElementById('curep');
-    if (ce) ce.textContent = '第 ' + ep + ' 集（' + (epErr || '源获取失败') + '）';
-    toast('第 ' + ep + ' 集取不到片源' + (epErr ? '：' + epErr : ''));
+    if (ce) {
+      ce.textContent = '第 ' + ep + ' 集（' + human + '）';
+      if (ce.parentNode && !document.getElementById('epretry')) {
+        const rb = document.createElement('button');
+        rb.id = 'epretry';
+        rb.textContent = '重试';
+        rb.onclick = function () {
+          try { delete curVid.eps[ep]; } catch (e) {}
+          const old = document.getElementById('epretry');
+          if (old && old.parentNode) old.parentNode.removeChild(old);
+          playEp(ep);
+        };
+        ce.parentNode.appendChild(rb);
+      }
+    }
+    toast('第 ' + ep + ' 集: ' + human);
     return;
   }
   // 统一入口: m3u8 交给 hls.js, mp4 直接播 (修: 之前裸塞 m3u8, Chrome 播不了)
@@ -6524,6 +6618,18 @@ function renderSiteBar() {
     'style="text-decoration:none;display:inline-flex;align-items:center;gap:7px"><span class="dot" style="background:#e8384f"></span>荔枝 ↗</a>';
   el.innerHTML = html;
   document.documentElement.setAttribute('data-site', SITE);
+  /* ★ 2026-10-25 UI-LABEL-PATCH v1 —— 当前模块「能不能看」一行说明 */
+  (function () {
+    var sub = document.getElementById('sitesub');
+    if (!sub) {
+      sub = document.createElement('div');
+      sub.id = 'sitesub';
+      sub.className = 'sitesub';
+      if (el.parentNode) el.parentNode.insertBefore(sub, el.nextSibling);
+    }
+    var nt = (typeof MOD_NOTE !== 'undefined') ? MOD_NOTE[SITE] : null;
+    sub.innerHTML = nt ? ('<span class="ns ' + nt.k + '">' + nt.t + '</span>') : '';
+  })();
 }
 
 /* ===================== 启动 ===================== */
