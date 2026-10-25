@@ -1050,17 +1050,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6ad/cover.jpg",
-   "ep": "4",
-   "epLabel": "更新至4集",
-   "id": "6aabb4eaca57c75f779ac6ad",
-   "title": "斗破苍穹之熏儿帮我控妖火",
-   "updating": true
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6af/cover.jpg",
    "ep": "6",
    "epLabel": "更新至6集",
@@ -1473,6 +1462,17 @@
    "epLabel": "全43集",
    "id": "6aae61fcca57c75f779b24f8",
    "title": "长生录",
+   "updating": false
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260920150140/6aaf84d5ca57c75f779b3d5e/cover.jpg",
+   "ep": "6",
+   "epLabel": "全6集",
+   "id": "6aaf84d5ca57c75f779b3d5e",
+   "title": "少女弹珠汽水",
    "updating": false
   },
   {
