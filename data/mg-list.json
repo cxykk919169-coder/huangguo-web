@@ -523,17 +523,6 @@
    "cats": [
     "er-ci-yuan"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910173641/6aa27a297c68f1b88c2a93f1/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa27a297c68f1b88c2a93f1",
-   "title": "探索欢爱新境界",
-   "updating": true
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910173650/6aa27a327c68f1b88c2a93f7/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -649,6 +638,17 @@
    "epLabel": "全1集",
    "id": "6aa38a497c68f1b88c2a96ac",
    "title": "飞机杯教室",
+   "updating": false
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260911125748/6aa38a4c7c68f1b88c2a96ae/cover.jpg",
+   "ep": "2",
+   "epLabel": "全2集",
+   "id": "6aa38a4c7c68f1b88c2a96ae",
+   "title": "鬼父",
    "updating": false
   },
   {
