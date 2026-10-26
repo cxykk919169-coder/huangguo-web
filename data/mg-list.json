@@ -177,17 +177,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8dfa/cover.jpg",
-   "ep": "8",
-   "epLabel": "更新至8集",
-   "id": "6a9ffae47c68f1b88c2a8dfa",
-   "title": "爸爸不在家",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8e02/cover.jpg",
    "ep": "22",
    "epLabel": "更新至22集",
@@ -208,11 +197,6 @@
    "ep": "8",
    "epLabel": "更新至8集",
    "id": "6a9ffae47c68f1b88c2a8e03",
-   "preview": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8e03/chapters/1/preview.mp4",
-   "tags": [
-    "绿帽",
-    "武侠"
-   ],
    "title": "重生之我救郭靖",
    "updating": true
   },
@@ -283,6 +267,9 @@
    "updating": true
   },
   {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260909151002/6aa1064a7c68f1b88c2a8f72/cover.jpg",
    "ep": "17",
    "epLabel": "更新至17集",
@@ -668,17 +655,6 @@
    "cats": [
     "er-ci-yuan"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260911125748/6aa38a4c7c68f1b88c2a96ae/cover.jpg",
-   "ep": "2",
-   "epLabel": "全2集",
-   "id": "6aa38a4c7c68f1b88c2a96ae",
-   "title": "鬼父",
-   "updating": false
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260911151346/6aa3aa2a7c68f1b88c2a9795/cover.jpg",
    "ep": "11",
    "epLabel": "全11集",
@@ -986,6 +962,17 @@
    "epLabel": "全1集",
    "id": "6aaa0ebdca57c75f779aba5c",
    "title": "热播短剧《亲爱的情敌》模范丈夫出轨富家女还藏5岁私生女 离婚逆袭拉闺蜜创业 携手双赢新爱情！",
+   "updating": false
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260916165325/6aaa5905ca57c75f779abba1/cover.png",
+   "ep": "2",
+   "epLabel": "全2集",
+   "id": "6aaa5905ca57c75f779abba1",
+   "title": "雌性友人",
    "updating": false
   },
   {
@@ -1569,17 +1556,6 @@
    "epLabel": "全60集",
    "id": "6ab11e07ca57c75f779b6deb",
    "title": "恋爱急救：身体先于我喜欢上你",
-   "updating": false
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260921200735/6ab11e09ca57c75f779b6dff/cover.jpg",
-   "ep": "66",
-   "epLabel": "全66集",
-   "id": "6ab11e09ca57c75f779b6dff",
-   "title": "陆总别作，太太她不要你了",
    "updating": false
   },
   {
@@ -2611,7 +2587,6 @@
   },
   {
    "cats": [
-    "du-jia-shuang-ju",
     "remixed-short-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019125449/6ad5a29925db60e3c21810ab/cover.jpg",
@@ -2668,8 +2643,8 @@
     "remixed-short-drama"
    ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023101856/6adac41032f2be7ce65a07e4/cover.jpg",
-   "ep": "7",
-   "epLabel": "更新至7集",
+   "ep": "9",
+   "epLabel": "更新至9集",
    "id": "6adac41032f2be7ce65a07e4",
    "title": "淫妻派对",
    "updating": true
@@ -2730,14 +2705,6 @@
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024181410/6adc84f26bd5afe98e648b01/cover.jpg",
-   "ep": "5",
-   "epLabel": "更新至5集",
-   "id": "6adc84f26bd5afe98e648b01",
-   "title": "超能觉醒",
-   "updating": true
-  },
-  {
    "cats": [
     "ai-comic-drama"
    ],
@@ -2749,132 +2716,157 @@
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024182012/6adc865c6bd5afe98e648b15/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6adc865c6bd5afe98e648b15",
-   "title": "美人局",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024182656/6adc87f06bd5afe98e648b23/cover.jpg",
-   "ep": "10",
-   "epLabel": "更新至10集",
-   "id": "6adc87f06bd5afe98e648b23",
-   "title": "陪玩假女友",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024183245/6adc894d6bd5afe98e648b29/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026154755/6adf05ab6bd5afe98e648c78/cover.jpg",
    "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6adc894d6bd5afe98e648b29",
-   "title": "性奴豪乳老师刘艳",
-   "updating": true
+   "epLabel": "全1集",
+   "id": "6adf05ab6bd5afe98e648c78",
+   "title": "AI魔改 单身男女",
+   "updating": false
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b76/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026154755/6adf05ab6bd5afe98e648c79/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adf05ab6bd5afe98e648c79",
+   "title": "AI魔改 大明风华",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026154755/6adf05ab6bd5afe98e648c7a/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adf05ab6bd5afe98e648c7a",
+   "title": "AI魔改 大梦归离",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026154755/6adf05ab6bd5afe98e648c81/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adf05ab6bd5afe98e648c81",
+   "title": "AI魔改 第七次心跳",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026154755/6adf05ab6bd5afe98e648c89/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adf05ab6bd5afe98e648c89",
+   "title": "AI魔改 迪丽热巴赵露思李一桐田曦薇吉娜群星闪耀争相诱惑",
+   "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc1/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
-   "id": "6adc9aa86bd5afe98e648b76",
-   "title": "一觉醒来，我家猫竟然叫我爸爸",
+   "id": "6adf0d4e6bd5afe98e648cc1",
+   "title": "宝贝妈妈蓝菲菲",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b77/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6adc9aa86bd5afe98e648b77",
-   "title": "乡村乱情",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc2/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6adf0d4e6bd5afe98e648cc2",
+   "title": "小姨你好香",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b78/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6adc9aa86bd5afe98e648b78",
-   "title": "侠客驿站",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc3/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6adf0d4e6bd5afe98e648cc3",
+   "title": "师门夺爱",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b79/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6adc9aa86bd5afe98e648b79",
-   "title": "天魔种",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b7a/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6adc9aa86bd5afe98e648b7a",
-   "title": "尤物讨妖队",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b7b/cover.jpg",
-   "ep": "3",
-   "epLabel": "更新至3集",
-   "id": "6adc9aa86bd5afe98e648b7b",
-   "title": "总统爱上了大洋彼岸的我",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b7c/cover.jpg",
-   "ep": "10",
-   "epLabel": "更新至10集",
-   "id": "6adc9aa86bd5afe98e648b7c",
-   "title": "我的妈妈是狐夭夭师尊是芈柔",
-   "updating": true
-  },
-  {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b7d/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc4/cover.jpg",
    "ep": "5",
    "epLabel": "更新至5集",
-   "id": "6adc9aa86bd5afe98e648b7d",
-   "title": "淫神来了",
+   "id": "6adf0d4e6bd5afe98e648cc4",
+   "title": "情欲写生",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b7e/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc5/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
-   "id": "6adc9aa86bd5afe98e648b7e",
-   "title": "渔王",
+   "id": "6adf0d4e6bd5afe98e648cc5",
+   "title": "我的妹妹是风俗娘",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b7f/cover.jpg",
-   "ep": "1",
-   "epLabel": "更新至1集",
-   "id": "6adc9aa86bd5afe98e648b7f",
-   "title": "禁忌之触",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc6/cover.jpg",
+   "ep": "12",
+   "epLabel": "更新至12集",
+   "id": "6adf0d4e6bd5afe98e648cc6",
+   "title": "武林外传深夜版",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b80/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc7/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
-   "id": "6adc9aa86bd5afe98e648b80",
-   "title": "莎莎和老板外传",
+   "id": "6adf0d4e6bd5afe98e648cc7",
+   "title": "深闺",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b81/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc8/cover.jpg",
    "ep": "2",
    "epLabel": "更新至2集",
-   "id": "6adc9aa86bd5afe98e648b81",
-   "title": "驱鬼者第二季",
+   "id": "6adf0d4e6bd5afe98e648cc8",
+   "title": "舅妈别舔了",
    "updating": true
   },
   {
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024194648/6adc9aa86bd5afe98e648b82/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cc9/cover.jpg",
    "ep": "3",
    "epLabel": "更新至3集",
-   "id": "6adc9aa86bd5afe98e648b82",
-   "title": "黑道总裁的契约情人",
+   "id": "6adf0d4e6bd5afe98e648cc9",
+   "title": "重生之我操你全家",
    "updating": true
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026162030/6adf0d4e6bd5afe98e648cca/cover.jpg",
+   "ep": "3",
+   "epLabel": "更新至3集",
+   "id": "6adf0d4e6bd5afe98e648cca",
+   "title": "鱿鱼黄戏",
+   "updating": true
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026175240/6adf22e86bd5afe98e648d1f/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6adf22e86bd5afe98e648d1f",
+   "title": "倩女幽魂",
+   "updating": true
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026175240/6adf22e86bd5afe98e648d20/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6adf22e86bd5afe98e648d20",
+   "title": "言出法随的我穿越到修仙世界",
+   "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju",
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026180231/6adf25376bd5afe98e648d29/cover.jpg",
+   "ep": "5",
+   "epLabel": "全5集",
+   "id": "6adf25376bd5afe98e648d29",
+   "preview": "https://d12m928oe7qtlf.cloudfront.net/B20261026180231/6adf25376bd5afe98e648d29/chapters/1/preview.mp4",
+   "tags": [
+    "绿帽",
+    "都市"
+   ],
+   "title": "这顶绿帽还给你",
+   "updating": false
   }
  ]
 }
