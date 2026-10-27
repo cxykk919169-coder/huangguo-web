@@ -1402,17 +1402,6 @@
    "cats": [
     "adult-short-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260919152147/6aae380fca57c75f779b240a/cover.jpg",
-   "ep": "51",
-   "epLabel": "更新至51集",
-   "id": "6aae380fca57c75f779b240a",
-   "title": "逃出绝命岛",
-   "updating": true
-  },
-  {
-   "cats": [
-    "adult-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260919152147/6aae380fca57c75f779b240b/cover.jpg",
    "ep": "78",
    "epLabel": "全78集",
@@ -1517,6 +1506,17 @@
    "epLabel": "全60集",
    "id": "6ab0d5c9ca57c75f779b573a",
    "title": "梦境中的电话号码",
+   "updating": false
+  },
+  {
+   "cats": [
+    "adult-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260921145920/6ab0d5c9ca57c75f779b5740/cover.jpg",
+   "ep": "70",
+   "epLabel": "全70集",
+   "id": "6ab0d5c9ca57c75f779b5740",
+   "title": "缅北求生，从上飞机开始",
    "updating": false
   },
   {
@@ -2308,6 +2308,17 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261015163339/6ad08fe4ca57c75f779cb8f2/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6ad08fe4ca57c75f779cb8f2",
+   "title": "隔壁空姐的诱惑",
+   "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261015173003/6ad09d1bca57c75f779cb926/cover.jpg",
    "ep": "9",
    "epLabel": "更新至9集",
@@ -2346,17 +2357,6 @@
    ],
    "title": "听干妈的话找个老实人嫁了",
    "updating": false
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261020180131/6ad73bfb25db60e3c2181260/cover.jpg",
-   "ep": "7",
-   "epLabel": "更新至7集",
-   "id": "6ad73bfb25db60e3c2181260",
-   "title": "家庭教师",
-   "updating": true
   },
   {
    "cats": [
@@ -2461,6 +2461,17 @@
    "cats": [
     "remixed-short-drama"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023123953/6adae51963861f02aa6b8298/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6adae51963861f02aa6b8298",
+   "title": "AI魔改 白日提灯",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023123953/6adae51963861f02aa6b8299/cover.jpg",
    "ep": "1",
    "epLabel": "全1集",
@@ -2499,17 +2510,6 @@
    "epLabel": "全1集",
    "id": "6adae51963861f02aa6b829c",
    "title": "AI魔改 白鹿",
-   "updating": false
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023163813/6adb1cf563861f02aa6b82eb/cover.jpg",
-   "ep": "1",
-   "epLabel": "全1集",
-   "id": "6adb1cf563861f02aa6b82eb",
-   "title": "AI魔改 不能说的秘密",
    "updating": false
   },
   {
