@@ -1353,17 +1353,6 @@
    "cats": [
     "ai-comic-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260919182044/6aae61fcca57c75f779b24ed/cover.jpg",
-   "ep": "4",
-   "epLabel": "全4集",
-   "id": "6aae61fcca57c75f779b24ed",
-   "title": "云深不知梦",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260919182044/6aae61fcca57c75f779b24f0/cover.jpg",
    "ep": "11",
    "epLabel": "全11集",
@@ -2048,6 +2037,14 @@
    "updating": false
   },
   {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260929174320/6abb8838ca57c75f779c3ccd/cover.jpg",
+   "ep": "20",
+   "epLabel": "更新至20集",
+   "id": "6abb8838ca57c75f779c3ccd",
+   "title": "疯狂小杨哥",
+   "updating": true
+  },
+  {
    "cats": [
     "ca-bian-duan-ju"
    ],
@@ -2122,6 +2119,14 @@
    "epLabel": "更新至5集",
    "id": "6ac35c6fca57c75f779c706e",
    "title": "最强家丁",
+   "updating": true
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261006114204/6ac46e0cca57c75f779c71f2/cover.jpg",
+   "ep": "10",
+   "epLabel": "更新至10集",
+   "id": "6ac46e0cca57c75f779c71f2",
+   "title": "有五个姐姐的我",
    "updating": true
   },
   {
@@ -2213,6 +2218,22 @@
    "updating": true
   },
   {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261012100624/6acc40a0ca57c75f779c79a2/cover.jpg",
+   "ep": "5",
+   "epLabel": "更新至5集",
+   "id": "6acc40a0ca57c75f779c79a2",
+   "title": "我让空姐下跪道歉",
+   "updating": true
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261012204011/6accd52bca57c75f779c7abc/cover.jpg",
+   "ep": "7",
+   "epLabel": "更新至7集",
+   "id": "6accd52bca57c75f779c7abc",
+   "title": "末世后每天被法出汁",
+   "updating": true
+  },
+  {
    "cats": [
     "du-jia-shuang-ju"
    ],
@@ -2256,6 +2277,14 @@
    "updating": true
   },
   {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261015210932/6ad0d08cca57c75f779cb971/cover.jpg",
+   "ep": "4",
+   "epLabel": "全4集",
+   "id": "6ad0d08cca57c75f779cb971",
+   "title": "公车系列",
+   "updating": false
+  },
+  {
    "cats": [
     "du-jia-shuang-ju"
    ],
@@ -2281,6 +2310,14 @@
    "id": "6ad0d08cca57c75f779cb974",
    "title": "现代韦小宝：大学里的七个女室友",
    "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261019125449/6ad5a29925db60e3c21810a9/cover.jpg",
+   "ep": "5",
+   "epLabel": "更新至5集",
+   "id": "6ad5a29925db60e3c21810a9",
+   "title": "人妻猎人",
+   "updating": true
   },
   {
    "cats": [
@@ -2574,6 +2611,14 @@
    "updating": false
   },
   {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023204137/6adb560163861f02aa6b838c/cover.jpg",
+   "ep": "4",
+   "epLabel": "更新至4集",
+   "id": "6adb560163861f02aa6b838c",
+   "title": "交换游戏第二季",
+   "updating": true
+  },
+  {
    "cats": [
     "du-jia-shuang-ju"
    ],
@@ -2772,6 +2817,14 @@
    "updating": false
   },
   {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261026175240/6adf22e86bd5afe98e648d20/cover.jpg",
+   "ep": "3",
+   "epLabel": "更新至3集",
+   "id": "6adf22e86bd5afe98e648d20",
+   "title": "言出法随的我穿越到修仙世界",
+   "updating": true
+  },
+  {
    "cats": [
     "du-jia-shuang-ju"
    ],
@@ -2804,6 +2857,14 @@
    "updating": true
   },
   {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028172625/6ae1bfc16bd5afe98e648fda/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6ae1bfc16bd5afe98e648fda",
+   "title": "转生降服高冷女魔头",
+   "updating": true
+  },
+  {
    "cats": [
     "du-jia-shuang-ju"
    ],
@@ -2818,6 +2879,25 @@
    ],
    "title": "夜夜验身",
    "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028180614/6ae1c9166bd5afe98e649001/cover.jpg",
+   "ep": "5",
+   "epLabel": "全5集",
+   "id": "6ae1c9166bd5afe98e649001",
+   "title": "重启性福",
+   "updating": false
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028185646/6ae1d4ee6bd5afe98e649036/cover.jpg",
+   "ep": "10",
+   "epLabel": "更新至10集",
+   "id": "6ae1d4ee6bd5afe98e649036",
+   "title": "拳皇之不知火舞",
+   "updating": true
   },
   {
    "cats": [
@@ -2840,6 +2920,14 @@
    "id": "6ae1d4ee6bd5afe98e649038",
    "title": "火影异界：暗影之弈",
    "updating": false
+  },
+  {
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028201146/6ae1e6826bd5afe98e64905a/cover.jpg",
+   "ep": "6",
+   "epLabel": "更新至6集",
+   "id": "6ae1e6826bd5afe98e64905a",
+   "title": "与三个山西熟女往事",
+   "updating": true
   },
   {
    "cats": [
