@@ -34,6 +34,17 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907200037/6a9ea765e53e713f3c6feb6c/cover.jpg",
+   "ep": "11",
+   "epLabel": "全11集",
+   "id": "6a9ea765e53e713f3c6feb6c",
+   "title": "被潜规则的女孩",
+   "updating": false
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260907201430/6a9eaaa6e53e713f3c6feb8d/cover.jpg",
    "ep": "33",
    "epLabel": "更新至33集",
@@ -535,17 +546,6 @@
    "cats": [
     "er-ci-yuan"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910180839/6aa281a77c68f1b88c2a942f/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa281a77c68f1b88c2a942f",
-   "title": "性瘾波涛胸涌",
-   "updating": true
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910180850/6aa281b27c68f1b88c2a9437/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -617,6 +617,17 @@
    "epLabel": "全1集",
    "id": "6aa38a497c68f1b88c2a96ac",
    "title": "飞机杯教室",
+   "updating": false
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260911125748/6aa38a4c7c68f1b88c2a96ae/cover.jpg",
+   "ep": "2",
+   "epLabel": "全2集",
+   "id": "6aa38a4c7c68f1b88c2a96ae",
+   "title": "鬼父",
    "updating": false
   },
   {
@@ -969,6 +980,17 @@
    "epLabel": "更新至4集",
    "id": "6aabb4eaca57c75f779ac6ab",
    "title": "斗破苍穹之我请凤清儿喝奶茶",
+   "updating": true
+  },
+  {
+   "cats": [
+    "ai-comic-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260917173746/6aabb4eaca57c75f779ac6ad/cover.jpg",
+   "ep": "4",
+   "epLabel": "更新至4集",
+   "id": "6aabb4eaca57c75f779ac6ad",
+   "title": "斗破苍穹之熏儿帮我控妖火",
    "updating": true
   },
   {
@@ -2306,17 +2328,6 @@
    "updating": false
   },
   {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261022114753/6ad98769af9c62bc1a1746a9/cover.jpg",
-   "ep": "8",
-   "epLabel": "更新至8集",
-   "id": "6ad98769af9c62bc1a1746a9",
-   "title": "老丈人走后 我成为了一家之主",
-   "updating": true
-  },
-  {
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261023101856/6adac41032f2be7ce65a07e2/cover.jpg",
    "ep": "7",
    "epLabel": "更新至7集",
@@ -2341,39 +2352,6 @@
    "epLabel": "更新至5集",
    "id": "6adb560163861f02aa6b838c",
    "title": "交换游戏第二季",
-   "updating": true
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024112626/6adc25628f608cee1b9c891f/cover.jpg",
-   "ep": "1",
-   "epLabel": "全1集",
-   "id": "6adc25628f608cee1b9c891f",
-   "title": "AI魔改 楚乔传",
-   "updating": false
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024112628/6adc25648f608cee1b9c8921/cover.jpg",
-   "ep": "1",
-   "epLabel": "全1集",
-   "id": "6adc25648f608cee1b9c8921",
-   "title": "AI魔改 陈佳琪 网红野外",
-   "updating": false
-  },
-  {
-   "cats": [
-    "ai-comic-drama"
-   ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261024182012/6adc865c6bd5afe98e648b14/cover.jpg",
-   "ep": "10",
-   "epLabel": "更新至10集",
-   "id": "6adc865c6bd5afe98e648b14",
-   "title": "天师降妖",
    "updating": true
   },
   {
@@ -2719,6 +2697,17 @@
    "cats": [
     "remixed-short-drama"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028164619/6ae1b65b6bd5afe98e648f9f/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6ae1b65b6bd5afe98e648f9f",
+   "title": "AI魔改 斗罗大陆",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028164619/6ae1b65b6bd5afe98e648fa0/cover.jpg",
    "ep": "1",
    "epLabel": "全1集",
@@ -2836,6 +2825,17 @@
    "epLabel": "全1集",
    "id": "6ae2940b6bd5afe98e64908d",
    "title": "【寸止调教】女王妈妈的寸止调教 指淫足穴乳交榨精 猛坐肉棒打桩内射灌精A1",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261029114310/6ae2c0ce6bd5afe98e6490dd/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6ae2c0ce6bd5afe98e6490dd",
+   "title": "AI魔改 古力娜扎 金主大佬们的饭局自然少不了顶流女星的作陪",
    "updating": false
   },
   {
