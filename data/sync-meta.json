@@ -1,9 +1,9 @@
 {
- "generatedAt": "2026-10-31T15:27:42Z",
+ "generatedAt": "2026-10-31T19:29:07Z",
  "sources": {
   "hd": {
    "count": 1192,
-   "elapsed": 24.9,
+   "elapsed": 24.8,
    "errors": [],
    "ok": true
   },
@@ -14,8 +14,8 @@
    "ok": true
   },
   "hjw": {
-   "count": 199,
-   "elapsed": 75.5,
+   "count": 200,
+   "elapsed": 102.6,
    "errors": [],
    "ok": true
   },
