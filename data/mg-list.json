@@ -543,17 +543,6 @@
    "cats": [
     "er-ci-yuan"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910180839/6aa281a77c68f1b88c2a942f/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa281a77c68f1b88c2a942f",
-   "title": "性瘾波涛胸涌",
-   "updating": true
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910180850/6aa281b27c68f1b88c2a9437/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -845,6 +834,17 @@
    "epLabel": "全1集",
    "id": "6aa8c26f7c68f1b88c2a9fcb",
    "title": "新版少妇白洁【上】A",
+   "updating": false
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260915135410/6aa8dd827c68f1b88c2aa03c/cover.png",
+   "ep": "4",
+   "epLabel": "全4集",
+   "id": "6aa8dd827c68f1b88c2aa03c",
+   "title": "思春期的性学习",
    "updating": false
   },
   {
@@ -2473,22 +2473,22 @@
    "cats": [
     "remixed-short-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028164619/6ae1b65b6bd5afe98e648f9a/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028164619/6ae1b65b6bd5afe98e648f9b/cover.jpg",
    "ep": "1",
    "epLabel": "全1集",
-   "id": "6ae1b65b6bd5afe98e648f9a",
-   "title": "AI魔改 抖娘利世",
+   "id": "6ae1b65b6bd5afe98e648f9b",
+   "title": "AI魔改 抖音900万粉女神网红 程Yooooo",
    "updating": false
   },
   {
    "cats": [
     "remixed-short-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028164619/6ae1b65b6bd5afe98e648f9b/cover.jpg",
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261028164619/6ae1b65b6bd5afe98e648f9c/cover.jpg",
    "ep": "1",
    "epLabel": "全1集",
-   "id": "6ae1b65b6bd5afe98e648f9b",
-   "title": "AI魔改 抖音900万粉女神网红 程Yooooo",
+   "id": "6ae1b65b6bd5afe98e648f9c",
+   "title": "AI魔改 抖音网红 唐唐",
    "updating": false
   },
   {
