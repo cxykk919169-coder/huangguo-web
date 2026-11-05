@@ -123,17 +123,6 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8def/cover.jpg",
-   "ep": "9",
-   "epLabel": "更新至9集",
-   "id": "6a9ffae47c68f1b88c2a8def",
-   "title": "从一根烟到七个人挤在大床上",
-   "updating": true
-  },
-  {
-   "cats": [
-    "du-jia-shuang-ju"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260908200908/6a9ffae47c68f1b88c2a8df5/cover.jpg",
    "ep": "11",
    "epLabel": "更新至11集",
@@ -497,17 +486,6 @@
    "cats": [
     "er-ci-yuan"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910173641/6aa27a297c68f1b88c2a93f1/cover.jpg",
-   "ep": "2",
-   "epLabel": "更新至2集",
-   "id": "6aa27a297c68f1b88c2a93f1",
-   "title": "探索欢爱新境界",
-   "updating": true
-  },
-  {
-   "cats": [
-    "er-ci-yuan"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260910173650/6aa27a327c68f1b88c2a93f7/cover.jpg",
    "ep": "4",
    "epLabel": "更新至4集",
@@ -601,6 +579,17 @@
    "epLabel": "全1集",
    "id": "6aa38a497c68f1b88c2a96ac",
    "title": "飞机杯教室",
+   "updating": false
+  },
+  {
+   "cats": [
+    "er-ci-yuan"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20260911125748/6aa38a4c7c68f1b88c2a96ae/cover.jpg",
+   "ep": "2",
+   "epLabel": "全2集",
+   "id": "6aa38a4c7c68f1b88c2a96ae",
+   "title": "鬼父",
    "updating": false
   },
   {
@@ -2254,6 +2243,17 @@
    "cats": [
     "du-jia-shuang-ju"
    ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261015163339/6ad08fe4ca57c75f779cb8f2/cover.jpg",
+   "ep": "2",
+   "epLabel": "更新至2集",
+   "id": "6ad08fe4ca57c75f779cb8f2",
+   "title": "隔壁空姐的诱惑",
+   "updating": true
+  },
+  {
+   "cats": [
+    "du-jia-shuang-ju"
+   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261015173003/6ad09d1bca57c75f779cb926/cover.jpg",
    "ep": "9",
    "epLabel": "更新至9集",
@@ -2748,17 +2748,6 @@
    "cats": [
     "remixed-short-drama"
    ],
-   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261102155932/6ae842e40ea720fd2b04435f/cover.jpg",
-   "ep": "1",
-   "epLabel": "全1集",
-   "id": "6ae842e40ea720fd2b04435f",
-   "title": "AI魔改 今夜天使降临",
-   "updating": false
-  },
-  {
-   "cats": [
-    "remixed-short-drama"
-   ],
    "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261102155932/6ae842e40ea720fd2b044363/cover.jpg",
    "ep": "1",
    "epLabel": "全1集",
@@ -2786,6 +2775,17 @@
    "epLabel": "全1集",
    "id": "6ae846930ea720fd2b044375",
    "title": "AI魔改 借精",
+   "updating": false
+  },
+  {
+   "cats": [
+    "remixed-short-drama"
+   ],
+   "cover": "https://d12m928oe7qtlf.cloudfront.net/B20261103114746/6ae95962a896309ea1abbfe0/cover.jpg",
+   "ep": "1",
+   "epLabel": "全1集",
+   "id": "6ae95962a896309ea1abbfe0",
+   "title": "AI魔改 九品权臣",
    "updating": false
   },
   {
